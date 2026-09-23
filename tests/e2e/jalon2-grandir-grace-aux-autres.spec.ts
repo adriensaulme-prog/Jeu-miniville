@@ -133,14 +133,16 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
     }
   });
 
-  test("sabotage : le niveau visuel change bien en franchissant le seuil de population (5 → niveau 1)", async () => {
+  test("sabotage : plusieurs visiteurs distincts font bien monter la population sans plafond artificiel", async () => {
     const cible = await creerCompteAvecVille("cible-evolution");
     const visiteurs: string[] = [];
 
     try {
-      // La ville naît à population 1 (niveau 0). 4 visites distinctes
-      // suffisent à atteindre population 5, le seuil du niveau 1
-      // (Village) défini dans population_vers_niveau().
+      // La ville naît à population 1. 4 visiteurs distincts doivent
+      // chacun compter — voir jalon6-donnees-rendu-3d.spec.ts pour la
+      // vérification des seuils de niveau eux-mêmes (1 000 habitants
+      // pour le niveau 1 depuis le Jalon 6 : trop grand pour être
+      // atteint ici avec de vrais comptes de test un par un).
       for (let i = 0; i < 4; i++) {
         const visiteur = await creerCompteAvecVille(`visiteur-evolution-${i}`);
         visiteurs.push(visiteur.userId);
@@ -153,11 +155,12 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
 
       const { data: ville } = await supabaseAdmin
         .from("cities")
-        .select("population, niveau")
+        .select("population, population_max, niveau")
         .eq("id", cible.villeId)
         .single();
       expect(ville?.population).toBe(5);
-      expect(ville?.niveau).toBe(1);
+      expect(ville?.population_max).toBe(5);
+      expect(ville?.niveau).toBe(0); // bien en-dessous du seuil du niveau 1 (1 000)
     } finally {
       await supprimerCompte(cible.userId);
       for (const id of visiteurs) {

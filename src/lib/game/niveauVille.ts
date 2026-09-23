@@ -18,21 +18,24 @@ export function libelleNiveau(niveau: number, locale: Locale): string {
 }
 
 /**
- * Seuils de population par niveau, provisoires ("seuils à équilibrer
- * pendant les tests" — cahier des charges §2, docs/DECISIONS.md §10
- * point 2). Source de vérité pour les tests unitaires ; à tenir
+ * Seuils de population par niveau — Métropole = 100 000 habitants,
+ * décision d'Adrien (docs/DECISIONS.md §8 et §10 point 10). Calculés
+ * sur `population_max` (le record jamais atteint), pas la population
+ * du moment : une contamination ne fait jamais régresser le niveau
+ * visuel d'une ville (cahier des charges §1 point 4, pas de destruction
+ * permanente). Source de vérité pour les tests unitaires ; à tenir
  * synchronisé avec la fonction SQL population_vers_niveau() dans
- * supabase/migrations/0003_jalon2_grandir_grace_aux_autres.sql, qui est
+ * supabase/migrations/0008_jalon6_donnees_rendu_3d.sql, qui est
  * l'autorité réelle côté serveur (anti-triche — jamais recalculé côté
  * client pour une vraie ville).
  */
 export const SEUILS_NIVEAU: readonly [niveau: number, populationMin: number][] = [
   [0, 0],
-  [1, 5],
-  [2, 15],
-  [3, 30],
-  [4, 60],
-  [5, 120],
+  [1, 1000],
+  [2, 5000],
+  [3, 15000],
+  [4, 40000],
+  [5, 100000],
 ];
 
 export function niveauPourPopulation(population: number): number {

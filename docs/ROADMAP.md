@@ -34,6 +34,15 @@ de vue du joueur — le titre dit ce qui change pour lui.
   jumelage entre deux villes, bonus quotidien si les deux joueurs sont
   actifs. Détail dans `DECISIONS.md` §4 — recette dans
   `docs/recette-jalon-5.md`.
+- [x] **Jalon 6 — La ville prend forme (couche données).** Préparation
+  des données pour le rendu 3D : géo/fuseau horaire des pays,
+  `population_max` (jamais de destruction visuelle), seuils de niveau à
+  l'échelle 100 000 (`DECISIONS.md` §10 point 10), chargement des
+  **villes de test** (`supabase/seed/villes-de-test.json`,
+  `npm run seed:test`). Le rendu 3D lui-même est reporté au Jalon 6bis
+  (portage Three.js trop gros pour un seul jalon — voir `DECISIONS.md`
+  §4). Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-6.md`.
 
 ---
 
@@ -41,18 +50,16 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 1 bis — La ville prend forme *(ajoutée le 23/09/2026)*
 
-- [ ] **Jalon 6 — La ville prend forme.** La page de ville affiche la
-  ville en **3D temps réel** à partir du prototype
-  `docs/prototypes/prototype-ville-3d.html`, branché sur les vraies
-  données : identité de la ville (même ville à chaque visite), pays
-  (soleil et nuit à l'heure réelle du pays — ajouter latitude, longitude
-  et fuseau horaire à `countries`), population (maisons → immeubles →
-  tours selon `DECISIONS.md` §8). Au passage : seuils de niveau passés à
-  l'échelle 100 000 (`DECISIONS.md` §10 point 10), chargement des
-  **villes de test** (`supabase/seed/villes-de-test.json`) en dev/recette
-  uniquement avec un test qui garantit leur absence en production. À
-  trancher avant de commencer : Three.js ou WebGL fait main (§10 point
-  12), rendu d'après la population ou son record (§10 point 11).
+- [ ] **Jalon 6bis — Le rendu 3D.** La page de ville affiche la ville en
+  **3D temps réel**, portée du prototype
+  `docs/prototypes/prototype-ville-3d.html` (WebGL fait main, ~2000
+  lignes) vers **Three.js** (tranché — `DECISIONS.md` §10 point 12),
+  branchée sur les vraies données préparées au Jalon 6 : identité de la
+  ville (même ville à chaque visite, via une graine dérivée de son id),
+  pays (soleil et nuit à l'heure réelle du pays, latitude/longitude/
+  fuseau déjà en base), population_max (maisons → immeubles → tours
+  selon `DECISIONS.md` §8). À vérifier explicitement : fluidité sur
+  mobile (§10 point 13).
 
 ## Phase 2 — Rivalités entre villes
 
@@ -107,5 +114,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 5 terminé, avant le début du
-jalon 6.*
+*Dernière mise à jour : 23/09/2026, jalon 6 (couche données) terminé,
+avant le début du jalon 6bis (rendu 3D).*

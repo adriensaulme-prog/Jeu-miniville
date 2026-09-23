@@ -47,7 +47,7 @@ describe("niveauPourPopulation", () => {
   });
 
   it("plafonne à Métropole (5) bien au-delà du dernier seuil", () => {
-    expect(niveauPourPopulation(100_000)).toBe(NIVEAU_MAX);
+    expect(niveauPourPopulation(1_000_000)).toBe(NIVEAU_MAX);
   });
 
   it("refuse une population négative (sabotage : ne doit jamais arriver, la colonne DB l'interdit déjà)", () => {

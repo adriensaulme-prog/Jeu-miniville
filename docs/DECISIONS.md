@@ -503,6 +503,112 @@ précédents et toujours protégés (aucun test supprimé).
 
 ---
 
+### Jalon 6 (couche données) — préparation du rendu 3D — 23/09/2026
+
+**Ce qui a été fait** : ce jalon prépare les données pour le rendu 3D
+temps réel décidé avec Adrien hors de cette session (§8) — le portage
+du rendu lui-même vers Three.js est un jalon séparé ("Jalon 6bis"), vu
+sa taille (§8 : prototype de ~2000 lignes de géométrie procédurale
+WebGL bas niveau). Migration `0008` :
+- Latitude/longitude/fuseau horaire (IANA) sur `countries`, pour 247
+  pays sur 250 (générés via les paquets `world-countries` et
+  `moment-timezone`, pas de dépendance à l'exécution).
+- `population_max` sur `cities` : le record de population jamais
+  atteint. `visiter_ville()`, `lancer_action_antiville()` et
+  `reclamer_bonus_jumelages()` redéfinies pour le maintenir et calculer
+  `niveau` à partir de lui, jamais de la population instantanée — une
+  contamination fait baisser le chiffre affiché sans jamais faire
+  régresser le niveau visuel.
+- Nouveaux seuils de niveau : Métropole = 100 000 habitants (Village
+  1 000, Bourg 5 000, Ville 15 000, Grande ville 40 000), en
+  remplacement des seuils provisoires 5/15/30/60/120 du Jalon 2.
+- `is_test` sur `users`/`cities` (avec contrainte : pseudo préfixé
+  `test_` obligatoire si `is_test`), script
+  `scripts/charger-villes-test.mjs` (idempotent — supprime puis
+  recharge) qui a chargé les 24 villes et 8 jumelages de
+  `supabase/seed/villes-de-test.json`, et un test opt-in
+  (`VERIFIER_PROD=true`) qui vérifiera l'absence de données `is_test`
+  une fois qu'un vrai environnement de production existera.
+
+**Pourquoi** : cahier des charges §2 (évolution visuelle) et travail de
+direction artistique mené par Adrien avec Claude chat/web (§8) — les
+essais d'images 2D générées ont été jugés insuffisants, d'où le choix
+d'une vraie 3D temps réel dans le navigateur.
+
+**Décisions prises en cours de route** :
+
+1. **Découpage du jalon en deux, proposé par Claude Code et accepté par
+   Adrien** : porter fidèlement ~2000 lignes de géométrie procédurale
+   vers Three.js est un chantier à part entière. Ce jalon ne livre que
+   la couche données (testable et utile seule) ; le rendu proprement
+   dit attend une session dédiée.
+2. **Moteur 3D : Three.js**, tranché par Adrien (reco initiale de
+   Claude chat) plutôt que garder le WebGL fait main du prototype —
+   plus simple à faire évoluer, licence MIT, pas de coût. S'applique au
+   jalon du rendu, pas à celui-ci.
+3. **Rendu (et niveau) basés sur `population_max`, pas la population du
+   moment** — Adrien n'avait pas de préférence tranchée et a laissé la
+   reco initiale de Claude chat s'appliquer (§10 point 11, maintenant
+   clos). Implémenté dès ce jalon pour `niveau`, avant même que le rendu
+   3D existe, parce que la mécanique (contamination qui ne régresse
+   jamais le niveau) est indépendante du rendu et se teste seule.
+4. **Fuseau horaire "de la capitale" choisi à la main pour les pays
+   multi-fuseaux les plus courants** (US, CA, RU, AU, BR, MX, MN, CL,
+   PT, PF, ES) : `moment-timezone` renvoie sinon le premier fuseau par
+   ordre alphabétique, pas forcément celui de la capitale (ex. sans
+   cette liste, le Canada aurait hérité de `America/Atikokan`). Les
+   pays multi-fuseaux non couverts par cette liste gardent le
+   comportement par défaut (premier fuseau alphabétique) — simplification
+   assumée, à corriger au cas par cas si un pays précis pose problème.
+5. **Script de villes de test écrit en JavaScript simple (`.mjs`),
+   exécuté par cette session** (contrairement aux migrations SQL, qui
+   nécessitent le tableau de bord Supabase) : utilise directement
+   `@supabase/supabase-js` avec la clé `service_role`, sans passer par
+   les fonctions RPC du jeu (`creer_ville()` ne permet pas de fixer une
+   population/influence arbitraire) — écriture directe dans `users` et
+   `cities`, légitime ici puisque c'est un script d'administration, pas
+   une action de joueur.
+6. **`seed.jumelages` chargé dans la vraie table `jumelages`** (le
+   Jalon 5 existe déjà) ; `seed.presidents_attendus` ignoré pour
+   l'instant — le concept de président n'est pas encore implémenté
+   (Jalon 10 du `ROADMAP.md` actuel), le champ attend ce jalon-là.
+7. **`activite_7j` du JSON stocké tel quel dans `cities.activite`** —
+   ce champ n'a pas encore de définition précise dans le jeu réel (voir
+   Jalon 2 : "candidat naturel, agrégation pays du Jalon 8" avec la
+   numérotation actuelle) ; import fait par avance pour que les villes
+   de test soient déjà prêtes quand ce jalon arrivera.
+8. **Le script "simuler N jours"** mentionné dans
+   `GUIDE-METHODE.md` (section "Les villes de test") **n'existe pas
+   encore** — décalage entre la description du guide (écrite avec
+   Claude chat, en amont du travail réel) et ce qui a été implémenté
+   jalon après jalon. Noté ici pour ne pas laisser le guide mentir sans
+   le signaler ; pas dans la portée de ce jalon.
+
+**Ce qui a été testé** : `tests/e2e/jalon6-donnees-rendu-3d.spec.ts` —
+`population_vers_niveau()` sur les 11 points limites des nouveaux
+seuils, une contamination qui ne fait régresser ni `population_max` ni
+`niveau` sur une ville poussée à 5 200 habitants, géo/fuseau présents
+pour les 6 pays du scénario de test, et la contrainte `is_test` +
+pseudo `test_` réellement appliquée par la base. Le test de
+`niveauVille.test.ts` du Jalon 2 qui vérifiait un franchissement de
+seuil avec de vrais visiteurs a été adapté : avec Métropole à 100 000,
+atteindre un seuil avec des comptes de test un par un n'est plus
+praticable, remplacé par une vérification directe de la fonction SQL
+(bien plus rapide, et c'est elle l'autorité réelle). Chargement réel
+des 24 villes de test vérifié (niveaux corrects, jumelages avec le bon
+statut, affichage correct sur `/villes` dans le navigateur). `npm run
+build`, `npm run lint` et la suite complète (`npm test` + `npm run
+test:e2e`, 14 tests unitaires + 2 ignorés + 19 tests e2e) passent
+contre le projet Supabase réel, migration `0008` appliquée.
+
+**Vérification rouge par sabotage** : les 11 seuils de
+`population_vers_niveau()`, contamination sans régression de
+`population_max`/`niveau`, contrainte `is_test`/pseudo. Quatorze cas de
+sabotage au total depuis le début du projet, tous toujours protégés
+(aucun test supprimé).
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*
@@ -694,23 +800,21 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
    Le cahier des charges donne le principe, pas les chiffres ("les
    coefficients exacts seront définis lors du balancing"). → **À trancher
    par Adrien avec appui de Claude Code sur les tests d'équilibrage.**
-10. **Seuils de population à revoir dans le code** : `SEUILS_NIVEAU`
-    (TS) et `population_vers_niveau()` (SQL) utilisent aujourd'hui
-    5 / 15 / 30 / 60 / 120. Adrien a fixé l'échelle à **Métropole =
-    100 000 habitants** (voir §8 : 1 000 / 5 000 / 15 000 / 40 000 /
-    100 000). → **À appliquer par Claude Code** dans le jalon du rendu 3D,
-    avec migration et tests.
-11. **Rendu basé sur la population… ou sur son record ?** Une
-    contamination (-10 % de population) ferait "disparaître" des
-    bâtiments si le rendu suivait la population du moment, ce qui heurte
-    la contrainte "pas de destruction permanente" (§1). Reco de Claude :
-    dessiner la ville d'après le **record de population atteint**
-    (`population_max`), et garder la population du moment pour les
-    classements. → **À trancher par Adrien.**
-12. **Bibliothèque 3D pour la version de production** : garder le WebGL
-    fait main du prototype ou le porter sur Three.js (gratuit, licence
-    MIT, plus simple à faire évoluer). Reco de Claude : Three.js. → **À
-    trancher par Adrien avant le jalon du rendu 3D.**
+10. ~~Seuils de population à revoir dans le code.~~ **Appliqué au
+    Jalon 6** : `SEUILS_NIVEAU` (TS) et `population_vers_niveau()` (SQL,
+    migration `0008`) utilisent désormais 1 000 / 5 000 / 15 000 /
+    40 000 / 100 000.
+11. ~~Rendu basé sur la population… ou sur son record ?~~ **Tranché au
+    Jalon 6** : Adrien n'avait pas de préférence tranchée, la reco de
+    Claude s'applique — `population_max` (record jamais atteint), pas la
+    population du moment. Implémenté pour `niveau` dès ce jalon (avant
+    même le rendu 3D lui-même) — voir `DECISIONS.md` §4, journal du
+    Jalon 6.
+12. ~~Bibliothèque 3D pour la version de production.~~ **Tranché** :
+    Adrien confirme Three.js (reco de Claude), plutôt que le WebGL fait
+    main du prototype. → **Reste à faire** : le portage lui-même, dans
+    un jalon séparé ("Jalon 6bis" — voir `ROADMAP.md`).
 13. **Fluidité sur mobile** : à vérifier sur le téléphone d'Adrien dès le
     premier build du rendu 3D (le prototype réduit déjà la qualité des
-    ombres sur écran tactile).
+    ombres sur écran tactile). Toujours ouvert — pas testable avant le
+    jalon du rendu.

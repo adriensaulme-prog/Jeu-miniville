@@ -10,6 +10,7 @@ export interface User {
   countryId: string;
   cityId: string;
   createdAt: string;
+  isTest: boolean; // Jalon 6 — jamais true en production, voir GUIDE-METHODE.md
 }
 
 export interface City {
@@ -18,9 +19,11 @@ export interface City {
   ownerId: string;
   countryId: string;
   population: number;
+  populationMax: number; // Jalon 6 — record jamais atteint ; base du niveau, jamais la population du moment
   influence: number;
   activite: number;
-  niveau: number; // Hameau=0 → Métropole=5, seuils à équilibrer (voir DECISIONS.md §10)
+  niveau: number; // Hameau=0 → Métropole=5, seuils fixés au Jalon 6 (voir DECISIONS.md §8)
+  isTest: boolean; // Jalon 6 — jamais true en production
 }
 
 export interface Country {
@@ -30,6 +33,12 @@ export interface Country {
   // traductions dès sa création) — voir docs/DECISIONS.md §4, Jalon 1.
   nomFr: string;
   nomEn: string;
+  // Jalon 6 — position du soleil à l'heure réelle du pays de la ville
+  // (docs/DECISIONS.md §8). Nullable : pas encore renseigné pour tous
+  // les territoires ISO 3166-1.
+  latitude: number | null;
+  longitude: number | null;
+  fuseauHoraire: string | null; // identifiant IANA, ex. "Europe/Paris"
   population: number;
   influence: number;
   activite: number;
@@ -40,8 +49,9 @@ export interface Country {
 }
 
 export interface Twinning {
-  cityId: string;
-  targetCityId: string;
-  statutAcceptation: "en_attente" | "accepte" | "refuse";
-  dates: { proposeLe: string; accepteLe?: string };
+  villeProposanteId: string;
+  villeCibleeId: string;
+  statut: "en_attente" | "actif" | "refuse" | "annule";
+  createdAt: string;
+  accepteLe: string | null;
 }
