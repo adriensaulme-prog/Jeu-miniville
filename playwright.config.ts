@@ -8,6 +8,12 @@ process.loadEnvFile(".env.local");
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  // Depuis le Jalon 6bis, /ville pèse ~150 Ko de JS rien que pour
+  // Three.js : trop de requêtes simultanées dessus la toute première
+  // fois (avant que le serveur de dev ne l'ait compilée à la demande)
+  // font échouer les tests par pur effet de charge, pas un vrai bug —
+  // voir docs/DECISIONS.md §4, journal du Jalon 6bis.
+  workers: 2,
   reporter: "list",
   use: {
     baseURL: "http://localhost:3000",

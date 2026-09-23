@@ -18,7 +18,8 @@
     "react-dom": "^18.3.1",
     "@supabase/supabase-js": "^2.45.4",
     "@supabase/ssr": "^0.12.7",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
@@ -31,6 +32,7 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.0.0",
     "vitest": "^2.0.5",
-    "@playwright/test": "^1.46.1"
+    "@playwright/test": "^1.46.1",
+    "@types/three": "^0.186.0"
   }
 }

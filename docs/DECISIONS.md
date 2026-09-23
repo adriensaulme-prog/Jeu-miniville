@@ -609,6 +609,111 @@ sabotage au total depuis le début du projet, tous toujours protégés
 
 ---
 
+### Jalon 6bis — le rendu 3D — 23/09/2026
+
+**Ce qui a été fait** : la page `/ville` affiche désormais la ville en
+3D temps réel, portée du prototype `docs/prototypes/prototype-ville-3d.html`
+(~2000 lignes de géométrie procédurale WebGL bas niveau) vers **Three.js**
+(décision d'Adrien, `DECISIONS.md` §10 point 12), branchée sur les
+vraies données : identité stable de la ville (l'id sert de graine —
+toujours la même ville, jamais recalculée au hasard), `population_max`
+(maisons → immeubles → tours, jamais de régression visuelle après une
+contamination — voir Jalon 6), soleil à l'heure réelle du pays de la
+ville (latitude/longitude/fuseau déjà en base depuis le Jalon 6).
+Nouveaux modules `src/lib/ville3d/` (géométrie, bâtiments, terrain,
+occlusion ambiante, shaders, scène Three.js) et
+`src/lib/game/soleilVille.ts` (position du soleil, pur et testable,
+dans le même esprit que `niveauVille.ts`). Composant `VilleScene`
+(client) monté dans `/ville`.
+
+**Pourquoi** : direction artistique décidée par Adrien avec Claude
+chat/web (`DECISIONS.md` §8) — les essais d'images 2D générées ont été
+jugés insuffisants ("pas assez réaliste"), d'où le choix d'une vraie 3D
+temps réel dans le navigateur, dans l'esprit de l'ancien MiniVille
+(Motion Twin).
+
+**Portage, pas réécriture** : la quasi-totalité de la logique de
+génération du prototype (grille de rues, maisons, immeubles, gratte-ciel
+avec grue de chantier, cours communes, parkings, campagne alentour,
+occlusion ambiante précalculée) et le shader de matériaux procéduraux
+(fenêtres éclairées la nuit, tuiles, vitrages réfléchissants, chaussée
+marquée, ciel avec disque solaire, brouillard, tonemapping ACES) sont
+repris **tels quels**, juste traduits en TypeScript et branchés sur
+Three.js plutôt que sur des appels WebGL bruts. Aucune règle de
+génération n'a été réinventée : c'est un vrai portage, vérifié
+fonctionnellement identique par un test de non-régression
+(`tests/unit/ville3dGenerer.test.ts`, déterminisme comparé
+sommet par sommet).
+
+**Adaptations assumées par rapport au prototype** (voir aussi les
+commentaires dans `src/lib/ville3d/shaders.ts` et `scene.ts`) :
+
+1. **Ombres : `sampler2D` + comparaison manuelle plutôt que
+   `sampler2DShadow` + comparaison matérielle.** Le prototype utilisait
+   le mode de comparaison natif de WebGL2 pour un PCF matériel ; Three.js
+   n'expose pas simplement ce mode via `WebGLRenderTarget`/`DepthTexture`.
+   Même algorithme (12 échantillons Poisson), juste la comparaison
+   profondeur faite à la main dans le shader plutôt que par le matériel.
+   Résultat visuel équivalent, vérifié à l'œil dans le navigateur.
+2. **Caméra et interactions (glisser/zoomer/déplacer) réimplémentées
+   avec les primitives Three.js** (`OrthographicCamera`,
+   `camera.lookAt()`) plutôt que la matrice `lookAt`/`ortho` manuelle du
+   prototype — Three.js fait ce travail nativement, c'est tout l'intérêt
+   du choix de bibliothèque. Le comportement (azimut/élévation autour
+   d'une cible, cadrage automatique selon l'étendue de la ville,
+   pincement tactile) est identique.
+3. **Pas de vue "autre ville en 3D" depuis `/villes`** : ce jalon couvre
+   ce que `ROADMAP.md` demandait explicitement ("la page de ville
+   affiche la ville en 3D") — voir sa propre ville, pas celle des
+   autres. Ajouter un aperçu 3D des autres villes est un possible
+   raffinement futur, pas oublié, juste hors de portée ici.
+4. **Repli France (46,6 / 2,35 / Europe/Paris) si le pays de la ville
+   n'a pas de géo renseignée** — 3 pays sur 250 seulement (Jalon 6),
+   défendable pour ne pas bloquer le rendu sur une donnée manquante rare.
+
+**Bug trouvé en testant, pas dans le rendu lui-même** : sous forte
+concurrence (8 workers Playwright simultanés), plusieurs tests
+échouaient de façon reproductible en restant bloqués sur `/connexion`
+— pas un problème de connexion, mais `/ville` (désormais ~150 Ko de
+JS rien que pour cette route, tout Three.js compris) qui met trop
+longtemps à compiler à la demande quand plusieurs requêtes la
+sollicitent en même temps pour la première fois. Limiter à 2 workers
+(au lieu de la valeur par défaut, ici 7-8) résout le problème une fois
+la route déjà compilée une fois — corrigé à la racine plutôt que
+documenté comme rappel : `playwright.config.ts` fixe maintenant
+`workers: 2`, en plus du réflexe déjà connu (arrêter le serveur de
+prévisualisation avant de lancer les tests, `rm -rf .next` en cas de
+doute).
+
+**Ce qui a été testé** : `tests/unit/ville3dAleatoire.test.ts` (le
+hasard déterministe qui garantit l'identité stable des villes),
+`tests/unit/soleilVille.test.ts` (position du soleil : élévation nette
+à midi solaire vs minuit, azimut est le matin/ouest le soir, bornes
+exactes des catégories jour/nuit), `tests/unit/ville3dGenerer.test.ts`
+(déterminisme sommet par sommet, triangles toujours valides, plus de
+population donne plus de blocs actifs et de sommets, pas d'exception
+aux bornes population=0 et très grande population, un gratte-ciel
+n'apparaît qu'au-delà du seuil du niveau Ville). `tests/e2e/jalon6bis-rendu-3d.spec.ts` :
+la page `/ville` réelle affiche un canvas qui peint vraiment des pixels
+(pas une image transparente vide) et ne produit aucune erreur console.
+Vérifié aussi à l'œil dans le navigateur : arbres, maison avec fenêtres
+éclairées la nuit (l'heure réelle à Paris au moment du test était
+21h49, donc nuit — confirmé cohérent avec le calcul de position du
+soleil), glisser pour tourner la caméra. `npm run build`, `npm run
+lint` et la suite complète (`npm test` + `npm run test:e2e`,
+17 tests unitaires + 2 ignorés + 20 tests e2e) passent contre le projet
+Supabase réel.
+
+**Vérification rouge par sabotage** : aucun cas de sabotage spécifique
+à ce jalon — le rendu 3D n'affecte ni score, ni ressources, ni
+anti-triche (il ne fait qu'afficher `population_max`, déjà protégée par
+les sabotages du Jalon 6). Le test de non-régression du portage
+(comparaison sommet par sommet entre deux générations) joue un rôle
+équivalent pour ce jalon : toute dérive accidentelle du portage casserait
+ce test plutôt qu'une règle de jeu.
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*
@@ -810,11 +915,11 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     population du moment. Implémenté pour `niveau` dès ce jalon (avant
     même le rendu 3D lui-même) — voir `DECISIONS.md` §4, journal du
     Jalon 6.
-12. ~~Bibliothèque 3D pour la version de production.~~ **Tranché** :
-    Adrien confirme Three.js (reco de Claude), plutôt que le WebGL fait
-    main du prototype. → **Reste à faire** : le portage lui-même, dans
-    un jalon séparé ("Jalon 6bis" — voir `ROADMAP.md`).
-13. **Fluidité sur mobile** : à vérifier sur le téléphone d'Adrien dès le
-    premier build du rendu 3D (le prototype réduit déjà la qualité des
+12. ~~Bibliothèque 3D pour la version de production.~~ **Fait au
+    Jalon 6bis** : Adrien a confirmé Three.js (reco de Claude), portage
+    complet du prototype effectué — voir `DECISIONS.md` §4, journal du
+    Jalon 6bis.
+13. **Fluidité sur mobile** : maintenant testable (le rendu 3D existe
+    depuis le Jalon 6bis) — à vérifier sur le téléphone d'Adrien dès le
     ombres sur écran tactile). Toujours ouvert — pas testable avant le
     jalon du rendu.

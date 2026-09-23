@@ -48,18 +48,17 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 1 — Une ville qui vit *(terminée)*
 
-## Phase 1 bis — La ville prend forme *(ajoutée le 23/09/2026)*
+## Phase 1 bis — La ville prend forme *(terminée)*
 
-- [ ] **Jalon 6bis — Le rendu 3D.** La page de ville affiche la ville en
+- [x] **Jalon 6bis — Le rendu 3D.** La page de ville affiche la ville en
   **3D temps réel**, portée du prototype
   `docs/prototypes/prototype-ville-3d.html` (WebGL fait main, ~2000
-  lignes) vers **Three.js** (tranché — `DECISIONS.md` §10 point 12),
-  branchée sur les vraies données préparées au Jalon 6 : identité de la
-  ville (même ville à chaque visite, via une graine dérivée de son id),
-  pays (soleil et nuit à l'heure réelle du pays, latitude/longitude/
-  fuseau déjà en base), population_max (maisons → immeubles → tours
-  selon `DECISIONS.md` §8). À vérifier explicitement : fluidité sur
-  mobile (§10 point 13).
+  lignes) vers **Three.js**, branchée sur les vraies données préparées
+  au Jalon 6 : identité de la ville (graine = son id), pays (soleil et
+  nuit à l'heure réelle du pays), population_max (maisons → immeubles →
+  tours). Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-6bis.md`. Point encore ouvert : fluidité sur
+  mobile, à vérifier sur le téléphone d'Adrien (§10 point 13).
 
 ## Phase 2 — Rivalités entre villes
 
@@ -114,5 +113,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 6 (couche données) terminé,
-avant le début du jalon 6bis (rendu 3D).*
+*Dernière mise à jour : 23/09/2026, jalon 6bis terminé (fin de la Phase
+1 bis), avant le début du jalon 7.*
