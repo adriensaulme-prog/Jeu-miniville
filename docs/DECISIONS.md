@@ -103,6 +103,78 @@ GitHub et son premier `git push`, la création du projet Supabase, et le
 déploiement Vercel doivent être faits par Adrien lui-même, dans son propre
 terminal. Documenté aussi en §10.
 
+### Jalon 1 — naître quelque part — 23/09/2026
+
+**Ce qui a été fait** : inscription et connexion (Supabase Auth), création
+du profil joueur et de sa ville (pseudo, nom de ville, pays) en une seule
+étape après la première connexion, page de ville affichant population,
+influence, activité et niveau de départ (Hameau). Premier module de
+`src/lib/game/` (`niveauVille.ts`). Premier système d'i18n du projet
+(dictionnaire fr/en maison, cookie de langue, sélecteur dans la nav) —
+voir point 8 ci-dessous sur ce choix. Migrations SQL `0001` et `0002`
+(tables `countries`/`users`/`cities`, fonction `creer_ville()`, liste
+complète des pays ISO 3166-1 avec noms fr/en).
+
+**Pourquoi** : c'est le premier jalon de contenu du MVP (cahier des
+charges §2 et §30) — sans lui, rien n'est jouable.
+
+**Décisions prises en cours de route, à la demande d'Adrien ou par
+déduction du cahier des charges** :
+
+1. **Liste de pays à la création** : le cahier des charges ne précisait
+   pas la liste. Adrien a tranché pour la liste complète (ISO 3166-1
+   alpha-2, 250 entrées, y compris quelques territoires non
+   souverains — Antarctique, Mayotte, etc. — inclus dans la norme ISO).
+   Noms fr/en générés via le paquet `i18n-iso-countries`, embarqués dans
+   la migration `0002` (pas de dépendance à ce paquet à l'exécution).
+2. **`Country.nom` (types/index.ts) étendu en `nomFr`/`nomEn`** : la
+   règle i18n de `GUIDE-METHODE.md` §9 impose les deux traductions dès
+   le premier texte affiché ; un seul champ `nom` ne le permettait pas
+   pour les 250 pays. Décision d'implémentation, pas de design de jeu.
+3. **Anti-triche appliqué strictement dès ce jalon** : aucune policy RLS
+   d'écriture sur `users`/`cities` pour les rôles `anon`/`authenticated` —
+   toute écriture passe par la fonction serveur `creer_ville()`, appelée
+   avec la clé `service_role`. Étend par prudence le principe du cahier
+   des charges §26 (pensé pour population/influence en jeu) au tout
+   premier écrit, pour ne pas avoir à le durcir plus tard.
+4. **Schéma de la table `users`** : gardé fidèle à `src/types/index.ts`
+   existant (et au cahier des charges §28), avec `country_id` et
+   `city_id` directement sur la ligne joueur, même si `city_id` est
+   dérivable via `cities.owner_id`. Une légère dénormalisation assumée,
+   déjà écrite dans le code avant ce jalon.
+5. **i18n fait maison, sans librairie** (dictionnaire `fr`/`en` +
+   cookie de langue, pas de découpage d'URL `/fr`/`/en`) plutôt que
+   `next-intl` ou équivalent. Suffisant pour deux langues, évite de
+   figer une structure de routes dès le Jalon 1 ; à reconsidérer si
+   l'i18n devient plus complexe (pluriels, dates, etc.).
+6. **`@supabase/ssr` ajouté aux dépendances** (paquet officiel Supabase
+   pour la gestion de session par cookies en Next.js App Router) : choix
+   technique standard, pas un choix de design de jeu.
+
+**Bug trouvé en route (avant même d'écrire du code de jeu)** : l'URL
+Supabase dans `.env.local` pointait vers `*.supabase.com` au lieu de
+`*.supabase.co` (domaine réel des projets Supabase) — corrigé. La clé
+`anon` de `.env.local`, elle, est rejetée par le projet réel
+("Invalid API key" — signature invalide) alors que la clé
+`service_role` fonctionne : **point ouvert avec Adrien**, voir §10.
+
+**Ce qui a été testé** : `tests/unit/dictionaries.test.ts` (parité des
+clés fr/en, aucune valeur vide — protège la règle i18n elle-même) et
+`tests/unit/niveauVille.test.ts` (tous les niveaux 0 à 5 dans les deux
+langues, sabotage : niveau hors plage ou non entier rejeté).
+`tests/e2e/jalon1-naitre-quelque-part.spec.ts` couvre le parcours réel
+(connexion → création de ville → page de ville) avec un compte de test
+pré-confirmé via l'API admin Supabase, nettoyé après coup — pas encore
+exécuté avec succès de bout en bout, faute de clé `anon` valide et de
+migrations appliquées sur le projet réel (voir §10). `npm run build` et
+`npm run lint` passent.
+
+**Vérification rouge par sabotage** : `niveauVille.test.ts` couvre un
+niveau hors plage (-1, 6) et non entier (1.5) → `RangeError` attendu,
+test rouge si l'erreur n'est plus levée.
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*
@@ -190,12 +262,28 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
 5. **Stratégie App Store / Play Store.** PWA au démarrage ; passage aux
    stores nécessiterait un compte développeur Apple payant. → **À trancher
    par Adrien si/quand le jeu a une communauté.**
-6. **Accès réseau indisponible pour Claude Code depuis cette session.**
-   `npm install`, dépôt GitHub, projet Supabase et déploiement Vercel sont
-   à faire par Adrien dans son propre terminal (voir Jalon 0 au §4). → Pas
-   une décision à trancher, un fait à garder en tête pour la suite du
-   projet.
-7. **Format exact des paliers de guerre / rivalité internationale**
+6. ~~Accès réseau indisponible pour Claude Code depuis cette session.~~
+   **Périmé au Jalon 1** : cette session Claude Code a bien un accès
+   réseau sortant (installation de `@supabase/ssr`, appels au projet
+   Supabase réel pour diagnostiquer le point 8 ci-dessous). Reste vrai
+   que la création du dépôt GitHub et le déploiement Vercel n'ont pas
+   été retentés depuis cette session. Corrigé ici pour ne pas induire en
+   erreur un jalon futur.
+7. **Clé `anon` invalide dans `.env.local` (projet Supabase réel).**
+   Le `SUPABASE_SERVICE_ROLE_KEY` fonctionne contre le projet
+   (`wdqsbazuxnhhtnejbvwc.supabase.co`), mais `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   est rejetée avec "Invalid API key" (signature invalide) — bloque
+   toute action faite depuis le navigateur (inscription, connexion),
+   donc la recette du Jalon 1. → **À corriger par Adrien** : recopier la
+   clé `anon public` depuis Project Settings → API sur supabase.com,
+   remplacer la ligne dans `.env.local`.
+8. **Migrations `0001`/`0002` pas encore appliquées sur le projet
+   Supabase réel.** Écrites dans `supabase/` mais cette session n'a pas
+   les moyens de les pousser elle-même (pas de mot de passe de base de
+   données ni de session `supabase login`). → **À faire par Adrien** :
+   coller le contenu des deux fichiers dans l'éditeur SQL du tableau de
+   bord Supabase (voir `supabase/README.md`).
+9. **Format exact des paliers de guerre / rivalité internationale**
    (coefficients de réduction sur attaques répétées, plafonds de coalition).
    Le cahier des charges donne le principe, pas les chiffres ("les
    coefficients exacts seront définis lors du balancing"). → **À trancher

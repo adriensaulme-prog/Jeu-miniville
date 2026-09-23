@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { RegisterServiceWorker } from "./register-sw";
+import { Nav } from "@/components/Nav";
+import { getLocale } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "jeu_miniville (nom provisoire)",
@@ -13,15 +15,18 @@ export const viewport: Viewport = {
   themeColor: "#2563eb",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+
   return (
-    <html lang="fr">
+    <html lang={locale}>
       <body className="antialiased">
         <RegisterServiceWorker />
+        <Nav />
         {children}
       </body>
     </html>

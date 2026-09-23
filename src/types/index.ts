@@ -24,8 +24,12 @@ export interface City {
 }
 
 export interface Country {
-  id: string;
-  nom: string;
+  id: string; // code ISO 3166-1 alpha-2, ex. "FR"
+  // nom : étendu en nomFr/nomEn dès le Jalon 1 pour respecter la règle
+  // i18n de GUIDE-METHODE.md §9 (toute chaîne affichée a ses deux
+  // traductions dès sa création) — voir docs/DECISIONS.md §4, Jalon 1.
+  nomFr: string;
+  nomEn: string;
   population: number;
   influence: number;
   activite: number;

@@ -14,15 +14,16 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 - [x] **Jalon 0 — squelette technique.** Next.js/Supabase/PWA, tests,
   dépôt Git local. Détail dans `DECISIONS.md` §4.
+- [x] **Jalon 1 — Naître quelque part.** Création de compte (Supabase
+  Auth), choix du pseudo, du nom de ville et du pays, page de ville
+  minimale affichant population / influence / activité, niveau visuel de
+  départ (Hameau). Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-1.md`.
 
 ---
 
 ## Phase 1 — Une ville qui vit
 
-- [ ] **Jalon 1 — Naître quelque part.** Création de compte (Supabase
-  Auth), choix du nom de ville et du pays, page de ville minimale
-  affichant population / influence / activité, niveau visuel de départ
-  (Hameau).
 - [ ] **Jalon 2 — Grandir grâce aux autres.** Mécanique de connexion
   quotidienne entre joueurs (+1 population), une seule connexion
   comptabilisée par joueur et par ville et par jour, évolution visuelle
@@ -89,4 +90,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, avant le début du jalon 1.*
+*Dernière mise à jour : 23/09/2026, jalon 1 terminé, avant le début du
+jalon 2.*
