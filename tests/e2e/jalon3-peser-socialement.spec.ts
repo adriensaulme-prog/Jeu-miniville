@@ -95,7 +95,9 @@ test.describe("Jalon 3 — peser socialement", () => {
         p_joueur_id: joueur.userId,
         p_ville_id: joueur.villeId,
       });
-      expect(erreurAutoInfluence).not.toBeNull();
+      // Code dédié (P0005), pas P0001 (quota) : régression réelle
+      // trouvée en vérifiant le Jalon 4 — voir migration 0006.
+      expect(erreurAutoInfluence?.code).toBe("P0005");
 
       // 5 cibles distinctes pour épuiser le quota (la règle est "une
       // fois par ville et par jour" : il faut 5 villes différentes,

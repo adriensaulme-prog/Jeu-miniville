@@ -313,6 +313,110 @@ protégés (aucun test supprimé).
 
 ---
 
+### Jalon 4 — rivalités de quartier — 23/09/2026
+
+**Ce qui a été fait** : trois actions AntiVille (grève, contamination,
+propagande) sur la page `/villes`, avec quota quotidien (3/jour, tous
+types et cibles confondus) et protection anti-harcèlement dégressive
+par paire (attaquant, cible) sur une fenêtre glissante de 24h — 1re
+attaque = effet plein, 2e = effet réduit de moitié, 3e et suivantes =
+bloquées. Migrations `0005` et `0006` (correctif, voir plus bas).
+
+**Pourquoi** : cahier des charges §5 — créer des rivalités entre villes
+sans guerre militaire à l'intérieur d'un pays, avec la protection
+progressive explicitement exigée pour qu'une ville ne puisse pas être
+bloquée en permanence par un seul joueur.
+
+**Adrien a explicitement délégué les paramètres d'équilibrage** à
+Claude Code ("tranche selon tes reco" — `GUIDE-METHODE.md` §3), après
+avoir écarté deux autres options (donner les chiffres lui-même,
+réduire la portée à une seule action). Raisonnement complet des choix
+tranchés à sa place, pour qu'il puisse les contester d'un mot :
+
+1. **Quota AntiVille : 3 actions/jour**, plus bas que le quota
+   d'influence (5/jour, Jalon 3). Choix délibéré : les actions
+   AntiVille sont négatives pour la cible, un quota plus bas limite la
+   toxicité potentielle du jeu sans l'empêcher.
+2. **Protection dégressive par paire (attaquant, cible), tous types
+   d'action confondus**, sur une fenêtre glissante de 24h (pas un jour
+   calendaire UTC comme les autres quotas — une vraie "récupération"
+   progressive, cohérente avec le mot du cahier des charges). Le cahier
+   des charges mentionne aussi une protection liée à "la fréquence des
+   attaques reçues" en général, tous attaquants confondus : **non
+   implémentée à ce jalon**, simplification assumée et documentée dans
+   la migration `0005` — seule la version "même attaquant" (l'exemple
+   de principe donné par le cahier des charges) est couverte. Point
+   ouvert pour un jalon futur si une ville se retrouve harcelée par
+   plusieurs joueurs coordonnés.
+3. **Contamination : perte proportionnelle (10% de la population,
+   minimum 1 au plein effet)**, population jamais sous 1 — respecte la
+   contrainte fondatrice §1 point 4 ("jamais de destruction permanente
+   d'une ville"). À effet réduit (protection), la perte peut arrondir à
+   0 pour une petite ville : assumé, ça revient à une immunité de fait
+   une fois la ville déjà protégée.
+4. **Propagande : -2 influence au plein effet**, jamais sous 0.
+5. **Grève : bloque la réception d'influence pendant 24h au plein
+   effet (12h à effet réduit)**, pas de blocage de la production
+   (l'influence ne se "produit" pas passivement dans le jeu actuel,
+   elle vient uniquement des actions "Influencer" des autres joueurs —
+   bloquer la réception couvre donc tout le mécanisme existant).
+   Implémenté comme un état temporaire (`cities.greve_jusqua`), pas un
+   malus instantané comme les deux autres actions — `influencer_ville()`
+   (Jalon 3) a dû être redéfinie pour vérifier cet état.
+6. **Retour visible du résultat de chaque action** (réussie / effet
+   réduit / bloquée par la protection / quota atteint), contrairement à
+   `visiterVille`/`influencerVille` qui absorbent silencieusement leurs
+   cas "normaux" : se faire bloquer par la protection anti-harcèlement
+   est un événement que le joueur doit comprendre, pas une erreur à
+   cacher.
+
+**Bug trouvé en vérifiant contre le projet réel** : un `RAISE EXCEPTION`
+sans `using errcode` prend par défaut le code `P0001` en PL/pgSQL —
+exactement le code choisi à la main pour "quota atteint". Une ville
+introuvable, une auto-attaque ou un type d'action invalide étaient donc
+tous rapportés côté client comme "quota atteint" au lieu d'une vraie
+erreur, puisque `src/app/villes/actions.ts` ne distingue que sur
+`error.code`. Trouvé en testant `lancer_action_antiville()` avec un id
+de ville bidon via `curl` directement contre le projet réel (pas par un
+test automatisé — aucun des tests ne vérifiait le code exact de
+l'erreur d'auto-attaque, seulement qu'une erreur existait). Corrigé par
+la migration `0006`, qui donne un code dédié à chaque cas (`P0004`
+ville introuvable, `P0005` auto-cible, `P0006` type invalide, `P0007`
+non autorisé) et documente le registre complet des codes utilisés.
+Les tests des Jalons 3 et 4 ont été renforcés pour vérifier le code
+exact de l'erreur d'auto-cible, afin que cette régression précise ne
+puisse plus repasser inaperçue.
+
+**Autre point d'attention noté en testant** : un test Playwright qui
+expire (timeout) peut sauter l'exécution de son bloc `finally`, donc ne
+pas nettoyer les comptes de test qu'il avait créés — c'est arrivé
+pendant la vérification de ce jalon (deux comptes `*-antiville-*`
+laissés dans le projet Supabase réel avant que la migration `0005` n'y
+soit appliquée, nettoyés à la main). À garder en tête pour les jalons
+suivants : après un run e2e qui a timeout, vérifier
+`auth.users` avant de relancer.
+
+**Ce qui a été testé** :
+`tests/e2e/jalon4-rivalites-de-quartier.spec.ts` — propagande réelle
+via l'UI (influence réduite, visible dans le tableau), grève qui bloque
+bien une tentative d'influence d'un tiers, contamination qui ne fait
+jamais tomber une ville à 0 habitant, la courbe complète de protection
+(1re attaque pleine, 2e réduite, 3e bloquée avec le code `P0003`), et
+le quota de 3 réellement bloquant à la 4e cible avec le code `P0001`.
+Tests des Jalons 3 et 4 renforcés sur le code exact de l'erreur
+d'auto-cible (voir bug ci-dessus). `npm run build`, `npm run lint` et
+la suite complète (`npm test` + `npm run test:e2e`, 14 tests unitaires
++ 13 tests e2e) passent contre le projet Supabase réel, migrations
+`0005` et `0006` appliquées.
+
+**Vérification rouge par sabotage** : contamination sur une ville à
+population 1 (ne doit jamais atteindre 0), auto-attaque, protection
+anti-harcèlement à la 3e attaque, quota à la 4e action. Quatre cas de
+sabotage pour ce jalon, en plus des sept déjà couverts par les jalons
+précédents et toujours protégés (aucun test supprimé).
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*

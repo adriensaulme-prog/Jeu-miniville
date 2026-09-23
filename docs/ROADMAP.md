@@ -26,6 +26,10 @@ de vue du joueur — le titre dit ce qui change pour lui.
 - [x] **Jalon 3 — Peser socialement.** 5 actions d'influence par jour,
   cibler une autre ville, effet +1 influence. Détail dans
   `DECISIONS.md` §4 — recette dans `docs/recette-jalon-3.md`.
+- [x] **Jalon 4 — Rivalités de quartier.** Actions AntiVille de base
+  (grève, contamination, propagande) avec protection progressive contre le
+  harcèlement (effets dégressifs sur attaques répétées). Détail dans
+  `DECISIONS.md` §4 — recette dans `docs/recette-jalon-4.md`.
 
 ---
 
@@ -33,9 +37,6 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 2 — Rivalités entre villes
 
-- [ ] **Jalon 4 — Rivalités de quartier.** Actions AntiVille de base
-  (grève, contamination, propagande) avec protection progressive contre le
-  harcèlement (effets dégressifs sur attaques répétées).
 - [ ] **Jalon 5 — Villes jumelles.** Proposition et acceptation de
   jumelage entre deux villes, bonus quotidien si les deux joueurs sont
   actifs.
@@ -90,5 +91,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 3 terminé (fin de la Phase 1),
-avant le début du jalon 4.*
+*Dernière mise à jour : 23/09/2026, jalon 4 terminé, avant le début du
+jalon 5.*

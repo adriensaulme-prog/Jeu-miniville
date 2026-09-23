@@ -81,6 +81,20 @@ export const dictionaries = {
     "villes.dejaInfluencee": "Déjà influencée aujourd'hui",
     "villes.quotaAtteint": "Quota atteint",
     "villes.actionsRestantes": "Actions d'influence restantes aujourd'hui :",
+    "villes.antiVille": "AntiVille",
+    "villes.greve": "Grève",
+    "villes.contamination": "Contamination",
+    "villes.propagande": "Propagande",
+    "villes.enGreve": "En grève",
+    "villes.protectionActive": "Protection anti-harcèlement active",
+    "villes.quotaAntiVilleAtteint": "Quota AntiVille atteint",
+    "villes.antiVilleReussie": "Action lancée.",
+    "villes.antiVilleReussieEffetReduit":
+      "Action lancée, effet réduit de moitié (déjà attaquée récemment).",
+    "villes.antiVilleProtection":
+      "Bloqué : protection anti-harcèlement active sur cette ville (2 actions déjà lancées contre elle dans les dernières 24h).",
+    "villes.antiVilleQuota": "Quota quotidien d'actions AntiVille atteint (3).",
+    "villes.antiVilleErreur": "L'action a échoué. Réessaie dans un instant.",
 
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
@@ -153,6 +167,20 @@ export const dictionaries = {
     "villes.dejaInfluencee": "Already influenced today",
     "villes.quotaAtteint": "Quota reached",
     "villes.actionsRestantes": "Influence actions left today:",
+    "villes.antiVille": "AntiVille",
+    "villes.greve": "Strike",
+    "villes.contamination": "Contamination",
+    "villes.propagande": "Propaganda",
+    "villes.enGreve": "On strike",
+    "villes.protectionActive": "Anti-harassment protection active",
+    "villes.quotaAntiVilleAtteint": "AntiVille quota reached",
+    "villes.antiVilleReussie": "Action launched.",
+    "villes.antiVilleReussieEffetReduit":
+      "Action launched, effect halved (already attacked recently).",
+    "villes.antiVilleProtection":
+      "Blocked: anti-harassment protection is active on this city (2 actions already launched against it in the last 24h).",
+    "villes.antiVilleQuota": "Daily AntiVille action quota reached (3).",
+    "villes.antiVilleErreur": "The action failed. Please try again in a moment.",
 
     "erreurs.connexionRequise": "Log in to access this page.",
   },
