@@ -17,6 +17,16 @@ export async function Nav() {
         jeu_miniville
       </Link>
       <div className="flex items-center gap-4">
+        {user ? (
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/ville" className="text-gray-600 hover:text-gray-900">
+              {traduire(locale, "nav.maVille")}
+            </Link>
+            <Link href="/villes" className="text-gray-600 hover:text-gray-900">
+              {traduire(locale, "nav.villes")}
+            </Link>
+          </nav>
+        ) : null}
         <LangSwitcher locale={locale} />
         {user ? (
           <form action={deconnexion}>

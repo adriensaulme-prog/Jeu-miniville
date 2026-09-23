@@ -22,6 +22,8 @@ export const dictionaries = {
     "accueil.voirMaVille": "Voir ma ville",
 
     "nav.langue": "Langue",
+    "nav.maVille": "Ma ville",
+    "nav.villes": "Villes",
     "nav.seDeconnecter": "Se déconnecter",
 
     "inscription.titre": "Créer un compte",
@@ -66,6 +68,16 @@ export const dictionaries = {
     "niveau.4": "Grande ville",
     "niveau.5": "Métropole",
 
+    "villes.titre": "Les villes du monde",
+    "villes.introduction":
+      "Visite une autre ville pour lui donner +1 population — une seule fois par ville et par jour.",
+    "villes.nom": "Ville",
+    "villes.pays": "Pays",
+    "villes.population": "Population",
+    "villes.visiter": "Visiter",
+    "villes.dejaVisitee": "Déjà visitée aujourd'hui",
+    "villes.aucuneAutreVille": "Il n'y a pas encore d'autre ville à visiter.",
+
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
   en: {
@@ -78,6 +90,8 @@ export const dictionaries = {
     "accueil.voirMaVille": "See my city",
 
     "nav.langue": "Language",
+    "nav.maVille": "My city",
+    "nav.villes": "Cities",
     "nav.seDeconnecter": "Log out",
 
     "inscription.titre": "Create an account",
@@ -121,6 +135,16 @@ export const dictionaries = {
     "niveau.3": "City",
     "niveau.4": "Big city",
     "niveau.5": "Metropolis",
+
+    "villes.titre": "The world's cities",
+    "villes.introduction":
+      "Visit another city to give it +1 population — once per city, per day.",
+    "villes.nom": "City",
+    "villes.pays": "Country",
+    "villes.population": "Population",
+    "villes.visiter": "Visit",
+    "villes.dejaVisitee": "Already visited today",
+    "villes.aucuneAutreVille": "There's no other city to visit yet.",
 
     "erreurs.connexionRequise": "Log in to access this page.",
   },

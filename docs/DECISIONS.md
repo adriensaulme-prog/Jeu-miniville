@@ -173,6 +173,91 @@ migrations appliquées sur le projet réel (voir §10). `npm run build` et
 niveau hors plage (-1, 6) et non entier (1.5) → `RangeError` attendu,
 test rouge si l'erreur n'est plus levée.
 
+**Mise à jour a posteriori** : une fois Adrien a corrigé la clé `anon`
+et appliqué les migrations, la suite e2e est passée de bout en bout —
+voir le Jalon 2 ci-dessous, où deux bugs supplémentaires ont été trouvés
+en la faisant vraiment tourner (client navigateur sans cookie de
+session, hook React périmé).
+
+---
+
+### Jalon 2 — grandir grâce aux autres — 23/09/2026
+
+**Ce qui a été fait** : page `/villes` listant toutes les villes sauf la
+sienne (nom, pays, population), bouton "Visiter" qui donne +1 population
+à la ville visitée — une fois par (visiteur, ville, jour). Le niveau
+visuel de la ville évolue automatiquement en franchissant les seuils de
+population (migration `0003`, fonction `population_vers_niveau()`).
+Navigation ajoutée dans la barre du haut ("Ma ville" / "Villes"), absente
+depuis le Jalon 1.
+
+**Pourquoi** : cahier des charges §3 (population et connexions) et §2
+(évolution visuelle) — le cœur de la boucle "attirer des joueurs pour
+faire grandir sa ville".
+
+**Décisions prises en cours de route** :
+
+1. **Découverte des villes à visiter** : liste simple (nom, pays,
+   population), triée par population décroissante — tranché par Adrien
+   plutôt qu'un bouton "ville au hasard". Le vrai classement (tri par
+   colonne, pagination) arrive au Jalon 6.
+2. **Seuils d'évolution visuelle, provisoires** : 0 (Hameau) dès la
+   naissance, puis 5/15/30/60/120 habitants pour les niveaux 1 à 5.
+   Choisis pour qu'une évolution soit visible avec une poignée de
+   joueurs de test, pas calibrés sur un vrai volume de joueurs — cahier
+   des charges §2 : "seuils à équilibrer pendant les tests"
+   (`docs/DECISIONS.md` §10 point 2, toujours ouvert). Dupliqués dans
+   `src/lib/game/niveauVille.ts` (source pour les tests unitaires) et
+   `population_vers_niveau()` en SQL (autorité réelle, anti-triche) —
+   les deux fichiers se référencent l'un l'autre en commentaire.
+3. **Anti-triche** : comme au Jalon 1, aucune policy RLS d'écriture sur
+   `visites` pour le client — tout passe par `visiter_ville()` (clé
+   service_role), qui refuse aussi de se visiter soi-même et applique
+   l'unicité (visiteur, ville, jour) par contrainte SQL, pas par de la
+   logique applicative contournable.
+4. **"Jour" = jour calendaire UTC**, pas le fuseau horaire du joueur.
+   Simplification délibérée pour le MVP ; à reconsidérer si des joueurs
+   dans des fuseaux très éloignés trouvent la limite de minuit injuste.
+5. **`activité` non touchée à ce jalon** : le Jalon 2 du `ROADMAP.md` ne
+   parle que de population et de niveau visuel ; le champ `activite` de
+   `cities` reste à 0 jusqu'à un jalon qui le définira précisément
+   (candidat naturel : agrégation pays du Jalon 7, cahier des charges §9).
+
+**Bug trouvé en écrivant la page** (avant même de la tester) : `/villes`
+ne vérifiait pas que le visiteur avait déjà un profil (`public.users`) —
+un compte fraîchement créé sans ville pouvait afficher la page et cliquer
+"Visiter", provoquant une violation de clé étrangère silencieuse côté
+serveur (l'action avalait l'erreur). Corrigé en ajoutant la même
+redirection que `/ville` vers `/ville/creer` quand le profil n'existe
+pas. Trouvé en testant manuellement avec un compte créé directement via
+l'API admin Supabase (sans passer par le formulaire d'inscription) —
+scénario qu'aucun test automatisé ne couvrait puisque les comptes de
+test du Jalon 1 et du Jalon 2 passent tous par `creer_ville()`.
+
+**Autre point d'attention noté en testant** : lancer deux serveurs
+`npm run dev` en parallèle sur le même dossier `.next` (le serveur de
+prévisualisation de Claude Code + celui que Playwright essaie de
+démarrer si le premier n'est pas détecté à temps) corrompt le cache de
+build et provoque des 404 sur toutes les routes. Pas un bug du projet,
+mais à savoir pour les prochains jalons : toujours arrêter le serveur de
+prévisualisation avant de lancer `npm run test:e2e` en ligne de commande.
+
+**Ce qui a été testé** : `tests/unit/niveauVille.test.ts` étendu
+(`niveauPourPopulation` : valeur de naissance, juste avant/juste au
+seuil pour chaque niveau, plafond à Métropole, sabotage population
+négative ou non entière). `tests/e2e/jalon2-grandir-grace-aux-autres.spec.ts` :
+parcours réel (connexion → visite → +1 population → "déjà visitée" au
+rechargement), plus deux tests de sabotage au niveau de la fonction SQL
+directement : auto-visite refusée, double visite le même jour refusée
+(deuxième appel : `23505`, population +1 seulement), et franchissement
+réel du seuil du niveau 1 avec 4 visiteurs distincts. `npm run build`,
+`npm run lint` et la suite complète (`npm test` + `npm run test:e2e`,
+14 tests unitaires + 6 tests e2e) passent contre le projet Supabase réel.
+
+**Vérification rouge par sabotage** : voir ci-dessus — auto-visite,
+double visite le même jour, population négative/non entière, niveau
+hors plage. Cinq cas de sabotage au total pour ce jalon.
+
 ---
 
 *(Les jalons suivants migrent ici au fur et à mesure, depuis

@@ -19,15 +19,15 @@ de vue du joueur — le titre dit ce qui change pour lui.
   minimale affichant population / influence / activité, niveau visuel de
   départ (Hameau). Détail dans `DECISIONS.md` §4 — recette dans
   `docs/recette-jalon-1.md`.
+- [x] **Jalon 2 — Grandir grâce aux autres.** Page listant les autres
+  villes, visite quotidienne (+1 population, une fois par joueur et par
+  ville et par jour), évolution visuelle automatique selon seuils.
+  Détail dans `DECISIONS.md` §4 — recette dans `docs/recette-jalon-2.md`.
 
 ---
 
 ## Phase 1 — Une ville qui vit
 
-- [ ] **Jalon 2 — Grandir grâce aux autres.** Mécanique de connexion
-  quotidienne entre joueurs (+1 population), une seule connexion
-  comptabilisée par joueur et par ville et par jour, évolution visuelle
-  automatique selon seuils.
 - [ ] **Jalon 3 — Peser socialement.** 5 actions d'influence par jour,
   cibler une autre ville, effet +1 influence.
 
@@ -90,5 +90,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 1 terminé, avant le début du
-jalon 2.*
+*Dernière mise à jour : 23/09/2026, jalon 2 terminé, avant le début du
+jalon 3.*
