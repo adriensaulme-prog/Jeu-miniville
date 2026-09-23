@@ -1,0 +1,29 @@
+# dépendances
+/node_modules
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# build
+/build
+
+# tests
+/coverage
+/playwright-report
+/test-results
+
+# environnement (jamais commiter de vraies clés)
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# outil (état de session, pas du contenu de projet)
+.claude/
+
+# système
+.DS_Store
+Thumbs.db
