@@ -70,7 +70,8 @@ avancées.
 - **PWA** : manifest + service worker pour l'installation sur mobile et
   PC, sans passer par un store.
 - **Tests** : Vitest (unitaire), Playwright (bout-en-bout).
-- **Code source** : GitHub, dépôt privé.
+- **Code source** : GitHub, dépôt privé —
+  `github.com/adriensaulme-prog/Jeu-miniville`.
 - **Langue par défaut** : français, anglais en parallèle dès le premier
   texte.
 
