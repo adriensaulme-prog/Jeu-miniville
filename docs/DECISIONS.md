@@ -260,6 +260,59 @@ hors plage. Cinq cas de sabotage au total pour ce jalon.
 
 ---
 
+### Jalon 3 — peser socialement — 23/09/2026
+
+**Ce qui a été fait** : sur la page `/villes` (Jalon 2), un deuxième
+bouton "Influencer" à côté de "Visiter" — +1 influence à une autre
+ville, avec un quota affiché en haut de page ("Actions d'influence
+restantes aujourd'hui : x/5"). Migration `0004` (table
+`actions_influence`, fonction `influencer_ville()`).
+
+**Pourquoi** : cahier des charges §4 — "chaque joueur dispose de 5
+actions d'influence par jour. Une action permet d'influencer une autre
+ville."
+
+**Décisions prises en cours de route** :
+
+1. **Une fois par ville et par jour, comme les visites** — tranché par
+   Adrien plutôt que de permettre de concentrer les 5 actions sur une
+   seule ville. Même mécanisme anti-abus que `visiter_ville()` : la
+   contrainte unique `(joueur_id, ville_id, jour)` empêche de cibler
+   deux fois la même ville le même jour ; le quota de 5 (compté, pas de
+   contrainte SQL simple possible pour un total) est vérifié dans
+   `influencer_ville()` avant l'insertion.
+2. **Auto-influence refusée** : le cahier des charges dit littéralement
+   "influencer *une autre* ville" — pas d'ambiguïté à signaler ici,
+   contrairement à la règle "une fois par ville et par jour" (point 1)
+   qui, elle, n'était pas explicite pour l'influence.
+3. **Limite connue et acceptée sur le quota** : la vérification
+   (compter les actions du jour, puis insérer) n'est pas verrouillée
+   entre les deux étapes — un même joueur cliquant vraiment
+   simultanément (deux onglets, script) pourrait dépasser 5 de
+   quelques unités. Risque jugé négligeable pour un clic humain normal ;
+   documenté dans la migration `0004` elle-même, à revoir si ça devient
+   un vecteur de triche observé en pratique.
+4. **Colonne "Influence" ajoutée au tableau `/villes`** (population
+   déjà affichée depuis le Jalon 2) : cohérent avec l'affichage
+   existant, aide à décider qui influencer.
+
+**Ce qui a été testé** : `tests/e2e/jalon3-peser-socialement.spec.ts` —
+parcours réel (connexion → influencer → +1 influence → compteur de
+quota qui descend → "déjà influencée" qui tient au rechargement), plus
+sabotage au niveau de la fonction SQL directement : auto-influence
+refusée, et quota de 5 réellement bloquant à la 6e ville différente
+(vérifié avec 6 cibles distinctes, pas juste 6 appels sur la même,
+puisque la règle est justement "une fois par ville"). `npm run build`,
+`npm run lint` et la suite complète (`npm test` + `npm run test:e2e`,
+14 tests unitaires + 8 tests e2e) passent contre le projet Supabase réel.
+
+**Vérification rouge par sabotage** : auto-influence, 6e action du jour
+sur une 6e ville distincte (quota). Deux cas de sabotage pour ce jalon,
+en plus des cinq déjà couverts par les jalons précédents et toujours
+protégés (aucun test supprimé).
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*

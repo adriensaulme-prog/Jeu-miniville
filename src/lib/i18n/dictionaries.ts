@@ -77,6 +77,10 @@ export const dictionaries = {
     "villes.visiter": "Visiter",
     "villes.dejaVisitee": "Déjà visitée aujourd'hui",
     "villes.aucuneAutreVille": "Il n'y a pas encore d'autre ville à visiter.",
+    "villes.influencer": "Influencer",
+    "villes.dejaInfluencee": "Déjà influencée aujourd'hui",
+    "villes.quotaAtteint": "Quota atteint",
+    "villes.actionsRestantes": "Actions d'influence restantes aujourd'hui :",
 
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
@@ -145,6 +149,10 @@ export const dictionaries = {
     "villes.visiter": "Visit",
     "villes.dejaVisitee": "Already visited today",
     "villes.aucuneAutreVille": "There's no other city to visit yet.",
+    "villes.influencer": "Influence",
+    "villes.dejaInfluencee": "Already influenced today",
+    "villes.quotaAtteint": "Quota reached",
+    "villes.actionsRestantes": "Influence actions left today:",
 
     "erreurs.connexionRequise": "Log in to access this page.",
   },

@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
-import { visiterVille } from "./actions";
+import { influencerVille, visiterVille } from "./actions";
+
+const QUOTA_INFLUENCE_QUOTIDIEN = 5;
 
 export default async function VillesPage() {
   const locale = await getLocale();
@@ -29,13 +31,14 @@ export default async function VillesPage() {
     id: string;
     nom: string;
     population: number;
+    influence: number;
     pays: { nom: string } | { nom: string }[] | null;
   };
 
   const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
   const { data } = await supabase
     .from("cities")
-    .select(`id, nom, population, pays:countries(nom:${colonneNomPays})`)
+    .select(`id, nom, population, influence, pays:countries(nom:${colonneNomPays})`)
     .neq("owner_id", user.id)
     .order("population", { ascending: false });
   const villes = (data ?? []) as LigneVille[];
@@ -48,11 +51,26 @@ export default async function VillesPage() {
     .eq("jour", aujourdhui);
   const villesDejaVisitees = new Set((visitesDuJour ?? []).map((v) => v.ville_id));
 
+  const { data: actionsInfluenceDuJour } = await supabase
+    .from("actions_influence")
+    .select("ville_id")
+    .eq("joueur_id", user.id)
+    .eq("jour", aujourdhui);
+  const villesDejaInfluencees = new Set(
+    (actionsInfluenceDuJour ?? []).map((a) => a.ville_id)
+  );
+  const actionsInfluenceRestantes =
+    QUOTA_INFLUENCE_QUOTIDIEN - villesDejaInfluencees.size;
+
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8">
       <div>
         <h1 className="text-2xl font-bold">{traduire(locale, "villes.titre")}</h1>
         <p className="text-sm text-gray-600">{traduire(locale, "villes.introduction")}</p>
+        <p className="mt-1 text-sm text-gray-600">
+          {traduire(locale, "villes.actionsRestantes")} {actionsInfluenceRestantes}/
+          {QUOTA_INFLUENCE_QUOTIDIEN}
+        </p>
       </div>
 
       {villes.length === 0 ? (
@@ -66,6 +84,8 @@ export default async function VillesPage() {
               <th className="py-2">{traduire(locale, "villes.nom")}</th>
               <th className="py-2">{traduire(locale, "villes.pays")}</th>
               <th className="py-2">{traduire(locale, "villes.population")}</th>
+              <th className="py-2">{traduire(locale, "ville.influence")}</th>
+              <th className="py-2" />
               <th className="py-2" />
             </tr>
           </thead>
@@ -73,11 +93,13 @@ export default async function VillesPage() {
             {villes.map((ville) => {
               const nomPays = Array.isArray(ville.pays) ? ville.pays[0]?.nom : ville.pays?.nom;
               const dejaVisitee = villesDejaVisitees.has(ville.id);
+              const dejaInfluencee = villesDejaInfluencees.has(ville.id);
               return (
                 <tr key={ville.id} className="border-b border-gray-100">
                   <td className="py-2 font-medium">{ville.nom}</td>
                   <td className="py-2 text-gray-600">{nomPays}</td>
                   <td className="py-2 text-gray-600">{ville.population}</td>
+                  <td className="py-2 text-gray-600">{ville.influence}</td>
                   <td className="py-2 text-right">
                     {dejaVisitee ? (
                       <span className="text-xs text-gray-400">
@@ -91,6 +113,27 @@ export default async function VillesPage() {
                           className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
                         >
                           {traduire(locale, "villes.visiter")}
+                        </button>
+                      </form>
+                    )}
+                  </td>
+                  <td className="py-2 text-right">
+                    {dejaInfluencee ? (
+                      <span className="text-xs text-gray-400">
+                        {traduire(locale, "villes.dejaInfluencee")}
+                      </span>
+                    ) : actionsInfluenceRestantes <= 0 ? (
+                      <span className="text-xs text-gray-400">
+                        {traduire(locale, "villes.quotaAtteint")}
+                      </span>
+                    ) : (
+                      <form action={influencerVille}>
+                        <input type="hidden" name="villeId" value={ville.id} />
+                        <button
+                          type="submit"
+                          className="rounded bg-purple-600 px-3 py-1 text-xs text-white hover:bg-purple-700"
+                        >
+                          {traduire(locale, "villes.influencer")}
                         </button>
                       </form>
                     )}

@@ -23,13 +23,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
   villes, visite quotidienne (+1 population, une fois par joueur et par
   ville et par jour), évolution visuelle automatique selon seuils.
   Détail dans `DECISIONS.md` §4 — recette dans `docs/recette-jalon-2.md`.
+- [x] **Jalon 3 — Peser socialement.** 5 actions d'influence par jour,
+  cibler une autre ville, effet +1 influence. Détail dans
+  `DECISIONS.md` §4 — recette dans `docs/recette-jalon-3.md`.
 
 ---
 
-## Phase 1 — Une ville qui vit
-
-- [ ] **Jalon 3 — Peser socialement.** 5 actions d'influence par jour,
-  cibler une autre ville, effet +1 influence.
+## Phase 1 — Une ville qui vit *(terminée)*
 
 ## Phase 2 — Rivalités entre villes
 
@@ -90,5 +90,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 2 terminé, avant le début du
-jalon 3.*
+*Dernière mise à jour : 23/09/2026, jalon 3 terminé (fin de la Phase 1),
+avant le début du jalon 4.*
