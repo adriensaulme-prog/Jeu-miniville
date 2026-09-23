@@ -78,8 +78,32 @@ avancées.
 
 ## §4. Journal des jalons
 
-*(vide pour l'instant — chaque jalon terminé migre ici depuis
-`ROADMAP.md` avec : ce qui a été fait, pourquoi, ce qui a été testé, le
+### Jalon 0 — squelette technique (Next.js, Supabase, PWA) — 23/09/2026
+
+**Ce qui a été fait** : mise en place de la base technique avant tout
+contenu de jeu — projet Next.js (App Router, TypeScript, Tailwind),
+clients Supabase séparés navigateur/serveur, manifest + service worker
+PWA minimal, harnais de tests (Vitest + Playwright), dépôt Git local
+initialisé et taggé `0.0.0`.
+
+**Pourquoi** : jalon technique pur, dans l'esprit des jalons techniques de
+CVLS — rien de neuf n'est jouable, mais tout ce qui suit s'appuie dessus.
+
+**Ce qui a été testé** : un test canari unitaire (`tests/unit/harness.test.ts`)
+et un test de fumée bout-en-bout (`tests/e2e/smoke.spec.ts`), tous deux
+non jetables. Pas de sabotage effectué : aucune règle de jeu n'existe
+encore à casser.
+
+**Point d'attention noté au passage** : cette session Claude n'a aucun
+accès réseau, ni depuis le sandbox cloud ni depuis le dossier connecté sur
+la machine d'Adrien (host non autorisé par la politique d'égress de
+l'organisation). Concrètement : `npm install`, la création du dépôt
+GitHub et son premier `git push`, la création du projet Supabase, et le
+déploiement Vercel doivent être faits par Adrien lui-même, dans son propre
+terminal. Documenté aussi en §10.
+
+*(Les jalons suivants migrent ici au fur et à mesure, depuis
+`ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*
 
 ---
@@ -165,7 +189,12 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
 5. **Stratégie App Store / Play Store.** PWA au démarrage ; passage aux
    stores nécessiterait un compte développeur Apple payant. → **À trancher
    par Adrien si/quand le jeu a une communauté.**
-6. **Format exact des paliers de guerre / rivalité internationale**
+6. **Accès réseau indisponible pour Claude Code depuis cette session.**
+   `npm install`, dépôt GitHub, projet Supabase et déploiement Vercel sont
+   à faire par Adrien dans son propre terminal (voir Jalon 0 au §4). → Pas
+   une décision à trancher, un fait à garder en tête pour la suite du
+   projet.
+7. **Format exact des paliers de guerre / rivalité internationale**
    (coefficients de réduction sur attaques répétées, plafonds de coalition).
    Le cahier des charges donne le principe, pas les chiffres ("les
    coefficients exacts seront définis lors du balancing"). → **À trancher

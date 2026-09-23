@@ -10,6 +10,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ---
 
+## Fait
+
+- [x] **Jalon 0 — squelette technique.** Next.js/Supabase/PWA, tests,
+  dépôt Git local. Détail dans `DECISIONS.md` §4.
+
+---
+
 ## Phase 1 — Une ville qui vit
 
 - [ ] **Jalon 1 — Naître quelque part.** Création de compte (Supabase
