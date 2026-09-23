@@ -417,6 +417,92 @@ précédents et toujours protégés (aucun test supprimé).
 
 ---
 
+### Jalon 5 — villes jumelles — 23/09/2026
+
+**Ce qui a été fait** : proposer un jumelage à une autre ville depuis
+`/villes`, l'accepter ou le refuser depuis une nouvelle page
+`/jumelages` (qui liste aussi les jumelages actifs et les demandes
+envoyées, avec un bouton "Annuler" pour y mettre fin), bonus quotidien
+de +1 population aux deux villes quand les deux joueurs ont été actifs
+le même jour. Migration `0007` (tables `jumelages` et `jumelage_bonus`,
+fonctions `proposer_jumelage()`, `repondre_jumelage()`,
+`annuler_jumelage()`, `reclamer_bonus_jumelages()`).
+
+**Pourquoi** : cahier des charges §6 — créer de vraies relations entre
+joueurs, "sans transformer le système en gestion complexe."
+
+**Le nombre de jumelages actifs était un point ouvert explicite**
+(`DECISIONS.md` §10 point 3, qui prévoyait déjà la délégation) —
+tranché par Claude Code dans le même esprit que le Jalon 4 :
+
+1. **3 jumelages actifs maximum par ville**, revérifié à la fois côté
+   proposant (à la proposition) et côté cible (à l'acceptation, au cas
+   où sa situation aurait changé entre-temps). Même ordre de grandeur
+   que le quota AntiVille, pour rester cohérent et éviter la "gestion
+   complexe" que le cahier des charges veut éviter.
+2. **Une seule relation en_attente/actif à la fois entre deux villes
+   données**, dans un sens ou l'autre — appliqué par un index unique
+   partiel sur `(least(ville_a, ville_b), greatest(ville_a, ville_b))`,
+   donc garanti même en cas de double clic ou de requêtes concurrentes
+   (pas seulement vérifié côté application).
+3. **Bonus : +1 population aux deux villes**, même ordre de grandeur
+   qu'une visite (Jalon 2) — "petit bonus quotidien" au sens littéral du
+   cahier des charges.
+4. **Définition de "joueur actif"** : au moins une visite, une action
+   d'influence ou une action AntiVille lancée ce jour-là (UTC) — pas de
+   notion de connexion/login séparée, qui n'existe pas encore dans le
+   jeu. Simplification assumée et documentée dans la migration `0007`.
+5. **Bonus accordé au chargement de `/ville` ou `/jumelages`**, pas par
+   une tâche planifiée : le projet n'a aucune infrastructure de tâches
+   en arrière-plan à ce stade (cohérent avec la contrainte "zéro coût,
+   zéro infrastructure" — `DECISIONS.md` §1 point 1), et le cahier des
+   charges n'exige pas un versement à une heure précise. La fonction
+   SQL est idempotente (une ligne dans `jumelage_bonus` par jumelage et
+   par jour) : le rappeler plusieurs fois le même jour ne redonne rien.
+   Concession assumée : le bonus peut mettre du temps à apparaître si
+   aucun des deux joueurs ne recharge une de ces deux pages après que
+   les deux ont été actifs.
+
+**Bug trouvé en écrivant les tests** (pas en vérifiant contre le projet
+réel cette fois — trouvé avant même d'appliquer la migration) : dans
+`proposer_jumelage()`, le quota (3 jumelages actifs) est vérifié avant
+la tentative d'insertion, donc une proposition vers une ville déjà
+jumelée alors que le quota est déjà plein renvoie "quota atteint"
+(`P0008`) plutôt que "déjà jumelée" (`23505`) — les deux sont vraies
+en même temps, mais un seul code peut être renvoyé. Pas corrigé (les
+deux comportements sont défendables), mais le test de sabotage a été
+réorganisé pour vérifier chaque cas séparément, sans les mélanger.
+
+**Ce qui a été testé** : `tests/e2e/jalon5-villes-jumelles.spec.ts` —
+parcours réel (proposer → accepter → bonus accordé, visible sur
+`/jumelages` et reflété dans la population des deux villes → rappel du
+bonus le même jour sans effet, idempotence vérifiée), et sabotage :
+auto-jumelage refusé (`P0005`), double proposition vers une ville déjà
+jumelée refusée (`23505`), quota de 3 jumelages actifs réellement
+bloquant à la 4e ville (`P0008`). Vérifié aussi visuellement dans le
+navigateur (proposer, recevoir, accepter). `npm run build`, `npm run
+lint` et la suite complète (`npm test` + `npm run test:e2e`, 14 tests
+unitaires + 15 tests e2e) passent contre le projet Supabase réel,
+migration `0007` appliquée.
+
+**Point d'attention noté en testant, qui s'aggrave avec le nombre de
+jalons** : la flakiness du serveur de dev sous compilation à froid
+(déjà notée au Jalon 2) devient plus visible à mesure que le nombre de
+routes grandit (10 routes à ce jalon) — une suite e2e lancée juste
+après `rm -rf .next` peut voir plusieurs tests échouer en parallèle la
+première fois, simplement parce que Next.js compile chaque route à la
+demande. Un deuxième passage (routes déjà compilées) suffit à confirmer
+si c'est bien ça ou un vrai bug. Pas un problème pour la production
+(le build de prod précompile tout), seulement pour les runs e2e locaux
+répétés dans une même session de vérification.
+
+**Vérification rouge par sabotage** : auto-jumelage, double proposition
+vers une ville déjà liée, quota de 3 jumelages actifs. Trois cas de
+sabotage pour ce jalon, en plus des onze déjà couverts par les jalons
+précédents et toujours protégés (aucun test supprimé).
+
+---
+
 *(Les jalons suivants migrent ici au fur et à mesure, depuis
 `ROADMAP.md`, avec : ce qui a été fait, pourquoi, ce qui a été testé, le
 compte de vérification par sabotage, et les bugs trouvés en route.)*
@@ -495,9 +581,10 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
    Métropole). Le cahier des charges dit explicitement "seuils à équilibrer
    pendant les tests". → **À trancher par Adrien après les premiers
    tests.**
-3. **Nombre de jumelages actifs autorisés par ville.** Non précisé au
-   cahier des charges. → **À trancher par Adrien**, ou délégation possible
-   ("tranche selon tes reco") si souhaité.
+3. ~~Nombre de jumelages actifs autorisés par ville.~~ **Tranché au
+   Jalon 5** : 3 jumelages actifs par ville, délégué à Claude Code
+   ("tranche selon tes reco"). Détail et raisonnement dans
+   `DECISIONS.md` §4, journal du Jalon 5.
 4. **Publicités et premium.** Chapitre volontairement laissé ouvert par le
    cahier des charges lui-même (§7). → **Hors MVP, à rouvrir plus tard par
    Adrien.**

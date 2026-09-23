@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PAGES_PROTEGEES = ["/ville", "/villes"];
+const PAGES_PROTEGEES = ["/ville", "/villes", "/jumelages"];
 
 /**
  * Rafraîchit le cookie de session Supabase à chaque requête (pattern

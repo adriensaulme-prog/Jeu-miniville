@@ -2,11 +2,12 @@ import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { ActionsAntiVille } from "./ActionsAntiVille";
-import { influencerVille, visiterVille } from "./actions";
+import { influencerVille, proposerJumelage, visiterVille } from "./actions";
 
 const QUOTA_INFLUENCE_QUOTIDIEN = 5;
 const QUOTA_ANTIVILLE_QUOTIDIEN = 3;
 const SEUIL_PROTECTION_ANTIVILLE = 2; // actions récentes (24h) contre une cible avant blocage
+const QUOTA_JUMELAGES_ACTIFS = 3;
 
 export default async function VillesPage() {
   const locale = await getLocale();
@@ -22,13 +23,14 @@ export default async function VillesPage() {
 
   const { data: profil } = await supabase
     .from("users")
-    .select("id")
+    .select("id, city_id")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!profil) {
     redirect("/ville/creer");
   }
+  const maVilleId = profil!.city_id as string;
 
   type LigneVille = {
     id: string;
@@ -92,6 +94,21 @@ export default async function VillesPage() {
     );
   }
 
+  const { data: mesJumelages } = await supabase
+    .from("jumelages")
+    .select("ville_proposante_id, ville_ciblee_id, statut")
+    .or(`ville_proposante_id.eq.${maVilleId},ville_ciblee_id.eq.${maVilleId}`)
+    .in("statut", ["en_attente", "actif"]);
+  const villesDejaLieesParJumelage = new Set<string>();
+  let nbJumelagesActifs = 0;
+  for (const j of mesJumelages ?? []) {
+    const autreVilleId =
+      j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
+    villesDejaLieesParJumelage.add(autreVilleId);
+    if (j.statut === "actif") nbJumelagesActifs++;
+  }
+  const quotaJumelagesAtteint = nbJumelagesActifs >= QUOTA_JUMELAGES_ACTIFS;
+
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
       <div>
@@ -116,6 +133,7 @@ export default async function VillesPage() {
                 <th className="py-2">{traduire(locale, "villes.pays")}</th>
                 <th className="py-2">{traduire(locale, "villes.population")}</th>
                 <th className="py-2">{traduire(locale, "ville.influence")}</th>
+                <th className="py-2" />
                 <th className="py-2" />
                 <th className="py-2" />
                 <th className="py-2 text-right">{traduire(locale, "villes.antiVille")}</th>
@@ -176,6 +194,27 @@ export default async function VillesPage() {
                             className="rounded bg-purple-600 px-3 py-1 text-xs text-white hover:bg-purple-700"
                           >
                             {traduire(locale, "villes.influencer")}
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">
+                      {villesDejaLieesParJumelage.has(ville.id) ? (
+                        <span className="text-xs text-gray-400">
+                          {traduire(locale, "villes.dejaJumelee")}
+                        </span>
+                      ) : quotaJumelagesAtteint ? (
+                        <span className="text-xs text-gray-400">
+                          {traduire(locale, "villes.jumelageQuotaAtteint")}
+                        </span>
+                      ) : (
+                        <form action={proposerJumelage}>
+                          <input type="hidden" name="villeId" value={ville.id} />
+                          <button
+                            type="submit"
+                            className="rounded bg-teal-600 px-3 py-1 text-xs text-white hover:bg-teal-700"
+                          >
+                            {traduire(locale, "villes.proposerJumelage")}
                           </button>
                         </form>
                       )}

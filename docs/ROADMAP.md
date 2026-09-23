@@ -30,6 +30,10 @@ de vue du joueur — le titre dit ce qui change pour lui.
   (grève, contamination, propagande) avec protection progressive contre le
   harcèlement (effets dégressifs sur attaques répétées). Détail dans
   `DECISIONS.md` §4 — recette dans `docs/recette-jalon-4.md`.
+- [x] **Jalon 5 — Villes jumelles.** Proposition et acceptation de
+  jumelage entre deux villes, bonus quotidien si les deux joueurs sont
+  actifs. Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-5.md`.
 
 ---
 
@@ -37,9 +41,6 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 2 — Rivalités entre villes
 
-- [ ] **Jalon 5 — Villes jumelles.** Proposition et acceptation de
-  jumelage entre deux villes, bonus quotidien si les deux joueurs sont
-  actifs.
 - [ ] **Jalon 6 — Se classer.** Classement des villes (pays + mondial).
 
 ## Phase 3 — Le pays prend forme
@@ -91,5 +92,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 4 terminé, avant le début du
-jalon 5.*
+*Dernière mise à jour : 23/09/2026, jalon 5 terminé, avant le début du
+jalon 6.*

@@ -25,6 +25,9 @@ export async function Nav() {
             <Link href="/villes" className="text-gray-600 hover:text-gray-900">
               {traduire(locale, "nav.villes")}
             </Link>
+            <Link href="/jumelages" className="text-gray-600 hover:text-gray-900">
+              {traduire(locale, "nav.jumelages")}
+            </Link>
           </nav>
         ) : null}
         <LangSwitcher locale={locale} />

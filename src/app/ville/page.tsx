@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau } from "@/lib/game/niveauVille";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export default async function VillePage() {
   const locale = await getLocale();
@@ -14,6 +15,12 @@ export default async function VillePage() {
   if (!user) {
     redirect("/connexion");
   }
+
+  // Déclenche le bonus quotidien de jumelage (idempotent) avant de lire
+  // les statistiques, pour que cette page affiche un bonus fraîchement
+  // accordé sans attendre un passage par /jumelages — voir
+  // reclamer_bonus_jumelages() (Jalon 5, docs/DECISIONS.md §4).
+  await supabaseAdmin.rpc("reclamer_bonus_jumelages", { p_joueur_id: user.id });
 
   type LigneVille = {
     nom: string;

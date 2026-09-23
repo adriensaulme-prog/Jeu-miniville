@@ -142,3 +142,40 @@ export async function lancerActionAntiVille(
   const effetReduit = Boolean((data as { effet_reduit?: boolean } | null)?.effet_reduit);
   return { statut: "succes", effetReduit };
 }
+
+/**
+ * Propose un jumelage entre sa ville et une autre. Toute la logique —
+ * résolution de "sa" ville, quota de 3 jumelages actifs, interdiction
+ * d'une deuxième proposition vers une ville déjà en attente/jumelée —
+ * vit dans la fonction SQL proposer_jumelage() (docs/DECISIONS.md §4,
+ * Jalon 5).
+ */
+export async function proposerJumelage(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/connexion");
+  }
+
+  const villeId = String(formData.get("villeId") ?? "");
+  if (!villeId) {
+    return;
+  }
+
+  const { error } = await supabaseAdmin.rpc("proposer_jumelage", {
+    p_proposant_id: user.id,
+    p_ville_ciblee_id: villeId,
+  });
+
+  // 23505 (déjà en_attente/actif avec cette ville) et P0008 (quota de
+  // 3 atteint) : pas de vraies erreurs, l'affichage se corrige au
+  // revalidate ci-dessous.
+  if (error && !["23505", "P0008"].includes(error.code ?? "")) {
+    console.error("proposerJumelage a échoué :", error.message);
+  }
+
+  revalidatePath("/villes");
+}
