@@ -39,39 +39,54 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 1 — Une ville qui vit *(terminée)*
 
+## Phase 1 bis — La ville prend forme *(ajoutée le 23/09/2026)*
+
+- [ ] **Jalon 6 — La ville prend forme.** La page de ville affiche la
+  ville en **3D temps réel** à partir du prototype
+  `docs/prototypes/prototype-ville-3d.html`, branché sur les vraies
+  données : identité de la ville (même ville à chaque visite), pays
+  (soleil et nuit à l'heure réelle du pays — ajouter latitude, longitude
+  et fuseau horaire à `countries`), population (maisons → immeubles →
+  tours selon `DECISIONS.md` §8). Au passage : seuils de niveau passés à
+  l'échelle 100 000 (`DECISIONS.md` §10 point 10), chargement des
+  **villes de test** (`supabase/seed/villes-de-test.json`) en dev/recette
+  uniquement avec un test qui garantit leur absence en production. À
+  trancher avant de commencer : Three.js ou WebGL fait main (§10 point
+  12), rendu d'après la population ou son record (§10 point 11).
+
 ## Phase 2 — Rivalités entre villes
 
-- [ ] **Jalon 6 — Se classer.** Classement des villes (pays + mondial).
+- [ ] **Jalon 7 — Se classer.** Classement des villes (pays + mondial).
 
 ## Phase 3 — Le pays prend forme
 
-- [ ] **Jalon 7 — Naissance d'un pays.** Page pays, agrégation des
+- [ ] **Jalon 8 — Naissance d'un pays.** Page pays, agrégation des
   statistiques nationales (population, influence, activité) à partir des
   villes membres.
-- [ ] **Jalon 8 — Voter pour son pays.** Vote hebdomadaire de ressource
+- [ ] **Jalon 9 — Voter pour son pays.** Vote hebdomadaire de ressource
   (Industrie / Techno / Culture / Commerce), résultat proportionnel aux
   votes, attribution des ressources nationales.
-- [ ] **Jalon 9 — Le président malgré lui.** La ville #1 du pays devient
+- [ ] **Jalon 10 — Le président malgré lui.** La ville #1 du pays devient
   automatiquement présidente, apparition dans un historique des
   présidents.
 
 ## Phase 4 — Le monde entre en scène
 
-- [ ] **Jalon 10 — Décider à l'international.** Décision diplomatique
+- [ ] **Jalon 11 — Décider à l'international.** Décision diplomatique
   hebdomadaire (alliance, paix, attaque/rivalité, embargo éventuel),
   agrégation des votes citoyens, le président peut proposer sans décider
   seul.
-- [ ] **Jalon 11 — France contre Allemagne.** Premier scénario de rivalité
+- [ ] **Jalon 12 — France contre Allemagne.** Premier scénario de rivalité
   internationale : coût en ressources, bonus défensif pour l'attaqué,
   mobilisation quotidienne, résultat en fin de période. Scénario de test
   explicitement prévu par le cahier des charges.
 
 ## Phase 5 — Tenir la route
 
-- [ ] **Jalon 12 — Rester dans la légalité.** Anti-triche côté serveur
+- [ ] **Jalon 13 — Rester dans la légalité.** Anti-triche côté serveur
   systématique : validation serveur de toutes les actions sensibles,
   limitation multi-compte, détection de comportements automatisés/répétitifs.
-- [ ] **Jalon 13 — Jouable partout.** Passage en PWA installable (manifest,
+- [ ] **Jalon 14 — Jouable partout.** Passage en PWA installable (manifest,
   service worker, mode hors-ligne minimal), vérification manuelle sur
   mobile (Android + iOS via navigateur) et PC.
 

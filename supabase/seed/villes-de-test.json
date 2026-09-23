@@ -1,0 +1,345 @@
+{
+  "_a_lire": "Villes de TEST uniquement (is_test = true). A charger dans les environnements de dev et de recette, JAMAIS en production. Pseudos prefixes test_. Chaque jalon enrichit ce jeu de donnees (voir docs/GUIDE-METHODE.md, section recette).",
+  "version": 2,
+  "villes": [
+    {
+      "id": "test-01",
+      "pseudo": "test_belval-sur-loi",
+      "ville": "Belval-sur-Loire",
+      "pays": "fr",
+      "connexions": 114000,
+      "population": 114000,
+      "influence": 13680,
+      "activite_7j": 35,
+      "stade_attendu": "Métropole",
+      "is_test": true
+    },
+    {
+      "id": "test-02",
+      "pseudo": "test_montclair",
+      "ville": "Montclair",
+      "pays": "fr",
+      "connexions": 78400,
+      "population": 78400,
+      "influence": 9408,
+      "activite_7j": 44,
+      "stade_attendu": "Grande ville",
+      "is_test": true
+    },
+    {
+      "id": "test-03",
+      "pseudo": "test_saint-aubin-le",
+      "ville": "Saint-Aubin-les-Vignes",
+      "pays": "fr",
+      "connexions": 39000,
+      "population": 39000,
+      "influence": 4680,
+      "activite_7j": 9,
+      "stade_attendu": "Ville",
+      "is_test": true
+    },
+    {
+      "id": "test-04",
+      "pseudo": "test_rochemaure",
+      "ville": "Rochemaure",
+      "pays": "fr",
+      "connexions": 20500,
+      "population": 20500,
+      "influence": 2460,
+      "activite_7j": 60,
+      "stade_attendu": "Ville",
+      "is_test": true
+    },
+    {
+      "id": "test-05",
+      "pseudo": "test_ormassville",
+      "ville": "Ormassville",
+      "pays": "fr",
+      "connexions": 10750,
+      "population": 10750,
+      "influence": 1290,
+      "activite_7j": 38,
+      "stade_attendu": "Bourg",
+      "is_test": true
+    },
+    {
+      "id": "test-06",
+      "pseudo": "test_castelviel",
+      "ville": "Castelviel",
+      "pays": "fr",
+      "connexions": 5250,
+      "population": 5250,
+      "influence": 630,
+      "activite_7j": 39,
+      "stade_attendu": "Bourg",
+      "is_test": true
+    },
+    {
+      "id": "test-07",
+      "pseudo": "test_les-grandes-or",
+      "ville": "Les Grandes-Ormes",
+      "pays": "fr",
+      "connexions": 2760,
+      "population": 2760,
+      "influence": 331,
+      "activite_7j": 49,
+      "stade_attendu": "Village",
+      "is_test": true
+    },
+    {
+      "id": "test-08",
+      "pseudo": "test_valcourt",
+      "ville": "Valcourt",
+      "pays": "fr",
+      "connexions": 930,
+      "population": 930,
+      "influence": 111,
+      "activite_7j": 34,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-09",
+      "pseudo": "test_pierrefeu",
+      "ville": "Pierrefeu",
+      "pays": "fr",
+      "connexions": 410,
+      "population": 410,
+      "influence": 49,
+      "activite_7j": 40,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-10",
+      "pseudo": "test_le-hameau-fleu",
+      "ville": "Le Hameau-Fleuri",
+      "pays": "fr",
+      "connexions": 30,
+      "population": 30,
+      "influence": 3,
+      "activite_7j": 3,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-11",
+      "pseudo": "test_neustadt-am-se",
+      "ville": "Neustadt-am-See",
+      "pays": "de",
+      "connexions": 108000,
+      "population": 108000,
+      "influence": 12960,
+      "activite_7j": 10,
+      "stade_attendu": "Métropole",
+      "is_test": true
+    },
+    {
+      "id": "test-12",
+      "pseudo": "test_lindenfeld",
+      "ville": "Lindenfeld",
+      "pays": "de",
+      "connexions": 65200,
+      "population": 65200,
+      "influence": 7824,
+      "activite_7j": 9,
+      "stade_attendu": "Grande ville",
+      "is_test": true
+    },
+    {
+      "id": "test-13",
+      "pseudo": "test_rosenheide",
+      "ville": "Rosenheide",
+      "pays": "de",
+      "connexions": 33000,
+      "population": 33000,
+      "influence": 3960,
+      "activite_7j": 55,
+      "stade_attendu": "Ville",
+      "is_test": true
+    },
+    {
+      "id": "test-14",
+      "pseudo": "test_altmark-ost",
+      "ville": "Altmark-Ost",
+      "pays": "de",
+      "connexions": 16000,
+      "population": 16000,
+      "influence": 1920,
+      "activite_7j": 34,
+      "stade_attendu": "Ville",
+      "is_test": true
+    },
+    {
+      "id": "test-15",
+      "pseudo": "test_kleinbruck",
+      "ville": "Kleinbrück",
+      "pays": "de",
+      "connexions": 8000,
+      "population": 8000,
+      "influence": 960,
+      "activite_7j": 16,
+      "stade_attendu": "Bourg",
+      "is_test": true
+    },
+    {
+      "id": "test-16",
+      "pseudo": "test_wiesental",
+      "ville": "Wiesental",
+      "pays": "de",
+      "connexions": 3240,
+      "population": 3240,
+      "influence": 388,
+      "activite_7j": 25,
+      "stade_attendu": "Village",
+      "is_test": true
+    },
+    {
+      "id": "test-17",
+      "pseudo": "test_birkenau-dorf",
+      "ville": "Birkenau-Dorf",
+      "pays": "de",
+      "connexions": 600,
+      "population": 600,
+      "influence": 72,
+      "activite_7j": 25,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-18",
+      "pseudo": "test_eichwalde",
+      "ville": "Eichwalde",
+      "pays": "de",
+      "connexions": 80,
+      "population": 80,
+      "influence": 9,
+      "activite_7j": 50,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-19",
+      "pseudo": "test_beaufays",
+      "ville": "Beaufays",
+      "pays": "be",
+      "connexions": 13500,
+      "population": 13500,
+      "influence": 1620,
+      "activite_7j": 7,
+      "stade_attendu": "Bourg",
+      "is_test": true
+    },
+    {
+      "id": "test-20",
+      "pseudo": "test_hautrive",
+      "ville": "Hautrive",
+      "pays": "be",
+      "connexions": 730,
+      "population": 730,
+      "influence": 87,
+      "activite_7j": 8,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-21",
+      "pseudo": "test_lac-aux-pins",
+      "ville": "Lac-aux-Pins",
+      "pays": "ch",
+      "connexions": 3880,
+      "population": 3880,
+      "influence": 465,
+      "activite_7j": 21,
+      "stade_attendu": "Village",
+      "is_test": true
+    },
+    {
+      "id": "test-22",
+      "pseudo": "test_grunau",
+      "ville": "Grünau",
+      "pays": "ch",
+      "connexions": 200,
+      "population": 200,
+      "influence": 24,
+      "activite_7j": 12,
+      "stade_attendu": "Hameau",
+      "is_test": true
+    },
+    {
+      "id": "test-23",
+      "pseudo": "test_saint-laurent-",
+      "ville": "Saint-Laurent-du-Fleuve",
+      "pays": "ca",
+      "connexions": 9500,
+      "population": 9500,
+      "influence": 1140,
+      "activite_7j": 48,
+      "stade_attendu": "Bourg",
+      "is_test": true
+    },
+    {
+      "id": "test-24",
+      "pseudo": "test_sakuragawa",
+      "ville": "Sakuragawa",
+      "pays": "jp",
+      "connexions": 27000,
+      "population": 27000,
+      "influence": 3240,
+      "activite_7j": 22,
+      "stade_attendu": "Ville",
+      "is_test": true
+    }
+  ],
+  "jumelages": [
+    {
+      "ville": "test-01",
+      "cible": "test-11",
+      "statut": "accepte"
+    },
+    {
+      "ville": "test-02",
+      "cible": "test-04",
+      "statut": "accepte"
+    },
+    {
+      "ville": "test-05",
+      "cible": "test-19",
+      "statut": "accepte"
+    },
+    {
+      "ville": "test-12",
+      "cible": "test-21",
+      "statut": "en_attente"
+    },
+    {
+      "ville": "test-06",
+      "cible": "test-15",
+      "statut": "accepte"
+    },
+    {
+      "ville": "test-09",
+      "cible": "test-10",
+      "statut": "en_attente"
+    },
+    {
+      "ville": "test-23",
+      "cible": "test-08",
+      "statut": "accepte"
+    },
+    {
+      "ville": "test-24",
+      "cible": "test-13",
+      "statut": "refuse"
+    }
+  ],
+  "presidents_attendus": {
+    "be": "test-19",
+    "ca": "test-23",
+    "ch": "test-21",
+    "de": "test-11",
+    "fr": "test-01",
+    "jp": "test-24"
+  },
+  "_echelle": "Seuils : Hameau 0, Village 1 000, Bourg 5 000, Ville 15 000, Grande ville 40 000, Metropole 100 000 habitants (DECISIONS.md §8)."
+}

@@ -196,6 +196,32 @@ Deux sections à toujours inclure :
 Comme chez Henri : *« dis-moi précisément quelle ligne t'a manqué ou
 trompé, pas "améliore l'UI" en général. »*
 
+### Les villes de test
+
+Un jeu de **villes fictives** (`supabase/seed/villes-de-test.json`,
+24 villes au départ) sert à tous les essais : rendu, classements,
+interactions. Elles couvrent tous les stades (du Hameau à la Métropole)
+et plusieurs pays, avec en priorité la France et l'Allemagne pour le
+scénario de rivalité du cahier des charges.
+
+Règles :
+- **Jamais en production.** Chaque ville de test porte `is_test = true` et
+  un pseudo préfixé `test_` ; elles ne sont chargées que dans les
+  environnements de développement et de recette, par un script dédié. Un
+  test automatique vérifie qu'aucune donnée `is_test` n'existe en prod.
+- **Chaque jalon enrichit le jeu de données** avec ce dont il a besoin
+  (influence au Jalon 4, attaques AntiVille au 5, jumelages au 6, votes et
+  présidents plus tard). Le fichier est versionné et ses résultats
+  attendus aussi (ex. `presidents_attendus`) : c'est une référence pour
+  les tests, pas seulement un décor.
+- **Un script de simulation** ("simuler N jours") fera agir ces villes
+  entre elles (connexions, influence, attaques) pour tester les
+  classements et les interactions sans attendre de vrais joueurs. Il
+  arrive avec le Jalon 3, quand les connexions existent.
+- Les cahiers de recette citent des villes de test précises ("visite
+  Rochemaure, 9 100 connexions, stade Ville") pour que chaque essai soit
+  reproductible.
+
 ---
 
 ## 9. Conventions à connaître

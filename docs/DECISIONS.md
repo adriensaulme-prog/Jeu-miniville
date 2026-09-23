@@ -547,10 +547,87 @@ ouvert à signaler à Adrien, pas une décision technique à prendre seul.
 
 ---
 
-## §8. Réservé
+## §8. Direction artistique et rendu des villes
 
-*(section réservée pour une future extension du format, comme chez CVLS —
-rien à date.)*
+*(Section rédigée côté Claude chat/Cowork le 23/09/2026, avec Adrien —
+décisions de design, pas encore implémentées dans le jeu.)*
+
+### Ce qui a été essayé, et pourquoi on a changé
+
+Quatre essais d'images 2D générées par script (vue de face, puis
+isométrique, puis quadrillage de blocs) ont été jugés insuffisants par
+Adrien ("pas assez réaliste"). Constat : ce qui rend l'ancien MiniVille
+(Motion Twin, 2007) réaliste, ce sont des bâtiments **en 3D éclairés**
+(ombres portées, reflets, pieds de murs plus sombres), pas des formes 2D
+mieux coloriées. D'où le choix d'une **vraie 3D temps réel dans le
+navigateur**.
+
+### Prototype de référence
+
+`docs/prototypes/prototype-ville-3d.html` — un seul fichier, WebGL 2,
+aucune bibliothèque, aucun coût. Il contient tout le rendu attendu :
+caméra isométrique qu'on tourne/zoome/déplace (souris et tactile),
+ombres douces, occlusion ambiante, reflets des vitrages, rues avec
+marquages et passages piétons, voitures, maisons à toit de tuiles et
+volets, petits immeubles avec balcons et commerces, cours et squares,
+parkings, lampadaires, campagne et forêts, routes qui partent vers
+l'horizon. Il sert de **référence visuelle et de base de code** pour le
+jalon qui l'intègre (`ROADMAP.md`).
+
+### Règles de la ville (décidées par Adrien)
+
+- **Plan** : un quadrillage de rues délimite des blocs (4×4 blocs). Dans
+  chaque bloc : **4 maisons, 2 petits immeubles, 1 gratte-ciel**, tous au
+  bord d'une rue (le centre du bloc est une cour commune, jamais
+  construite). Les deux grands axes traversent la carte et partent en
+  routes de campagne : **la ville naît à leur croisement**.
+- **Chaque ville est unique et stable** : la forme, les couleurs et les
+  modèles des bâtiments sont tirés une seule fois à partir de l'identité
+  de la ville ; la même ville revisitée est toujours identique, et un
+  bâtiment déjà posé ne change jamais d'aspect quand la ville grandit.
+- **Progression : maisons → immeubles → tours**, pilotée par le nombre
+  d'habitants (1 connexion = +1 habitant) :
+
+| Stade | À partir de | Ce qui apparaît |
+|---|---|---|
+| Hameau | 0 | la première maison au croisement, puis les suivantes une par une |
+| Village | 1 000 | nouveaux blocs, toujours des maisons |
+| Bourg | 5 000 | premiers petits immeubles (2 étages, jusqu'à 7 ensuite) |
+| Ville | 15 000 | premier gratte-ciel, dans le bloc du centre |
+| Grande ville | 40 000 | les 16 blocs sont ouverts, les tours se lancent bloc après bloc |
+| Métropole | 100 000 | toutes les tours sont construites ou presque |
+
+- **Blocs** : ils s'ouvrent du centre vers l'extérieur (16 blocs, le
+  dernier vers 40 000 habitants). Dans un bloc, les 4 maisons arrivent
+  une par une.
+- **Gratte-ciel** : son emplacement est d'abord un **square public**
+  (aucune maison détruite). Le chantier démarre à 15 000 habitants dans
+  le bloc du centre, puis un nouveau chantier tous les 4 500 habitants.
+  La tour gagne **un étage tous les 500 habitants** depuis le début de son
+  chantier, avec une grue et des étages en béton brut tant qu'elle n'est
+  pas finie. Hauteur maximale plus grande au centre (~38 étages) qu'en
+  périphérie (~23) : **les plus hautes tours au milieu**.
+- Toutes ces valeurs sont réglables et à équilibrer en jouant avec les
+  villes de test ; l'échelle (Métropole = 100 000) est une décision
+  d'Adrien.
+
+### Lumière : l'heure réelle du pays de la ville
+
+Le soleil suit l'heure et la date réelles **du pays de la ville** (pas
+celles du joueur qui regarde) : vraie position du soleil calculée avec la
+latitude, la longitude et le fuseau horaire du pays, saisons comprises.
+Aube et crépuscule dorés, nuit au clair de lune avec fenêtres allumées et
+lampadaires. Une ville japonaise visitée depuis Paris à 17 h est donc en
+pleine nuit. **Conséquence pour les données** : la table `countries` doit
+porter latitude, longitude et fuseau horaire (IANA, ex. `Europe/Paris`).
+
+### Villes de test
+
+`supabase/seed/villes-de-test.json` : 24 villes fictives de tous les
+stades et plusieurs pays (France et Allemagne en tête), pour tester
+rendu, classements et interactions. Règles dans `GUIDE-METHODE.md`
+(section recette) : jamais en production (`is_test`), enrichies à chaque
+jalon, animées plus tard par un script "simuler N jours".
 
 ---
 
@@ -617,3 +694,23 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
    Le cahier des charges donne le principe, pas les chiffres ("les
    coefficients exacts seront définis lors du balancing"). → **À trancher
    par Adrien avec appui de Claude Code sur les tests d'équilibrage.**
+10. **Seuils de population à revoir dans le code** : `SEUILS_NIVEAU`
+    (TS) et `population_vers_niveau()` (SQL) utilisent aujourd'hui
+    5 / 15 / 30 / 60 / 120. Adrien a fixé l'échelle à **Métropole =
+    100 000 habitants** (voir §8 : 1 000 / 5 000 / 15 000 / 40 000 /
+    100 000). → **À appliquer par Claude Code** dans le jalon du rendu 3D,
+    avec migration et tests.
+11. **Rendu basé sur la population… ou sur son record ?** Une
+    contamination (-10 % de population) ferait "disparaître" des
+    bâtiments si le rendu suivait la population du moment, ce qui heurte
+    la contrainte "pas de destruction permanente" (§1). Reco de Claude :
+    dessiner la ville d'après le **record de population atteint**
+    (`population_max`), et garder la population du moment pour les
+    classements. → **À trancher par Adrien.**
+12. **Bibliothèque 3D pour la version de production** : garder le WebGL
+    fait main du prototype ou le porter sur Three.js (gratuit, licence
+    MIT, plus simple à faire évoluer). Reco de Claude : Three.js. → **À
+    trancher par Adrien avant le jalon du rendu 3D.**
+13. **Fluidité sur mobile** : à vérifier sur le téléphone d'Adrien dès le
+    premier build du rendu 3D (le prototype réduit déjà la qualité des
+    ombres sur écran tactile).
