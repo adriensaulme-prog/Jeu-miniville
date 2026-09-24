@@ -8,20 +8,15 @@ import { pick, rngFrom, rr } from "./aleatoire";
 import {
   APART_FLOOR_EVERY,
   APART_FROM,
-  BLOCK_OPEN,
-  BN,
   BS,
   COL,
-  HALF,
   LOT,
   MAT,
-  NT,
   PER_FLOOR,
   PERIOD,
   SW,
   T,
-  TOWER_FROM,
-  TOWER_STAGGER,
+  blockX0,
   hex,
 } from "./constantes";
 import { box, cylinder, flat, type Geo } from "./geometrie";
@@ -45,6 +40,8 @@ export interface Stats {
   center?: [number, number];
   extent?: number;
   next?: number;
+  /** Demi-taille du carré qui contient la ville : pilote brouillard, ombres, occlusion et caméra. */
+  cityR?: number;
 }
 
 const lotRect = (bx0: number, bz0: number, lc: number, lr: number): Rect => [
@@ -150,8 +147,8 @@ export function buildBlock(
   ev: number[]
 ) {
   const r = rngFrom(key + "|bloc|" + b.bi + "," + b.bj);
-  const bx0 = -HALF + T * (b.bi * PERIOD + 1),
-    bz0 = -HALF + T * (b.bj * PERIOD + 1);
+  const bx0 = blockX0(b.bi),
+    bz0 = blockX0(b.bj);
   const seed = Math.floor(r() * 900) + 50;
 
   box(g, bx0, 0, bz0, bx0 + BS, 0.15, bz0 + BS, { c: COL.lawn, m: MAT.PLAIN, topM: MAT.LAWN, topC: COL.lawn, seed });
@@ -235,8 +232,10 @@ export function buildBlock(
     return f[Math.floor(r() * f.length)];
   });
   const parkingIdx = 6 + Math.floor(r() * (perim.length - 6));
-  const dCenter = Math.hypot(b.bi - (BN - 1) / 2, b.bj - (BN - 1) / 2);
-  const cap = Math.round(40 - dCenter * 8 + (r() * 4 - 2));
+  // Tours plus hautes au centre ; les blocs lointains plafonnent à 14 étages
+  // (silhouette dense au centre, quelle que soit la taille de la ville).
+  const dCenter = Math.hypot(b.bi + 0.5, b.bj + 0.5);
+  const cap = Math.max(14, Math.round(40 - dCenter * 8 + (r() * 4 - 2)));
   const jitter = Math.floor(r() * 3);
   const lotRng = (lc: number, lr: number) => rngFrom(key + "|lot|" + b.bi + "," + b.bj + "|" + lc + "," + lr);
 
@@ -327,79 +326,99 @@ export function buildSquare(g: Geo, rect: Rect, r: RNG, ao: TamponAO[]) {
 
 export function buildIdleBlock(g: Geo, b: Bloc, key: string, ao: TamponAO[]) {
   const r = rngFrom(key + "|friche|" + b.bi + "," + b.bj);
-  const bx0 = -HALF + T * (b.bi * PERIOD + 1),
-    bz0 = -HALF + T * (b.bj * PERIOD + 1);
+  const bx0 = blockX0(b.bi),
+    bz0 = blockX0(b.bj);
   const n = 3 + Math.floor(r() * 5);
   for (let i = 0; i < n; i++) tree(g, bx0 + rr(r, 6, BS - 6), bz0 + rr(r, 6, BS - 6), 0, rr(r, 0.9, 1.3), r, ao);
 }
 
-export function buildCountryside(g: Geo, key: string, ao: TamponAO[]) {
-  const r = rngFrom(key + "|campagne");
-  for (let k = 0; k < 34; k++) {
+/**
+ * Forêts à positions fixes (tirées une fois par ville, un générateur par
+ * forêt et par arbre) : quand la ville s'étend, elle efface les arbres qui
+ * tombent sur son emprise sans déplacer les autres.
+ */
+export function buildCountryside(g: Geo, key: string, ao: TamponAO[], cityR: number) {
+  for (let k = 0; k < 110; k++) {
+    const r = rngFrom(key + "|foret|" + k);
     const a = r() * Math.PI * 2,
-      d = rr(r, 200, 470);
+      d = rr(r, 200, 1500);
     const cx = Math.cos(a) * d,
       cz = Math.sin(a) * d;
     const n = 6 + Math.floor(r() * 14),
       spread = rr(r, 10, 26);
     const coni = r() < 0.5;
     for (let i = 0; i < n; i++) {
-      const x = cx + rr(r, -spread, spread),
-        z = cz + rr(r, -spread, spread);
-      if (Math.max(Math.abs(x), Math.abs(z)) < HALF + 14) continue;
+      const q = rngFrom(key + "|arbre|" + k + "|" + i);
+      const x = cx + rr(q, -spread, spread),
+        z = cz + rr(q, -spread, spread);
+      if (Math.max(Math.abs(x), Math.abs(z)) < cityR + 14) continue;
       if (Math.abs(x) < 12 || Math.abs(z) < 12) continue;
-      if (coni && r() < 0.8) conifer(g, x, z, rr(r, 0.9, 1.25), r, ao);
-      else tree(g, x, z, 0, rr(r, 1.1, 1.6), r, ao);
+      if (coni && q() < 0.8) conifer(g, x, z, rr(q, 0.9, 1.25), q, ao);
+      else tree(g, x, z, 0, rr(q, 1.1, 1.6), q, ao);
     }
   }
 }
 
-export function buildRoadsAndTraffic(g: Geo, activeSet: Set<string>, key: string) {
-  const r = rngFrom(key + "|trafic");
-  for (let i = 0; i < NT; i++)
-    for (let j = 0; j < NT; j++) {
-      const ri = i % PERIOD === 0,
-        rj = j % PERIOD === 0;
-      if (!ri && !rj) continue;
-      const bIs = ri ? [i / PERIOD - 1, i / PERIOD] : [Math.floor(i / PERIOD)];
-      const bJs = rj ? [j / PERIOD - 1, j / PERIOD] : [Math.floor(j / PERIOD)];
-      // les deux grands axes traversent toujours la carte : la ville naît à leur croisement
-      let on = i === (NT - 1) / 2 || j === (NT - 1) / 2;
-      for (const a of bIs) for (const bb of bJs) if (activeSet.has(a + "," + bb)) on = true;
-      if (!on) continue;
-      const x0 = -HALF + i * T,
-        z0 = -HALF + j * T;
-      flat(g, x0, z0, x0 + T, z0 + T, 0.03, COL.road, MAT.ROAD);
-      if (ri && rj) continue;
-      if (r() < 0.42) {
-        const lane = r() < 0.5 ? -3.2 : 3.2;
-        const t = rr(r, 3, 13);
-        if (ri) car(g, x0 + T / 2 + lane, z0 + t, false, r); // rue orientée Z
-        else car(g, x0 + t, z0 + T / 2 + lane, true, r);
+/**
+ * Rues autour de chaque bloc actif, plus les deux grands axes qui
+ * traversent toute la ville (elle est née à leur croisement). Cases de rue
+ * repérées par des indices entiers (ti, tj) centrés sur x = ti·T ; une rue
+ * tous les PERIOD cases. Une voiture par case, avec son propre générateur :
+ * ouvrir un bloc ne déplace pas celles déjà garées ailleurs.
+ */
+export function buildRoadsAndTraffic(g: Geo, activeBlocks: Bloc[], key: string, rayonEnCases: number) {
+  const tiles = new Set<string>();
+  const m5 = (v: number) => ((v % PERIOD) + PERIOD) % PERIOD;
+  for (const bl of activeBlocks) {
+    for (let ti = PERIOD * bl.bi; ti <= PERIOD * bl.bi + PERIOD; ti++)
+      for (let tj = PERIOD * bl.bj; tj <= PERIOD * bl.bj + PERIOD; tj++) {
+        if (m5(ti) === 0 || m5(tj) === 0) tiles.add(ti + "," + tj);
       }
-    }
-}
-
-/** Routes de campagne : les deux axes centraux partent vers l'horizon, bordés d'arbres. */
-export function buildCountryRoads(g: Geo, key: string, ao: TamponAO[]) {
-  const r = rngFrom(key + "|routes");
-  const hw = 5,
-    far = 1700,
-    y = 0.03;
-  flat(g, -hw, -far, hw, -HALF, y, COL.road, MAT.ROAD);
-  flat(g, -hw, HALF, hw, far, y, COL.road, MAT.ROAD);
-  flat(g, -far, -hw, -HALF, hw, y, COL.road, MAT.ROAD);
-  flat(g, HALF, -hw, far, hw, y, COL.road, MAT.ROAD);
-  for (const sgn of [-1, 1]) {
-    for (let d = HALF + 14; d < 620; d += rr(r, 16, 26)) {
-      const side = r() < 0.5 ? -1 : 1,
-        off = side * rr(r, 7.5, 9.5);
-      if (r() < 0.8) tree(g, off, sgn * d, 0, rr(r, 1.0, 1.35), r, ao);
-      if (r() < 0.8) tree(g, sgn * d, -off, 0, rr(r, 1.0, 1.35), r, ao);
-      if (r() < 0.12) car(g, r() < 0.5 ? -2.2 : 2.2, sgn * (d + 6), false, r);
-      if (r() < 0.12) car(g, sgn * (d + 6), r() < 0.5 ? -2.2 : 2.2, true, r);
+  }
+  for (let t = -rayonEnCases; t <= rayonEnCases; t++) {
+    tiles.add("0," + t);
+    tiles.add(t + ",0");
+  }
+  const list = [...tiles].map((k) => k.split(",").map(Number)).sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  for (const [ti, tj] of list) {
+    const x0 = ti * T - T / 2,
+      z0 = tj * T - T / 2;
+    flat(g, x0, z0, x0 + T, z0 + T, 0.03, COL.road, MAT.ROAD);
+    const ri = m5(ti) === 0,
+      rj = m5(tj) === 0;
+    if (ri && rj) continue;
+    const rc = rngFrom(key + "|voiture|" + ti + "," + tj);
+    if (rc() < 0.42) {
+      const lane = rc() < 0.5 ? -3.2 : 3.2;
+      const t = rr(rc, 3, 13);
+      if (ri) car(g, x0 + T / 2 + lane, z0 + t, false, rc); // rue orientée Z
+      else car(g, x0 + t, z0 + T / 2 + lane, true, rc);
     }
   }
 }
 
-export { BLOCK_OPEN, TOWER_FROM, TOWER_STAGGER };
+/** Routes de campagne : les deux axes centraux repartent du bord actuel de la ville vers l'horizon, bordés d'arbres. */
+export function buildCountryRoads(g: Geo, key: string, ao: TamponAO[], cityR: number) {
+  const hw = 5,
+    far = 3800,
+    y = 0.03,
+    E = cityR;
+  flat(g, -hw, -far, hw, -E, y, COL.road, MAT.ROAD);
+  flat(g, -hw, E, hw, far, y, COL.road, MAT.ROAD);
+  flat(g, -far, -hw, -E, hw, y, COL.road, MAT.ROAD);
+  flat(g, E, -hw, far, hw, y, COL.road, MAT.ROAD);
+  for (const sgn of [-1, 1]) {
+    for (let i = 0; i < 68; i++) {
+      const d = 190 + i * 21;
+      if (d < E + 14) continue;
+      const q = rngFrom(key + "|bord|" + sgn + "|" + i);
+      const side = q() < 0.5 ? -1 : 1,
+        off = side * rr(q, 7.5, 9.5),
+        jd = rr(q, -4, 4);
+      if (q() < 0.8) tree(g, off, sgn * (d + jd), 0, rr(q, 1.0, 1.35), q, ao);
+      if (q() < 0.8) tree(g, sgn * (d - jd), -off, 0, rr(q, 1.0, 1.35), q, ao);
+      if (q() < 0.12) car(g, q() < 0.5 ? -2.2 : 2.2, sgn * (d + 6), false, q);
+      if (q() < 0.12) car(g, sgn * (d + 6), q() < 0.5 ? -2.2 : 2.2, true, q);
+    }
+  }
+}

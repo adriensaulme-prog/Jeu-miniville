@@ -4,6 +4,14 @@
 Jalon 6bis). À fusionner dans `docs/` du dépôt **sans écraser** le
 journal existant, puis ce fichier peut être supprimé.*
 
+> **État de l'intégration (24/09/2026, Claude Code)** : §1 fait au
+> Jalon 7 ; §2 fait au Jalon 7bis ; §3 consigné en points ouverts
+> (`DECISIONS.md` §10 points 16 et 22, jalon "Revoir les règles du jeu"
+> à placer dans `ROADMAP.md`), aucun code ; §4 inscrit comme contrainte
+> permanente (`DECISIONS.md` §1 point 6), script `npm run poids` pas
+> encore fait. Ce fichier peut être supprimé quand Adrien aura répondu
+> aux questions restantes.
+
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
   cliquable de toutes les pages du jeu (données fictives).

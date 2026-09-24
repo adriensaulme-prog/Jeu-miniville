@@ -60,7 +60,7 @@ de vue du joueur — le titre dit ce qui change pour lui.
   `docs/recette-jalon-6bis.md`. Point encore ouvert : fluidité sur
   mobile, à vérifier sur le téléphone d'Adrien (§10 point 13).
 
-## Phase 1 ter — Un jeu agréable à regarder *(en cours)*
+## Phase 1 ter — Un jeu agréable à regarder *(terminée)*
 
 - [x] **Jalon 7 — Un jeu agréable à regarder.** Refonte visuelle de toutes
   les pages (accueil, connexion/inscription, création, Ma ville, Villes,
@@ -75,12 +75,27 @@ de vue du joueur — le titre dit ce qui change pour lui.
   (tri par population, rang dans le pays, badge Président) est inclus ;
   le reste (page de classement dédiée, mondial) reste dans le Jalon 8.
   Détail dans `DECISIONS.md` §4 — recette dans `docs/recette-jalon-7.md`.
-- [ ] **Jalon 7bis — La ville continue de grandir.** La ville ne
+- [x] **Jalon 7bis — La ville continue de grandir.** La ville ne
   plafonne plus à 40 000 habitants pour son rendu 3D : un nouveau bloc
   tous les 5 000 habitants au-delà, sans limite (voir
-  `docs/A-INTEGRER.md` §2). Scindé du Jalon 7 : c'est un changement
-  purement technique du générateur 3D, indépendant de la refonte visuelle
-  (même logique que la scission Jalon 6 / 6bis).
+  `docs/A-INTEGRER.md` §2) ; brouillard, ombres, occlusion au sol et
+  caméra suivent le rayon réel de la ville. Scindé du Jalon 7 (même
+  logique que la scission Jalon 6 / 6bis). Détail dans `DECISIONS.md` §4
+  — recette dans `docs/recette-jalon-7bis.md`. Points ouverts : plafond
+  de rendu pour les très grandes villes, stade au-delà de Métropole
+  (§10 points 19 et 20).
+
+## À placer (Adrien choisit quand)
+
+- [ ] **Revoir les règles du jeu.** Tous les mécanismes et actions revus
+  sur une même grille : effets unitaires faibles, cumul des attaques
+  reçues dans la journée, plafond de 10 % par jour, paliers visibles
+  (Incidents, Troubles, Émeutes, Crise, Ville sinistrée). Proposition en
+  réflexion (`docs/SYSTEME-DEVELOPPEMENT.md` §6 bis, `DECISIONS.md` §10
+  point 22), pas de code avant validation.
+- [ ] **La bibliothèque de bâtiments** (puis thèmes et boutique).
+  Proposition `docs/BATIMENTS-ET-PACKS.md`, en attente des réponses
+  d'Adrien (`DECISIONS.md` §10 point 21).
 
 ## Phase 2 — Rivalités entre villes
 
@@ -137,7 +152,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 24/09/2026, jalon 7 terminé — "Un jeu agréable à
-regarder" (renumérotation depuis `docs/A-INTEGRER.md`, voir
-`DECISIONS.md` §4 et §10), avant le jalon 7bis (ville qui grandit sans
-limite).*
+*Dernière mise à jour : 24/09/2026, jalon 7bis terminé (fin de la Phase
+1 ter), avant le jalon 8 "Se classer".*

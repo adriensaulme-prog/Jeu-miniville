@@ -13,7 +13,8 @@
  */
 
 import * as THREE from "three";
-import { AO_EXT, bakeAO } from "./ao";
+import { bakeAO, dimensionsAO } from "./ao";
+import { CITY_R_MIN } from "./constantes";
 import { generate, type ResultatGeneration } from "./generer";
 import { FS, SFS, SVS, VS } from "./shaders";
 import {
@@ -195,11 +196,12 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     depthTexture: new THREE.DepthTexture(SHADOW_SIZE, SHADOW_SIZE, THREE.UnsignedShortType),
     depthBuffer: true,
   });
-  const S = 245;
-  const lightCamera = new THREE.OrthographicCamera(-S, S, S, -S, 50, 1500);
+  // Cadre ajusté à chaque rendu selon le rayon de la ville (voir render()).
+  const lightCamera = new THREE.OrthographicCamera(-245, 245, 245, -245, 50, 1500);
 
   const aoTexture = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGFormat, THREE.UnsignedByteType);
   aoTexture.needsUpdate = true;
+  let cityR = CITY_R_MIN;
 
   const uniforms = {
     uViewProj: { value: new THREE.Matrix4() },
@@ -216,7 +218,8 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     uAmbient: { value: 1 },
     uExposure: { value: 1 },
     uNight: { value: 0 },
-    uAOExt: { value: AO_EXT },
+    uAOExt: { value: dimensionsAO(CITY_R_MIN).ext },
+    uCityR: { value: CITY_R_MIN },
   };
 
   const material = new THREE.RawShaderMaterial({
@@ -249,10 +252,17 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
   // Caméra : azimut/élévation autour d'une cible, comme le prototype.
   const etatCamera = { az: 45, el: 33, zoom: 1, panX: 0, panZ: 0, autoFrame: true };
 
+  let seedActuelle: string | null = null;
+
   function reconstruire(params: ParametresVille) {
     pays = params.pays;
     const res = generate(params.seed, params.populationMax);
     stats = res.stats;
+    cityR = res.stats.cityR;
+    // Nouvelle ville (et pas juste la même qui grandit) : on recadre, sinon
+    // un zoom manuel réglé pour un hameau resterait sur une métropole.
+    if (params.seed !== seedActuelle) etatCamera.autoFrame = true;
+    seedActuelle = params.seed;
 
     if (mesh) {
       scene.remove(mesh);
@@ -266,11 +276,13 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     scene.add(mesh);
     shadowMesh = new THREE.Mesh(geometry, shadowMaterial);
 
-    const aoData = bakeAO(res.ao, res.glow);
-    aoTexture.dispose();
-    const tex = new THREE.DataTexture(aoData, 512, 512, THREE.RGFormat, THREE.UnsignedByteType);
+    const carte = bakeAO(res.ao, res.glow, cityR);
+    uniforms.uAO.value.dispose();
+    const tex = new THREE.DataTexture(carte.donnees, carte.res, carte.res, THREE.RGFormat, THREE.UnsignedByteType);
     tex.needsUpdate = true;
     uniforms.uAO.value = tex;
+    uniforms.uAOExt.value = carte.ext;
+    uniforms.uCityR.value = cityR;
   }
 
   function resize() {
@@ -299,8 +311,16 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     uniforms.uExposure.value = L.exposure;
     uniforms.uNight.value = L.night;
 
-    // Caméra lumière (ombres)
-    const lEye = new THREE.Vector3(L.sun[0], L.sun[1], L.sun[2]).multiplyScalar(700);
+    // Caméra lumière (ombres) : son cadre couvre toute la ville, quelle que soit sa taille.
+    const S = Math.max(245, cityR * 1.25 + 40);
+    const LD = S * 2.6 + 300;
+    lightCamera.left = -S;
+    lightCamera.right = S;
+    lightCamera.top = S;
+    lightCamera.bottom = -S;
+    lightCamera.near = 50;
+    lightCamera.far = LD * 2.2;
+    const lEye = new THREE.Vector3(L.sun[0], L.sun[1], L.sun[2]).multiplyScalar(LD);
     lightCamera.position.copy(lEye);
     lightCamera.lookAt(0, 0, 0);
     lightCamera.updateMatrixWorld(true);
@@ -324,7 +344,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       tX = etatCamera.panX,
       tZ = etatCamera.panZ;
     if (etatCamera.autoFrame && stats?.center && stats.extent != null) {
-      zoom = Math.max(0.32, Math.min(1, (stats.extent * 0.72 + 30) / 128));
+      zoom = Math.max(0.32, Math.min(4, (stats.extent * 0.72 + 30) / 128));
       tX = stats.center[0];
       tZ = stats.center[1];
     }
@@ -335,7 +355,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     camera.top = hh;
     camera.bottom = -hh;
     camera.near = 10;
-    camera.far = 2600;
+    camera.far = 4200;
 
     const azR = (etatCamera.az * Math.PI) / 180,
       elR = (etatCamera.el * Math.PI) / 180;
@@ -345,7 +365,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       Math.cos(elR) * Math.cos(azR)
     );
     const target = new THREE.Vector3(tX, 22, tZ);
-    camera.position.copy(target).addScaledVector(cd, 900);
+    camera.position.copy(target).addScaledVector(cd, 1600);
     camera.up.set(0, 1, 0);
     camera.lookAt(target);
     camera.updateMatrixWorld(true);
@@ -376,7 +396,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
   function takeCamera() {
     if (!etatCamera.autoFrame || !stats?.center || stats.extent == null) return;
     etatCamera.autoFrame = false;
-    etatCamera.zoom = Math.max(0.32, Math.min(1, (stats.extent * 0.72 + 30) / 128));
+    etatCamera.zoom = Math.max(0.32, Math.min(4, (stats.extent * 0.72 + 30) / 128));
     etatCamera.panX = stats.center[0];
     etatCamera.panZ = stats.center[1];
   }
@@ -384,8 +404,10 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     takeCamera();
     const azR = (etatCamera.az * Math.PI) / 180;
     const k = (etatCamera.zoom * 0.42) / Math.max(1, canvas.clientHeight / 4);
-    etatCamera.panX -= (Math.cos(azR) * dx + Math.sin(azR) * dy) * k;
-    etatCamera.panZ -= (-Math.sin(azR) * dx + Math.cos(azR) * dy) * k;
+    const limite = cityR + 150;
+    const borne = (v: number) => Math.max(-limite, Math.min(limite, v));
+    etatCamera.panX = borne(etatCamera.panX - (Math.cos(azR) * dx + Math.sin(azR) * dy) * k);
+    etatCamera.panZ = borne(etatCamera.panZ - (-Math.sin(azR) * dx + Math.cos(azR) * dy) * k);
   }
 
   const onPointerDown = (e: PointerEvent) => {
@@ -418,7 +440,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       const mid: [number, number] = [(a.x + b.x) / 2, (a.y + b.y) / 2];
       if (pinchDist > 0) {
         takeCamera();
-        etatCamera.zoom = Math.max(0.35, Math.min(2.2, etatCamera.zoom * (pinchDist / d)));
+        etatCamera.zoom = Math.max(0.35, Math.min(4.5, etatCamera.zoom * (pinchDist / d)));
       }
       if (lastMid) pan(mid[0] - lastMid[0], mid[1] - lastMid[1]);
       pinchDist = d;
@@ -436,7 +458,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
     takeCamera();
-    etatCamera.zoom = Math.max(0.35, Math.min(2.2, etatCamera.zoom * Math.exp(e.deltaY * 0.0012)));
+    etatCamera.zoom = Math.max(0.35, Math.min(4.5, etatCamera.zoom * Math.exp(e.deltaY * 0.0012)));
     schedule();
   };
   const onContextMenu = (e: Event) => e.preventDefault();
@@ -478,7 +500,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       shadowTarget.dispose();
       material.dispose();
       shadowMaterial.dispose();
-      aoTexture.dispose();
+      uniforms.uAO.value.dispose();
       renderer.dispose();
     },
   };

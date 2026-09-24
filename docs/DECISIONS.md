@@ -951,6 +951,111 @@ peint bien des pixels) repassée après cette correction, verte.
 
 ---
 
+### Jalon 7bis — la ville continue de grandir — 24/09/2026
+
+**Ce qui a été fait** : portage dans le générateur Three.js de la
+croissance sans limite déjà écrite dans le prototype mis à jour
+(`docs/prototypes/prototype-ville-3d.html`, demande d'Adrien consignée
+dans `docs/A-INTEGRER.md` §2). Les 16 premiers blocs s'ouvrent exactement
+aux mêmes seuils qu'avant (`BLOCK_OPEN`, jusqu'à 40 000 habitants), puis
+un bloc de plus tous les 5 000 habitants, sans plafond, toujours du
+centre vers l'extérieur (`openAtK`, `constantes.ts`). Les blocs sont
+repérés par des entiers relatifs au croisement central
+(`blockX0(b) = 8 + 80·b`, rues sur x = 80·k) au lieu de la grille fixe
+de 4 × 4. Chaque nouveau bloc suit la même vie (maisons, immeubles, puis
+chantier de gratte-ciel au plus tôt 12 000 habitants après son ouverture,
+`towerAtK`) ; les tours des blocs lointains plafonnent à 14 étages (le
+centre reste le plus haut). Les deux grands axes traversent toute la
+ville et repartent en routes de campagne depuis son bord réel ; les
+forêts ont des positions fixes par ville et s'effacent là où la ville
+s'étend.
+
+Tout ce qui était réglé pour une ville de 168 m de demi-côté suit
+désormais le **rayon réel de la ville** (`stats.cityR`, plancher
+`CITY_R_MIN` = 168) : champs cultivés et brouillard dans le shader
+(`uCityR`), emprise et finesse de la carte d'occlusion au sol
+(`dimensionsAO` : ville + 40 m, texture 1024² au-delà de 300 m), cadre de
+la caméra des ombres, distance et limites de zoom/déplacement de la
+caméra. Fidèle au prototype, à une exception près : son `CITY_R` était
+une variable globale modifiée en cours de génération, ici c'est une
+valeur retournée par `generate()` et passée explicitement (plus facile à
+tester, pas d'état caché).
+
+Deux petites corrections au passage, dans le code touché :
+- la texture d'occlusion précédente n'était jamais libérée quand on
+  changeait de ville (fuite mémoire, plus coûteuse maintenant qu'elle
+  peut faire 1024²) ;
+- changer de ville (page Villes) ne recadrait pas la caméra si le
+  joueur avait zoomé à la main : on restait zoomé pour un hameau sur une
+  métropole. Recadrage automatique à chaque changement de ville, comme
+  dans le prototype.
+
+**Décision prise sans Adrien, à contester si besoin** : l'aspect de
+toutes les villes existantes change une fois avec ce jalon (ordre
+d'ouverture des blocs, maisons, voitures, forêts). Le prototype tire
+désormais un aléa propre à chaque bloc, à chaque case de rue et à chaque
+arbre, au lieu de générateurs séquentiels — c'est ce qui garantit
+qu'agrandir la ville ne déplace jamais ce qui existe déjà (voir tests
+ci-dessous), mais ça rebat les cartes une fois. Pas de migration pour
+garder l'ancien plan : il n'existe aujourd'hui que les villes de test et
+un seul vrai compte (Adrien, un hameau à 1 habitant), et la règle
+"l'identité d'une ville ne change jamais" vise les changements au hasard
+d'un rechargement à l'autre, pas une mise à jour du moteur annoncée.
+Après ce jalon, la règle redevient stricte (§10 point 18).
+
+**Mesures** (`generate()` + occlusion, Node, même machine) :
+
+| Habitants | Blocs | Rayon | Sommets | Génération |
+|---|---|---|---|---|
+| 1 | 1 | 168 m | 143 000 | ~60 ms |
+| 40 000 | 16 | 240 m | 227 000 | ~60 ms |
+| 100 000 | 28 | 240 m | 287 000 | ~65 ms |
+| 250 000 | 58 | 320 m | 436 000 | ~155 ms |
+| 500 000 | 108 | 480 m | 706 000 | ~185 ms |
+| 1 000 000 | 208 | 640 m | 1 250 000 | ~345 ms |
+
+Repères de la spécification atteints (~28 blocs à 100 000, ~58 à
+250 000). Poids du paquet inchangé (`next build` : 104-113 Ko au premier
+chargement des pages du jeu, le générateur est dans le morceau 3D chargé
+en différé). **Pas de plafond ajouté** : la demande dit "sans limite",
+mais au-delà de ~500 000 habitants la géométrie devient lourde pour un
+téléphone — point ouvert pour Adrien (§10 point 19), pas tranché
+silencieusement. La plus grande ville de test fait aujourd'hui 114 000
+habitants.
+
+**Tests** : `tests/unit/ville3dCroissance.test.ts` (nouveau) — les 16
+premiers seuils sont identiques à avant ; +1 bloc tous les 5 000
+habitants au-delà ; un chantier de tour jamais moins de 12 000 habitants
+après son bloc ; repères 28 et 58 blocs ; la ville dépasse enfin 16
+blocs ; **stabilité** : pour trois graines et neuf paliers de 1 à
+500 000 habitants, chaque bloc ouvert le reste, au même endroit, avec les
+mêmes seuils ; la ville naît au croisement central et s'étend vers
+l'extérieur ; le rayon ne descend jamais sous le plancher et grandit avec
+la ville ; la carte d'occlusion couvre toujours toute la ville. Pour
+tester l'ordre des blocs sans passer par la géométrie, la planification
+est sortie de `generate()` dans une fonction pure,
+`planifierBlocs()`. Les tests existants (déterminisme, triangles valides,
+bornes jusqu'à 500 000, gratte-ciel au seuil Ville) et le test e2e "le
+sol est bien dessiné" passent sans changement. Vérifié aussi à l'œil
+avec un compte jetable à 250 000 habitants (58 blocs, tours plus hautes
+au centre, champs et routes de campagne partant du bord réel, ombres sur
+toute la ville) et en passant d'une grande ville à un hameau sur la page
+Villes (recadrage correct). Suite complète : 57 tests unitaires +
+21 tests e2e, verte depuis un cache froid.
+
+**Vérification rouge par sabotage** : remplacer l'aléa par bloc par un
+générateur séquentiel unique (l'ancienne méthode) → le test de stabilité
+échoue (blocs "perdus" quand la ville grandit), puis passe de nouveau une
+fois l'aléa par bloc rétabli.
+
+**Faux échec corrigé à la racine** : le test e2e du Jalon 1 échouait
+parfois à froid (troisième fois constatée) sur la double redirection
+connexion → `/ville` → `/ville/creer`, les deux routes se compilant à la
+demande en plus des 5 s d'attente par défaut. Attente portée à 20 s sur
+cette seule assertion, avec un commentaire qui l'explique.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1203,3 +1308,38 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     dédié, et avec quel contenu réel pour le bulletin (quels événements
     logger : nouveaux habitants, influence reçue, attaques subies,
     étages construits ?).
+18. **Aspect des villes existantes changé une fois par le Jalon 7bis**
+    (nouveau plan de blocs, maisons, voitures, forêts). Tranché par
+    Claude, raisonnement dans §4, journal du Jalon 7bis. → **À contester
+    par Adrien s'il préfère une migration** qui garde l'ancien plan. À
+    partir de maintenant, la règle redevient stricte : toute évolution du
+    générateur doit garder à l'identique les villes déjà construites (le
+    test de stabilité du Jalon 7bis en couvre l'ordre des blocs ; la
+    future bibliothèque de bâtiments, `docs/BATIMENTS-ET-PACKS.md` §2,
+    devra faire de même pour les modèles).
+19. **Plafond de rendu pour les très grandes villes ?** La croissance est
+    sans limite comme demandé, mais le coût monte : 436 000 sommets à
+    250 000 habitants, 706 000 à 500 000, 1,25 million à 1 000 000 (mesures
+    au §4, Jalon 7bis). Sur téléphone, au-delà de ~500 000 habitants, ça
+    risque de ramer. Pistes : plafonner le *rendu* (la population continue
+    de monter, la ville dessinée arrête de s'étendre) ; ou simplifier les
+    blocs lointains (moins de détails loin du centre). → **À trancher par
+    Adrien**, sans urgence : la plus grande ville de test fait 114 000
+    habitants. À mesurer sur son téléphone avec une ville de test géante
+    avant de décider.
+20. **Un stade au-delà de Métropole ?** (ex. "Mégapole" à 250 000
+    habitants, question posée dans `docs/A-INTEGRER.md` §2). Le rendu
+    continue de grandir mais le niveau reste Métropole au-delà de
+    100 000. → **À trancher par Adrien** ; toucherait `SEUILS_NIVEAU` et
+    la fonction SQL `population_vers_niveau()` (nouvelle migration).
+21. **Bibliothèque de bâtiments et packs de thèmes**
+    (`docs/BATIMENTS-ET-PACKS.md`, proposition du 24/09/2026). En attente
+    des réponses d'Adrien aux 4 questions de son §7 (thèmes prioritaires,
+    variantes par pays, packs uniquement cosmétiques, ordre par rapport
+    au Jalon 8). Aucun code avant validation.
+22. **Revoir les règles du jeu** (retour d'Adrien après le Jalon 4 :
+    "−10 % de population, c'est exagéré" — `docs/A-INTEGRER.md` §3 et
+    `docs/SYSTEME-DEVELOPPEMENT.md` §6 bis). Proposition en réflexion :
+    effets unitaires faibles, cumul des attaques de la journée, plafond de
+    10 %/jour, paliers visibles. Ajouté à `ROADMAP.md` comme jalon **à
+    placer par Adrien**. Pas de code d'ici là.

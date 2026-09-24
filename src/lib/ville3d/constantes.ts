@@ -6,9 +6,10 @@
 
 export const T = 16; // taille d'une case de la grille de rues
 export const PERIOD = 5; // 4 cases de bloc + 1 case de rue
-export const BN = 4; // blocs par côté
-export const NT = BN * PERIOD + 1; // 21 cases par côté
-export const HALF = (NT * T) / 2; // 168
+// Demi-taille minimale du carré qui contient la ville (l'ancienne grille
+// fixe de 4×4 blocs) : sert de plancher au rayon de ville, même pour un
+// hameau, pour que la campagne et le brouillard ne collent pas au centre.
+export const CITY_R_MIN = 168;
 export const BS = 4 * T; // côté d'un bloc : 64 m
 export const SW = 3; // largeur de trottoir
 export const LOT = (BS - 2 * SW) / 4; // 14,5 m
@@ -30,7 +31,24 @@ export const APART_FLOOR_EVERY = 6000; // +1 étage d'immeuble tous les 6 000 ha
 export const TOWER_FROM = 15000; // premier gratte-ciel à partir de Ville, bloc du centre
 export const TOWER_STAGGER = 4500; // puis un nouveau chantier de tour tous les 4 500 habitants
 export const PER_FLOOR = 500; // +1 étage de gratte-ciel tous les 500 habitants
-export const MAX_POP = 120000;
+// Au-delà des 16 premiers blocs, la ville ne s'arrête plus : un bloc de
+// plus tous les 5 000 habitants (Jalon 7bis, docs/A-INTEGRER.md §2).
+export const BLOC_SUPPLEMENTAIRE_TOUS = 5000;
+// Un chantier de gratte-ciel ne démarre jamais moins de 12 000 habitants
+// après l'ouverture de son bloc (les blocs lointains se construisent d'abord).
+export const TOWER_AFTER_OPEN = 12000;
+
+/** Seuil de population à partir duquel le k-ième bloc (0 = le plus central) s'ouvre. */
+export const openAtK = (k: number): number =>
+  k < BLOCK_OPEN.length
+    ? BLOCK_OPEN[k]
+    : BLOCK_OPEN[BLOCK_OPEN.length - 1] + (k - BLOCK_OPEN.length + 1) * BLOC_SUPPLEMENTAIRE_TOUS;
+
+/** Seuil de population du chantier de gratte-ciel du k-ième bloc. */
+export const towerAtK = (k: number): number => Math.max(TOWER_FROM + k * TOWER_STAGGER, openAtK(k) + TOWER_AFTER_OPEN);
+
+/** x (ou z) du bord d'un bloc d'indice entier relatif au croisement central : rues sur x = 80·k. */
+export const blockX0 = (b: number): number => 8 + (PERIOD * T) * b;
 
 export const MAT = {
   MEADOW: 0,

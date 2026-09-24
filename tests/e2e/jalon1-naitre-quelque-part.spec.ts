@@ -58,7 +58,11 @@ test.describe("Jalon 1 — naître quelque part", () => {
     await page.getByLabel("Mot de passe").fill(motDePasse);
     await page.getByRole("button", { name: "Se connecter" }).click();
 
-    await expect(page).toHaveURL(/\/ville\/creer$/);
+    // Deux sauts (connexion → /ville → redirection /ville/creer) : sur un
+    // serveur de dev à froid, chaque route se compile à la demande et les
+    // 5 s par défaut ne suffisent pas toujours (faux échec constaté trois
+    // fois, voir DECISIONS.md §4, Jalon 7bis).
+    await expect(page).toHaveURL(/\/ville\/creer$/, { timeout: 20_000 });
 
     await page.getByLabel("Ton pseudo").fill("Testeur");
     await page.getByLabel("Nom de ta ville").fill("Testopolis");

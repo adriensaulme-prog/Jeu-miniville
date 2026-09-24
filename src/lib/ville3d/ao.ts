@@ -7,8 +7,19 @@
 
 import type { TamponAO } from "./mobilier";
 
-export const AO_RES = 512;
-export const AO_EXT = 210;
+export interface CarteAO {
+  donnees: Uint8Array;
+  /** Côté de la texture, en texels. */
+  res: number;
+  /** Demi-taille, en mètres, du carré couvert par la texture. */
+  ext: number;
+}
+
+/** Emprise de la carte d'occlusion : la ville plus une marge, texture plus fine au-delà de 300 m. */
+export function dimensionsAO(cityR: number): { res: number; ext: number } {
+  const ext = cityR + 40;
+  return { ext, res: ext > 300 ? 1024 : 512 };
+}
 
 export function blur(src: Float32Array, n: number, rad: number): Float32Array {
   const tmp = new Float32Array(n * n),
@@ -34,7 +45,8 @@ export function blur(src: Float32Array, n: number, rad: number): Float32Array {
   return out;
 }
 
-export function bakeAO(stamps: TamponAO[], lamps: { x: number; z: number }[]): Uint8Array {
+export function bakeAO(stamps: TamponAO[], lamps: { x: number; z: number }[], cityR: number): CarteAO {
+  const { res: AO_RES, ext: AO_EXT } = dimensionsAO(cityR);
   const n = AO_RES,
     cell = (2 * AO_EXT) / n;
   const occ = new Float32Array(n * n),
@@ -75,5 +87,5 @@ export function bakeAO(stamps: TamponAO[], lamps: { x: number; z: number }[]): U
     out[2 * k] = Math.round(255 * Math.max(0.28, Math.min(1, 1 - 0.62 * a[k] - 0.4 * t[k])));
     out[2 * k + 1] = Math.round(255 * Math.min(1, gw[k] * 1.8));
   }
-  return out;
+  return { donnees: out, res: AO_RES, ext: AO_EXT };
 }

@@ -36,7 +36,7 @@ export const FS = /* glsl */ `
   uniform sampler2D uShadow;
   uniform sampler2D uAO;
   uniform vec3 uSunDir, uSunColor, uSkyTop, uSkyHorizon, uGround, uViewDir, uFog;
-  uniform float uAmbient, uExposure, uNight, uAOExt;
+  uniform float uAmbient, uExposure, uNight, uAOExt, uCityR;
   out vec4 outColor;
 
   float h12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -102,7 +102,7 @@ export const FS = /* glsl */ `
       float hc = h12(cellId);
       vec3 field = hc < .33 ? lin(vec3(.60,.69,.36)) : hc < .55 ? lin(vec3(.80,.73,.46)) : hc < .72 ? lin(vec3(.50,.62,.30)) : lin(vec3(.67,.62,.40));
       float stripes = .92 + .08 * step(.5, fract(dot(P.xz, hc < .5 ? vec2(.35,0) : vec2(0,.35))));
-      float far = smoothstep(190., 300., max(abs(P.x), abs(P.z)));
+      float far = smoothstep(uCityR + 22., uCityR + 130., max(abs(P.x), abs(P.z)));
       albedo = mix(albedo, field * stripes * (.85 + .3 * n2), far * .85);
       vec2 cf = fract((P.xz + vec2(13.,7.)) / vec2(95., 70.));
       float hedge = far * (1. - smoothstep(0., .012, min(min(cf.x, 1. - cf.x), min(cf.y, 1. - cf.y))));
@@ -115,7 +115,7 @@ export const FS = /* glsl */ `
       float Pd = 80.;
       float dx = P.x - (-160. + Pd * floor((P.x + 160.) / Pd + .5));
       float dz = P.z - (-160. + Pd * floor((P.z + 160.) / Pd + .5));
-      bool inCity = max(abs(P.x), abs(P.z)) < 176.;
+      bool inCity = max(abs(P.x), abs(P.z)) < uCityR;
       if (!inCity) { dx = P.x; dz = P.z; }
       bool rx = abs(dx) < 8., rz = abs(dz) < 8.;
       if (!inCity) { rx = abs(P.x) < 6.; rz = abs(P.z) < 6.; }
@@ -329,7 +329,7 @@ export const FS = /* glsl */ `
     col = aces(col * uExposure);
     col = pow(col, vec3(1. / 2.2));
     float d = length(P.xz);
-    col = mix(col, uFog, smoothstep(250., 760., d) * .92);
+    col = mix(col, uFog, smoothstep(uCityR + 80., uCityR + 650., d) * .92);
     outColor = vec4(col, 1.);
   }
 `;
