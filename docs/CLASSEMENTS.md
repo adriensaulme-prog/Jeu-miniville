@@ -7,8 +7,11 @@ intégrer par Claude Code dans `docs/DECISIONS.md` et dans le
 
 > **État de l'intégration (24/09/2026, Claude Code)** : §1, §2 et §4
 > faits au Jalon 8 (`docs/DECISIONS.md` §4, journal du Jalon 8). §3 et
-> §5 (Jalon 8bis) pas commencés. §6 : questions 1 et 3 tranchées par
-> défaut (délai de 30 jours, pas de classement des attaquants) ; les
+> §5 (Jalon 8bis) faits le même jour (`docs/DECISIONS.md` §4, journal du
+> Jalon 8bis) — calculés par requête directe sur les journaux existants
+> plutôt que par `city_stats_jour`/`pg_cron` comme proposé ici, écart
+> assumé et documenté dans ce journal. §6 : questions 1 et 3 tranchées
+> par défaut (délai de 30 jours, pas de classement des attaquants) ; les
 > questions 2 (gouverneur de région) et 4 (autres classements annexes)
 > restent ouvertes pour Adrien — voir `docs/DECISIONS.md` §10 points 23
 > et 25.

@@ -97,7 +97,7 @@ de vue du joueur — le titre dit ce qui change pour lui.
   Proposition `docs/BATIMENTS-ET-PACKS.md`, en attente des réponses
   d'Adrien (`DECISIONS.md` §10 point 21).
 
-## Phase 2 — Rivalités entre villes
+## Phase 2 — Rivalités entre villes *(terminée)*
 
 - [x] **Jalon 8 — Se classer.** Régions (choix obligatoire à la création,
   écran de rattrapage pour les villes créées avant ce jalon, changement
@@ -107,11 +107,15 @@ de vue du joueur — le titre dit ce qui change pour lui.
   version d'origine de ce jalon. Détail dans `DECISIONS.md` §4 — recette
   dans `docs/recette-jalon-8.md`. Points ouverts : titre de gouverneur de
   région, régions réelles pour d'autres pays (§10 points 23 et 24).
-- [ ] **Jalon 8bis — Les palmarès.** Bilans journaliers par ville et
-  classements annexes par période (croissance, habitants perdus,
-  influence, visites, jumelages, attaques reçues), sur 3 échelles
-  (monde, pays, région). Scindé du Jalon 8, même logique que 6/6bis et
-  7/7bis (`docs/CLASSEMENTS.md` §5, `DECISIONS.md` §10 point 25).
+- [x] **Jalon 8bis — Les palmarès.** Sept classements annexes (plus
+  forte croissance, plus éprouvées, plus influentes, plus visitées,
+  plus attaquées, joueurs les plus généreux, plus beaux jumelages), sur
+  4 périodes (jour/semaine/mois/toujours) et 3 échelles (monde, pays,
+  région), avec "ma position". Scindé du Jalon 8, même logique que
+  6/6bis et 7/7bis. Calculés par requête directe sur les journaux
+  existants plutôt que par bilan journalier + `pg_cron` (écart assumé,
+  voir `DECISIONS.md` §4, journal du Jalon 8bis). Détail dans
+  `DECISIONS.md` §4 — recette dans `docs/recette-jalon-8bis.md`.
 
 ## Phase 3 — Le pays prend forme
 
@@ -162,5 +166,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 24/09/2026, jalon 8 terminé, avant le jalon 8bis
-"Les palmarès" ou le jalon 9 "Naissance d'un pays".*
+*Dernière mise à jour : 24/09/2026, jalon 8bis terminé (fin de la
+Phase 2), avant le jalon 9 "Naissance d'un pays".*

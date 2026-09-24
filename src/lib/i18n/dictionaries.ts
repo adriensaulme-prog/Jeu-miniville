@@ -159,6 +159,7 @@ export const dictionaries = {
     "creationVille.regionPlaceholder": "Choisis une région",
 
     "nav.classement": "Classement",
+    "nav.palmares": "Palmarès",
 
     "classement.titre": "Se classer",
     "classement.mondial": "Mondial",
@@ -166,6 +167,28 @@ export const dictionaries = {
     "classement.regional": "Régional",
     "classement.maPosition": "Ma position",
     "classement.aucuneVille": "Aucune ville dans ce classement pour l'instant.",
+
+    "palmares.titre": "Les palmarès",
+    "palmares.croissance": "Plus forte croissance",
+    "palmares.pertes": "Plus éprouvées",
+    "palmares.influence": "Plus influentes",
+    "palmares.visites": "Plus visitées",
+    "palmares.attaques": "Plus attaquées",
+    "palmares.generosite": "Joueurs les plus généreux",
+    "palmares.jumelages": "Plus beaux jumelages",
+    "palmares.periode.jour": "Aujourd'hui",
+    "palmares.periode.semaine": "Cette semaine",
+    "palmares.periode.mois": "Ce mois",
+    "palmares.periode.toujours": "Depuis toujours",
+    "palmares.maPosition": "Ma position",
+    "palmares.aucunResultat": "Rien sur cette période pour l'instant.",
+    "palmares.uniteHabitantsGagnes": "habitants gagnés",
+    "palmares.uniteHabitantsPerdus": "habitants perdus",
+    "palmares.uniteInfluence": "points d'influence",
+    "palmares.uniteVisitesRecues": "visites reçues",
+    "palmares.uniteAttaques": "attaques reçues",
+    "palmares.uniteVisitesDonnees": "visites données",
+    "palmares.uniteJumelage": "jours de bonus",
 
     "region.titre": "Choisis ta région",
     "region.introduction":
@@ -328,6 +351,7 @@ export const dictionaries = {
     "creationVille.regionPlaceholder": "Pick a region",
 
     "nav.classement": "Rankings",
+    "nav.palmares": "Leaderboards",
 
     "classement.titre": "Get ranked",
     "classement.mondial": "World",
@@ -335,6 +359,28 @@ export const dictionaries = {
     "classement.regional": "Regional",
     "classement.maPosition": "My position",
     "classement.aucuneVille": "No city in this ranking yet.",
+
+    "palmares.titre": "Leaderboards",
+    "palmares.croissance": "Fastest growing",
+    "palmares.pertes": "Hardest hit",
+    "palmares.influence": "Most influential",
+    "palmares.visites": "Most visited",
+    "palmares.attaques": "Most attacked",
+    "palmares.generosite": "Most generous players",
+    "palmares.jumelages": "Best twinnings",
+    "palmares.periode.jour": "Today",
+    "palmares.periode.semaine": "This week",
+    "palmares.periode.mois": "This month",
+    "palmares.periode.toujours": "All-time",
+    "palmares.maPosition": "My position",
+    "palmares.aucunResultat": "Nothing on this period yet.",
+    "palmares.uniteHabitantsGagnes": "inhabitants gained",
+    "palmares.uniteHabitantsPerdus": "inhabitants lost",
+    "palmares.uniteInfluence": "influence points",
+    "palmares.uniteVisitesRecues": "visits received",
+    "palmares.uniteAttaques": "attacks received",
+    "palmares.uniteVisitesDonnees": "visits given",
+    "palmares.uniteJumelage": "bonus days",
 
     "region.titre": "Pick your region",
     "region.introduction":

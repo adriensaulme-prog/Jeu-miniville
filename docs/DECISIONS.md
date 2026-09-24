@@ -1150,9 +1150,96 @@ toujours dans le budget (104-180 Ko selon les pages, contrainte
   Adrien lui-même, pas codé ;
 - le **classement des plus grands attaquants** — exclu par choix
   délibéré du document, pas de code ;
-- le **Jalon 8bis "Les palmarès"** (bilans journaliers `city_stats_jour`,
-  classements annexes par période, `pg_cron`) — jalon séparé, pas
-  commencé.
+- le **Jalon 8bis "Les palmarès"** (bilans journaliers, classements
+  annexes par période) — jalon séparé, voir son propre journal
+  ci-dessous (fait le même jour).
+
+---
+
+### Jalon 8bis — les palmarès — 24/09/2026
+
+**Contenu.** Suite naturelle du Jalon 8, comme prévu par
+`docs/CLASSEMENTS.md` §3 et §5 : sept classements annexes (plus forte
+croissance, plus éprouvées, plus influentes, plus visitées, plus
+attaquées, joueurs les plus généreux, plus beaux jumelages), chacun sur
+quatre périodes (aujourd'hui, cette semaine, ce mois, depuis toujours)
+et trois échelles (mondial, national, régional), avec "ma position"
+affichée quand elle existe — nouvel onglet `/palmares`.
+
+**Écart assumé par rapport à `docs/CLASSEMENTS.md` §4, décidé sans
+attendre Adrien (à contester si besoin).** La spécification proposait
+une table `city_stats_jour` remplie au fil des événements puis agrégée
+par `pg_cron`. En écrivant ce jalon, constat que les journaux des
+jalons précédents (`visites`, `actions_influence`, `actions_antiville`,
+`jumelage_bonus`) contiennent déjà tout ce dont les sept palmarès ont
+besoin — chacun a une colonne `jour` — sauf le **montant** perdu par une
+action AntiVille (seul le type d'action était gardé, pas la quantité).
+Plutôt qu'une nouvelle table à tenir à jour en plus de ces journaux, ce
+jalon ajoute une seule colonne (`actions_antiville.montant`, renseignée
+par `lancer_action_antiville()`) et calcule chaque palmarès par une
+requête directe sur les journaux existants (sept fonctions SQL
+`palmares_croissance`, `palmares_pertes`, `palmares_influence`,
+`palmares_visites`, `palmares_attaques`, `palmares_generosite`,
+`palmares_jumelages`, chacune paramétrée par une date de début et une
+échelle). Même logique que la décision déjà prise au Jalon 8 de ne pas
+mettre de vue matérialisée/`pg_cron` pour les classements principaux
+tant que l'échelle réelle (quelques dizaines de villes) ne le justifie
+pas — voir le commentaire en tête de
+`supabase/migrations/0011_jalon8bis_palmares.sql` pour le détail.
+Chaque fonction renvoie tous les sujets actifs sur la période (pas de
+`LIMIT` arbitraire, juste `valeur > 0`) avec leur rang exact via
+`row_number()`, ce qui donne "ma position" et le haut du classement en
+une seule requête, sans requête séparée pour le rang hors-top.
+
+**Choix de conception notés au passage** :
+- "Habitants gagnés" (croissance) compte les visites reçues **et** les
+  bonus de jumelage reçus — ce sont les deux seules sources de
+  population dans le jeu actuel ; "habitants perdus" (pertes) ne compte
+  que les contaminations (pas les grèves/propagandes, qui ne retirent
+  pas d'habitants).
+- "Influence gagnée" compte les actions d'influence reçues (toujours
+  +1 chacune), sans soustraire les pertes de propagande — lecture
+  littérale de "influence gagnée" dans `docs/CLASSEMENTS.md` §3, pas un
+  solde net.
+- "Joueurs les plus généreux" (par joueur, pas par ville) filtre
+  l'échelle sur la **région du joueur qui visite**, pas sur celle de la
+  ville visitée.
+- "Plus beaux jumelages" (par paire, pas par ville) compte une paire
+  dans une échelle si **l'une** de ses deux villes en fait partie (un
+  jumelage peut traverser une frontière de pays/région).
+- Les quatre périodes sont des **fenêtres glissantes** (aujourd'hui
+  inclus, pas de mois calendaire) — même logique que la fenêtre
+  glissante de 24h déjà utilisée par la protection anti-harcèlement du
+  Jalon 4. Calcul dans `src/lib/game/periodePalmares.ts` (pur, testable,
+  séparé de la page comme `ordinal.ts`/`ligneLocale.ts`).
+
+**Pas de vérification rouge par sabotage sur les fonctions SQL
+elles-mêmes** : contrairement au code applicatif (TypeScript), une
+fonction SQL déjà appliquée ne peut pas être modifiée temporairement
+depuis un test sans accès psql direct (contrainte connue du projet).
+Les tests vérifient donc des **valeurs exactes** calculées à partir
+d'actions connues (ex. deux visites → `valeur = 2` pile), pas de simples
+`> 0` — une régression de calcul fait échouer une valeur précise, même
+rôle de garde-fou qu'un sabotage.
+
+**Testé.** `tests/unit/periodePalmares.test.ts` (nouveau, 6 tests) :
+bornes des quatre périodes, insensibilité à l'heure du jour (seule la
+date UTC compte), passage correct d'un mois à l'autre.
+`tests/e2e/jalon8bis-palmares.spec.ts` (nouveau, 6 tests) : croissance et
+visites reçues comptent exactement les vraies visites ; pertes et
+attaques comptent exactement le montant et le nombre d'une
+contamination (montant recalculé côté test à partir de la formule du
+Jalon 4, pas codé en dur) ; influence compte exactement les actions
+reçues ; générosité filtre bien sur la région du joueur qui visite (pas
+celle qu'il visite) ; jumelages compte exactement les bonus accordés à
+une paire ; la page `/palmares` affiche les sept classements et change
+bien de filtre (classement/période/échelle) sans erreur console.
+Vérifié aussi à l'œil avec des comptes jetables : page vide avant la
+migration (erreur PostgREST "function not found" absorbée proprement,
+pas de crash), page remplie après, "ma position" et badge "Ma ville"
+corrects. Poids du paquet toujours dans le budget (108 Ko pour
+`/palmares`). Suite complète : 63 tests unitaires + 32 tests e2e, verte
+depuis un cache froid.
 
 ---
 
@@ -1456,14 +1543,13 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     journal du Jalon 8, à contester si besoin). → **À trancher par
     Adrien** : étendre à d'autres pays (Japon, Espagne, Italie,
     Royaume-Uni ?) ne demande qu'une nouvelle migration insert.
-25. **Jalon 8bis "Les palmarès"** (`docs/CLASSEMENTS.md` §3 et §5) :
-    bilans journaliers (`city_stats_jour`), classements annexes par
-    période (croissance, habitants perdus, influence, visites, jumelages,
-    attaques reçues) sur 4 périodes × 3 échelles, calculés via `pg_cron`.
-    Pas commencé. Questions encore ouvertes pour Adrien
-    (`docs/CLASSEMENTS.md` §6, questions 3 et 4, la 1 et la 2 sont
-    couvertes par les points 23 et l'absence de classement des
-    attaquants déjà tranchée) : d'autres classements annexes en tête ?
+25. **Jalon 8bis "Les palmarès"** — fait, §4 journal du Jalon 8bis (sept
+    classements annexes, 4 périodes × 3 échelles, calculés par requête
+    directe sur les journaux existants plutôt que par
+    `city_stats_jour`/`pg_cron`, écart documenté dans le journal).
+    Question encore ouverte pour Adrien (`docs/CLASSEMENTS.md` §6,
+    question 4 — la question 3 est tranchée, l'absence de classement des
+    attaquants) : d'autres classements annexes en tête ?
 26. **Noms uniques (pseudos et villes) pas encore faits.**
     `docs/A-INTEGRER.md` §8 demandait cette règle **dans le Jalon 8**
     ("qui touche déjà l'écran de création"), mais le contenu réel de ce

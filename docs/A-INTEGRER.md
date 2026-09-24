@@ -9,8 +9,9 @@ journal existant, puis ce fichier peut être supprimé.*
 > (`DECISIONS.md` §10 points 16 et 22, jalon "Revoir les règles du jeu"
 > à placer dans `ROADMAP.md`), aucun code ; §4 inscrit comme contrainte
 > permanente (`DECISIONS.md` §1 point 6), script `npm run poids` pas
-> encore fait ; §6 fait au Jalon 8 (`DECISIONS.md` §4, journal du
-> Jalon 8, et §10 points 23-24 pour les questions encore ouvertes) ;
+> encore fait ; §6 fait aux Jalons 8 et 8bis (`DECISIONS.md` §4, journaux
+> des deux jalons, et §10 points 23-25 pour les questions encore
+> ouvertes) ;
 > **§8 (noms uniques) pas fait** malgré la demande "à faire dans le
 > Jalon 8" — le contenu réel du jalon a suivi `docs/CLASSEMENTS.md`
 > plutôt que ce §8, voir `DECISIONS.md` §10 point 26. Ce fichier peut
@@ -260,3 +261,23 @@ touche déjà l'écran de création (choix de la région).
   tiret ou espace → refusé ; deux créations simultanées du même nom →
   une seule réussit ; test rouge par sabotage (retirer l'index fait
   échouer le test).
+
+## 9. Service worker : à désactiver en développement (bug vécu par Adrien, 25/09/2026)
+
+**Symptôme** : `localhost:3000` inaccessible pour Adrien avec
+`ERR_FAILED` dans Chrome (pas `ERR_CONNECTION_REFUSED` : le serveur
+`next dev` tournait). Cause : `RegisterServiceWorker`
+(`src/app/register-sw.tsx`) enregistre `public/sw.js` **aussi en
+développement**. Ce service worker met en cache `/` de façon agressive
+(`fetch` dans le handler `fetch`, cache `SHELL_URLS`), or les chunks et
+le HTML changent à chaque compilation/HMR de `next dev` : le service
+worker sert alors une version périmée ou échoue, et bloque toute la
+page. Résolu ponctuellement par Adrien via DevTools > Application >
+Service Workers > Unregister + Clear site data.
+
+**À corriger** : n'enregistrer le service worker **qu'en production**
+(`process.env.NODE_ENV === "production"`, ou équivalent Next.js), jamais
+pendant `npm run dev`. Ajouter un test ou une vérification qui empêche
+la régression. Documenter le geste de dépannage (Unregister + Clear
+site data) dans `docs/GUIDE-METHODE.md` au cas où ça se reproduise
+malgré tout (cache déjà enregistré chez un joueur avant la correction).
