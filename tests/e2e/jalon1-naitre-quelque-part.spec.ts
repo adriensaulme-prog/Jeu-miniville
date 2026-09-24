@@ -67,11 +67,17 @@ test.describe("Jalon 1 — naître quelque part", () => {
     await page.getByLabel("Ton pseudo").fill("Testeur");
     await page.getByLabel("Nom de ta ville").fill("Testopolis");
     await page.getByLabel("Pays").selectOption({ label: "France" });
+    // Le sélecteur de région n'apparaît qu'une fois un pays choisi
+    // (Jalon 8, CreerVilleForm.tsx) — voir tests/e2e/jalon8-se-classer.spec.ts
+    // pour la couverture dédiée aux régions.
+    await page.getByLabel("Ta région").selectOption({ label: "Île-de-France" });
     await page.getByRole("button", { name: "Fonder ma ville" }).click();
 
     await expect(page).toHaveURL(/\/ville$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Testopolis");
-    await expect(page.getByText("France ·")).toBeVisible();
+    // Ancré en début de texte : la ligne de région ("Région :
+    // Île-de-France ·", Jalon 8) contient aussi "France ·" en sous-chaîne.
+    await expect(page.getByText(/^France · \d{2}:\d{2}/)).toBeVisible();
     await expect(page.getByText("Hameau")).toBeVisible();
     await expect(page.getByText("Population")).toBeVisible();
     await expect(page.getByRole("main").getByText("1", { exact: true })).toBeVisible();

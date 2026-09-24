@@ -9,6 +9,8 @@ const ONGLETS = [
   { href: "/ville", cle: "nav.maVille" as const },
   { href: "/villes", cle: "nav.villes" as const },
   { href: "/jumelages", cle: "nav.jumelages" as const },
+  { href: "/classement", cle: "nav.classement" as const },
+  { href: "/palmares", cle: "nav.palmares" as const },
 ];
 
 export function NavTabs({ locale, className, tabClassName }: { locale: Locale; className: string; tabClassName: string }) {

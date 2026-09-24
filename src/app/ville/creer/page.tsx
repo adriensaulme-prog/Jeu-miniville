@@ -30,13 +30,17 @@ export default async function CreerVillePage() {
     .from("countries")
     .select(`id, nom:${colonneNom}`)
     .order(colonneNom);
+  const { data: regions } = await supabase
+    .from("regions")
+    .select(`id, country_id, nom:${colonneNom}`)
+    .order(colonneNom);
 
   return (
     <main className="screen nobar" aria-label={traduire(locale, "creationVille.titre")}>
       <div className="center-card">
         <span className="eyebrow">{traduire(locale, "creationVille.titre")}</span>
         <p className="lead">{traduire(locale, "creationVille.introduction")}</p>
-        <CreerVilleForm locale={locale} pays={pays ?? []} />
+        <CreerVilleForm locale={locale} pays={pays ?? []} regions={regions ?? []} />
       </div>
     </main>
   );

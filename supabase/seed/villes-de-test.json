@@ -1,6 +1,6 @@
 {
   "_a_lire": "Villes de TEST uniquement (is_test = true). A charger dans les environnements de dev et de recette, JAMAIS en production. Pseudos prefixes test_. Chaque jalon enrichit ce jeu de donnees (voir docs/GUIDE-METHODE.md, section recette).",
-  "version": 2,
+  "version": 3,
   "villes": [
     {
       "id": "test-01",
@@ -12,7 +12,8 @@
       "influence": 13680,
       "activite_7j": 35,
       "stade_attendu": "Métropole",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-idf"
     },
     {
       "id": "test-02",
@@ -24,7 +25,8 @@
       "influence": 9408,
       "activite_7j": 44,
       "stade_attendu": "Grande ville",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-ara"
     },
     {
       "id": "test-03",
@@ -36,7 +38,8 @@
       "influence": 4680,
       "activite_7j": 9,
       "stade_attendu": "Ville",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-naq"
     },
     {
       "id": "test-04",
@@ -48,7 +51,8 @@
       "influence": 2460,
       "activite_7j": 60,
       "stade_attendu": "Ville",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-occ"
     },
     {
       "id": "test-05",
@@ -60,7 +64,8 @@
       "influence": 1290,
       "activite_7j": 38,
       "stade_attendu": "Bourg",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-pdl"
     },
     {
       "id": "test-06",
@@ -72,7 +77,8 @@
       "influence": 630,
       "activite_7j": 39,
       "stade_attendu": "Bourg",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-bre"
     },
     {
       "id": "test-07",
@@ -84,7 +90,8 @@
       "influence": 331,
       "activite_7j": 49,
       "stade_attendu": "Village",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-ges"
     },
     {
       "id": "test-08",
@@ -96,7 +103,8 @@
       "influence": 111,
       "activite_7j": 34,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-hdf"
     },
     {
       "id": "test-09",
@@ -108,7 +116,8 @@
       "influence": 49,
       "activite_7j": 40,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-nor"
     },
     {
       "id": "test-10",
@@ -120,7 +129,8 @@
       "influence": 3,
       "activite_7j": 3,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "fr-pac"
     },
     {
       "id": "test-11",
@@ -132,7 +142,8 @@
       "influence": 12960,
       "activite_7j": 10,
       "stade_attendu": "Métropole",
-      "is_test": true
+      "is_test": true,
+      "region": "de-by"
     },
     {
       "id": "test-12",
@@ -144,7 +155,8 @@
       "influence": 7824,
       "activite_7j": 9,
       "stade_attendu": "Grande ville",
-      "is_test": true
+      "is_test": true,
+      "region": "de-nw"
     },
     {
       "id": "test-13",
@@ -156,7 +168,8 @@
       "influence": 3960,
       "activite_7j": 55,
       "stade_attendu": "Ville",
-      "is_test": true
+      "is_test": true,
+      "region": "de-be"
     },
     {
       "id": "test-14",
@@ -168,7 +181,8 @@
       "influence": 1920,
       "activite_7j": 34,
       "stade_attendu": "Ville",
-      "is_test": true
+      "is_test": true,
+      "region": "de-he"
     },
     {
       "id": "test-15",
@@ -180,7 +194,8 @@
       "influence": 960,
       "activite_7j": 16,
       "stade_attendu": "Bourg",
-      "is_test": true
+      "is_test": true,
+      "region": "de-bw"
     },
     {
       "id": "test-16",
@@ -192,7 +207,8 @@
       "influence": 388,
       "activite_7j": 25,
       "stade_attendu": "Village",
-      "is_test": true
+      "is_test": true,
+      "region": "de-ni"
     },
     {
       "id": "test-17",
@@ -204,7 +220,8 @@
       "influence": 72,
       "activite_7j": 25,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "de-sn"
     },
     {
       "id": "test-18",
@@ -216,7 +233,8 @@
       "influence": 9,
       "activite_7j": 50,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "de-mv"
     },
     {
       "id": "test-19",
@@ -228,7 +246,8 @@
       "influence": 1620,
       "activite_7j": 7,
       "stade_attendu": "Bourg",
-      "is_test": true
+      "is_test": true,
+      "region": "be-vlg"
     },
     {
       "id": "test-20",
@@ -240,7 +259,8 @@
       "influence": 87,
       "activite_7j": 8,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "be-wal"
     },
     {
       "id": "test-21",
@@ -252,7 +272,8 @@
       "influence": 465,
       "activite_7j": 21,
       "stade_attendu": "Village",
-      "is_test": true
+      "is_test": true,
+      "region": "ch-zh"
     },
     {
       "id": "test-22",
@@ -264,7 +285,8 @@
       "influence": 24,
       "activite_7j": 12,
       "stade_attendu": "Hameau",
-      "is_test": true
+      "is_test": true,
+      "region": "ch-ge"
     },
     {
       "id": "test-23",
@@ -276,7 +298,8 @@
       "influence": 1140,
       "activite_7j": 48,
       "stade_attendu": "Bourg",
-      "is_test": true
+      "is_test": true,
+      "region": "ca-on"
     },
     {
       "id": "test-24",
@@ -288,7 +311,8 @@
       "influence": 3240,
       "activite_7j": 22,
       "stade_attendu": "Ville",
-      "is_test": true
+      "is_test": true,
+      "region": "jp-tout"
     }
   ],
   "jumelages": [

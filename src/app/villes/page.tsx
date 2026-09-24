@@ -4,6 +4,7 @@ import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau, progressionNiveau } from "@/lib/game/niveauVille";
 import { ligneLocale } from "@/lib/game/ligneLocale";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
+import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { FiltreVilles } from "./FiltreVilles";
 import { ActionsAntiVille } from "./ActionsAntiVille";
 import { SincroniserScene } from "@/components/SincroniserScene";
@@ -59,6 +60,7 @@ export default async function VillesPage({
     redirect("/ville/creer");
   }
   const maVilleId = profil!.city_id as string;
+  await exigerRegionChoisie(supabase, user.id);
 
   const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
   const { data, error: erreurListe } = await supabase
