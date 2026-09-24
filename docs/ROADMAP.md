@@ -99,9 +99,19 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 2 — Rivalités entre villes
 
-- [ ] **Jalon 8 — Se classer.** Classement des villes (pays + mondial),
-  au-delà de ce que le Jalon 7 a déjà mis en place pour son propre
-  affichage.
+- [x] **Jalon 8 — Se classer.** Régions (choix obligatoire à la création,
+  écran de rattrapage pour les villes créées avant ce jalon, changement
+  limité à une fois tous les 30 jours) et classements mondial, national
+  et régional, avec "ma position" toujours visible. Contenu précisé par
+  `docs/CLASSEMENTS.md` (demande d'Adrien, 24/09/2026) par rapport à la
+  version d'origine de ce jalon. Détail dans `DECISIONS.md` §4 — recette
+  dans `docs/recette-jalon-8.md`. Points ouverts : titre de gouverneur de
+  région, régions réelles pour d'autres pays (§10 points 23 et 24).
+- [ ] **Jalon 8bis — Les palmarès.** Bilans journaliers par ville et
+  classements annexes par période (croissance, habitants perdus,
+  influence, visites, jumelages, attaques reçues), sur 3 échelles
+  (monde, pays, région). Scindé du Jalon 8, même logique que 6/6bis et
+  7/7bis (`docs/CLASSEMENTS.md` §5, `DECISIONS.md` §10 point 25).
 
 ## Phase 3 — Le pays prend forme
 
@@ -152,5 +162,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 24/09/2026, jalon 7bis terminé (fin de la Phase
-1 ter), avant le jalon 8 "Se classer".*
+*Dernière mise à jour : 24/09/2026, jalon 8 terminé, avant le jalon 8bis
+"Les palmarès" ou le jalon 9 "Naissance d'un pays".*

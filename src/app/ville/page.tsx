@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { progressionNiveau, libelleNiveau } from "@/lib/game/niveauVille";
@@ -38,17 +39,19 @@ export default async function VillePage() {
     influence: number;
     activite: number;
     country_id: string;
+    region_id: string | null;
     pays:
       | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }
       | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }[]
       | null;
+    region: { nom: string } | { nom: string }[] | null;
   };
 
   const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
   const { data } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, influence, activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire)`
+      `id, nom, population, population_max, influence, activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
     )
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -57,7 +60,11 @@ export default async function VillePage() {
   if (!ville) {
     redirect("/ville/creer");
   }
+  if (!ville.region_id) {
+    redirect("/ville/region");
+  }
 
+  const nomRegion = (Array.isArray(ville.region) ? ville.region[0] : ville.region)?.nom ?? "";
   const paysBrut = Array.isArray(ville.pays) ? ville.pays[0] : ville.pays;
   const nomPays = paysBrut?.nom ?? "";
   const pays =
@@ -101,6 +108,12 @@ export default async function VillePage() {
           <span>{ville.nom}</span>
         </h1>
         <p className="sign-sub">{ligneLocale({ nom: nomPays, ...pays }, locale)}</p>
+        <p className="note">
+          {traduire(locale, "region.actuelle")} : {nomRegion} ·{" "}
+          <Link href="/ville/region" style={{ color: "var(--focus)" }}>
+            {traduire(locale, "region.changerBouton")}
+          </Link>
+        </p>
         <div className="stage">
           <div className="stage-top">
             <span className="stage-name">{libelleNiveau(progression.niveau, locale)}</span>

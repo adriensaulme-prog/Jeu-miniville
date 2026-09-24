@@ -9,8 +9,12 @@ journal existant, puis ce fichier peut être supprimé.*
 > (`DECISIONS.md` §10 points 16 et 22, jalon "Revoir les règles du jeu"
 > à placer dans `ROADMAP.md`), aucun code ; §4 inscrit comme contrainte
 > permanente (`DECISIONS.md` §1 point 6), script `npm run poids` pas
-> encore fait. Ce fichier peut être supprimé quand Adrien aura répondu
-> aux questions restantes.
+> encore fait ; §6 fait au Jalon 8 (`DECISIONS.md` §4, journal du
+> Jalon 8, et §10 points 23-24 pour les questions encore ouvertes) ;
+> **§8 (noms uniques) pas fait** malgré la demande "à faire dans le
+> Jalon 8" — le contenu réel du jalon a suivi `docs/CLASSEMENTS.md`
+> plutôt que ce §8, voir `DECISIONS.md` §10 point 26. Ce fichier peut
+> être supprimé quand Adrien aura répondu aux questions restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -187,3 +191,72 @@ sortie de build ou de `.next/`, tailles compressées). Les chiffres
 mesurés vont dans le résumé de chaque jalon dans `DECISIONS.md` §4.
 Attention : les tailles de `.next/` après `npm run dev` ne veulent rien
 dire (code non minifié, plusieurs Mo) ; seul le `next build` compte.
+
+---
+
+## 6. Classements et régions — pour le Jalon 8 (demande d'Adrien, 24/09/2026)
+
+Spécification dans `docs/CLASSEMENTS.md`. **À intégrer au Jalon 8 « Se
+classer »**, qui change de contenu :
+- chaque ville appartient à une **région** de son pays (choix à la
+  création, rattrapage des villes existantes à la prochaine connexion,
+  changement possible une fois tous les 30 jours) ; table `regions`
+  construite à partir de l'ISO 3166-2 (noms fr/en du CLDR, libre),
+  retouchée pour les pays principaux (France : 13 régions + 5
+  d'outre-mer) ;
+- classements **mondial, national et régional**, avec « ma position »
+  toujours visible ;
+- proposé en **Jalon 8bis « Les palmarès »** : bilans journaliers
+  (`city_stats_jour`) et classements annexes par période (croissance,
+  habitants perdus, influence, visites reçues et données, jumelages,
+  attaques reçues).
+Questions encore ouvertes pour Adrien en §6 du document (30 jours,
+gouverneur de région, pas de classement des attaquants) : ne bloquent
+pas le début du Jalon 8, prendre les propositions par défaut et le
+noter dans `DECISIONS.md`.
+
+## 7. Bâtiments : décision d'Adrien (24/09/2026)
+
+Principe validé pour `docs/BATIMENTS-ET-PACKS.md` : **bâtiments de base
+gratuits pour tout le monde** (ceux d'aujourd'hui, à enrichir), et
+**packs payants inspirés de villes** (New York, Paris, etc.), purement
+cosmétiques. Pas de variantes gratuites par pays. À inscrire dans
+`DECISIONS.md` et dans `ROADMAP.md` (jalons « La bibliothèque de
+bâtiments », « Les thèmes », puis « La boutique » après le MVP).
+
+## 8. Noms uniques : pseudos et villes (demande d'Adrien, 24/09/2026)
+
+**Règle ferme d'Adrien : deux joueurs ne peuvent pas avoir le même
+pseudo, et deux villes ne peuvent pas avoir le même nom.** Constat :
+aujourd'hui, ni `users.pseudo` ni `cities.nom` n'ont de contrainte
+d'unicité (migrations 0001 à 0008). À faire **dans le Jalon 8**, qui
+touche déjà l'écran de création (choix de la région).
+
+- **Unicité « à la lecture »**, pas seulement à la lettre près :
+  « Rochemaure », « rochemaure », « Rochemauré » et « Roche-Maure »
+  sont le même nom. Colonne générée normalisée (minuscules, sans
+  accents via l'extension `unaccent`, sans espaces, tirets ni
+  apostrophes) + **index unique** dessus. C'est la base qui garantit
+  la règle (deux inscriptions simultanées ne passent pas toutes les
+  deux), pas seulement le formulaire.
+- **Portée mondiale** pour les villes comme pour les pseudos : le nom
+  d'une ville apparaît dans le classement mondial, il doit y être
+  unique.
+- **À la création** : vérification pendant la saisie (« ✓ disponible »
+  / « ✗ déjà pris »), message clair si le nom est pris au moment de
+  valider, avec un code d'erreur dédié (même logique que les codes
+  P0004–P0007 du Jalon 4).
+- **Doublons déjà existants** (base de dev/recette) : la migration les
+  détecte ; la ville ou le pseudo **le plus ancien garde le nom**, le
+  plus récent doit en choisir un autre à sa prochaine connexion (même
+  écran de rattrapage que pour la région).
+- **Villes de test** : vérifier qu'aucun nom de `villes-de-test.json`
+  n'entre en collision ; le test existant sur leur absence en
+  production reste valable.
+- **Noms réservés** *(proposition)* : refuser « admin », « modérateur »,
+  « système », le nom du jeu, et une courte liste de mots injurieux ;
+  pseudo de 3 à 20 caractères (aujourd'hui 1 à 40).
+- **Tests** : même nom avec une autre casse, avec ou sans accent, avec
+  tiret ou espace → refusé ; deux créations simultanées du même nom →
+  une seule réussit ; test rouge par sabotage (retirer l'index fait
+  échouer le test).

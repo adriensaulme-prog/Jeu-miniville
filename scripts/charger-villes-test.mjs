@@ -101,6 +101,8 @@ async function creerVilleDeTest(ville) {
       activite: ville.activite_7j ?? 0,
       niveau,
       is_test: true,
+      region_id: ville.region,
+      region_choisie_le: ville.region ? new Date().toISOString() : null,
     })
     .select("id")
     .single();

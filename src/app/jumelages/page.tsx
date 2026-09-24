@@ -3,6 +3,7 @@ import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau } from "@/lib/game/niveauVille";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { annulerJumelage, repondreJumelage } from "./actions";
 
@@ -31,6 +32,7 @@ export default async function JumelagesPage() {
     redirect("/ville/creer");
   }
   const maVilleId = profil!.city_id as string;
+  await exigerRegionChoisie(supabase, user.id);
 
   const { data: maVille } = await supabase
     .from("cities")

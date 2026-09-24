@@ -1,0 +1,11 @@
+-- Correctif Jalon 8 — la fonction creer_ville() à 4 paramètres (migration
+-- 0003) et celle à 5 paramètres (migration 0009, p_region_id en plus)
+-- coexistaient : `create or replace function` ne remplace que si la
+-- signature (les types de paramètres) est identique, sinon Postgres crée
+-- une surcharge. Résultat constaté en testant : tout appel à 4 arguments
+-- (tous les tests e2e des jalons précédents, qui ne connaissent pas les
+-- régions) devenait ambigu entre les deux versions — PostgREST refusait
+-- de choisir. On supprime l'ancienne signature ; la version à 5
+-- paramètres (p_region_id optionnel, défaut nul) créée par la migration
+-- 0009 reste seule et gère déjà les deux cas.
+drop function if exists public.creer_ville(uuid, text, text, text);

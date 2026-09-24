@@ -155,6 +155,29 @@ export const dictionaries = {
 
     "creationVille.note":
       "Ta ville naîtra au croisement de deux routes, avec une première maison. Son plan est unique et ne changera plus : c'est celui que tu vois derrière.",
+    "creationVille.region": "Ta région",
+    "creationVille.regionPlaceholder": "Choisis une région",
+
+    "nav.classement": "Classement",
+
+    "classement.titre": "Se classer",
+    "classement.mondial": "Mondial",
+    "classement.national": "National",
+    "classement.regional": "Régional",
+    "classement.maPosition": "Ma position",
+    "classement.aucuneVille": "Aucune ville dans ce classement pour l'instant.",
+
+    "region.titre": "Choisis ta région",
+    "region.introduction":
+      "Les villes de ton pays sont aussi classées par région : choisis celle qui correspond à ta ville.",
+    "region.bouton": "Confirmer ma région",
+    "region.erreurGenerique": "Le choix de région a échoué. Réessaie dans un instant.",
+    "region.actuelle": "Région",
+    "region.changerTitre": "Changer de région",
+    "region.changerBouton": "Changer",
+    "region.changerNote": "Possible une fois tous les 30 jours.",
+    "region.delaiRestant": "Prochain changement possible dans",
+    "region.jours": "jours",
 
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
@@ -301,6 +324,29 @@ export const dictionaries = {
 
     "creationVille.note":
       "Your city will be born at the crossing of two roads, with a first house. Its layout is unique and will never change: it's the one you see behind.",
+    "creationVille.region": "Your region",
+    "creationVille.regionPlaceholder": "Pick a region",
+
+    "nav.classement": "Rankings",
+
+    "classement.titre": "Get ranked",
+    "classement.mondial": "World",
+    "classement.national": "National",
+    "classement.regional": "Regional",
+    "classement.maPosition": "My position",
+    "classement.aucuneVille": "No city in this ranking yet.",
+
+    "region.titre": "Pick your region",
+    "region.introduction":
+      "Cities in your country are also ranked by region: pick the one your city belongs to.",
+    "region.bouton": "Confirm my region",
+    "region.erreurGenerique": "The region choice failed. Please try again in a moment.",
+    "region.actuelle": "Region",
+    "region.changerTitre": "Change region",
+    "region.changerBouton": "Change",
+    "region.changerNote": "Possible once every 30 days.",
+    "region.delaiRestant": "Next change possible in",
+    "region.jours": "days",
 
     "erreurs.connexionRequise": "Log in to access this page.",
   },

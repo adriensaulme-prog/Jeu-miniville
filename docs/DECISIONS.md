@@ -1056,6 +1056,106 @@ cette seule assertion, avec un commentaire qui l'explique.
 
 ---
 
+### Jalon 8 — se classer — 24/09/2026
+
+**Contenu, revu par rapport à la ROADMAP d'origine.** L'ancien Jalon 8
+("classement des villes, pays + mondial") a été précisé et étendu par
+une demande d'Adrien du même jour : `docs/CLASSEMENTS.md` ajoute les
+**régions** (chaque ville appartient à une région de son pays,
+classements mondial/national/**régional**). La proposition scinde
+elle-même le travail en Jalon 8 (régions + classements principaux) et
+**Jalon 8bis "Les palmarès"** (bilans journaliers, classements annexes
+par période) — scission reprise telle quelle, même logique que
+6/6bis et 7/7bis.
+
+**Régions.** Table `regions` (id, country_id, nom_fr, nom_en). Régions
+réelles pour les 6 pays cités nommément par Adrien et les plus présents
+dans les villes de test — France (18 : 13 régions + 5 d'outre-mer),
+Allemagne (16 Länder), Belgique (3), Suisse (26 cantons), Canada (13),
+États-Unis (51, avec DC) — soit 127 lignes. **Décision prise sans
+attendre Adrien, à contester si besoin** : le Japon, présent dans les
+villes de test mais pas dans la liste explicite d'Adrien, n'a pas reçu
+de régions réelles pour ce jalon — il reçoit comme tous les ~240 autres
+pays une région de repli unique "Tout le pays", générée par requête
+depuis `countries` plutôt que listée à la main (244 lignes). Étendre à
+d'autres pays plus tard ne demande qu'une nouvelle migration insert,
+aucun changement de code.
+
+**Choix de région.** Obligatoire à la création (`creer_ville()` reçoit
+`p_region_id`, valide qu'elle appartient au pays choisi, sinon P0010).
+Les villes créées avant ce jalon (le compte réel d'Adrien, les villes de
+test avant le rechargement du seed) ont `region_id` nul : un garde-fou
+commun (`src/lib/supabase/gardes.ts`, appelé par Ma ville/Villes/
+Jumelages/Classement) redirige vers `/ville/region` tant que le choix
+n'est pas fait — même principe que la redirection déjà en place vers
+`/ville/creer` pour un profil sans ville. La même page sert aussi à
+**changer** de région plus tard, avec le délai de 30 jours
+(`definir_region()`, P0011 si trop tôt) : premier choix libre (region_id
+encore nul), un changement volontaire redémarre le délai.
+
+**Classements** (`/classement`, nouvel onglet). Trois vues (mondial,
+national, régional) par simples requêtes triées sur `population`, "ma
+position" toujours affichée (nombre de villes strictement devant + 1,
+même méthode que le badge de rang de Ma ville depuis le Jalon 7) — pas
+de vue matérialisée ni de `pg_cron` pour ce jalon : à l'échelle actuelle
+(une poignée de villes), une requête directe suffit très largement ;
+CLASSEMENTS.md §4 le propose comme optimisation pour plus tard, pas
+comme un prérequis. Chaque ligne du classement renvoie vers `/villes`
+(les vraies actions restent là, pas dupliquées ici) ou vers `/ville`
+pour sa propre ville.
+
+**Bug trouvé en testant, pas dans le code applicatif** : `create or
+replace function` sur `creer_ville()` avec un paramètre en plus
+(`p_region_id`, même avec une valeur par défaut) ne remplace pas la
+fonction — Postgres distingue les fonctions par les *types* de leurs
+paramètres, pas leurs noms ni leurs valeurs par défaut, donc l'ancienne
+version à 4 paramètres restait active à côté de la nouvelle à 5. Tout
+appel à 4 arguments (tous les tests e2e des jalons précédents) devenait
+ambigu pour PostgREST ("Could not choose the best candidate function").
+Corrigé par une migration corrective (`0010`, jamais de modification
+d'une migration déjà appliquée) qui supprime explicitement l'ancienne
+signature.
+
+**Vérifié aussi, sans lien avec ce jalon** : deux exécutions de la
+nouvelle suite e2e ont laissé des comptes orphelins (mêmes noms de ville
+réutilisés d'un essai à l'autre) après un test qui a dépassé son délai —
+le même piège déjà documenté au Jalon 6bis (timeout Playwright qui saute
+le bloc `finally`). Nettoyés à la main ; délai du test concerné porté à
+60 s pour que ça n'arrive plus.
+
+**Testé.** `tests/e2e/jalon8-se-classer.spec.ts` (nouveau) : une ville à
+région nulle est bloquée sur `/ville/region` puis débloquée après choix
+(vérifié aussi en base) ; sabotage région d'un autre pays refusée
+(P0010) ; sabotage changement avant 30 jours refusé (P0011, région
+inchangée en base) ; sabotage changement accepté pile 30 jours après ;
+mondial/national/régional filtrent correctement et "ma position" tombe
+juste — calculée dynamiquement en base au moment du test plutôt que
+codée en dur, donc robuste au contenu déjà présent (villes de test,
+compte réel d'Adrien). **Vérification rouge par sabotage** sur le calcul
+de rang de `/classement` (retrait du `+ 1`) : le test échoue, corrigé →
+repasse. Jalon 1 adapté (le formulaire de création a un champ région en
+plus) et son assertion sur le pays élargie (collision de texte avec la
+nouvelle ligne "Région : ..."). Vérifié aussi à l'œil avec un compte
+jetable : sélecteur de région qui apparaît après le choix du pays,
+affichage "Région : ... · Changer" sur Ma ville, page Classement (trois
+onglets, "Ma position", liste), écran `/ville/region` en mode
+"changement" avec le délai de 30 jours affiché. Poids du paquet
+toujours dans le budget (104-180 Ko selon les pages, contrainte
+"application légère" du §1 point 6). Suite complète : 57 tests unitaires
++ 26 tests e2e, verte depuis un cache froid.
+
+**Explicitement exclu de ce jalon**, comme le proposait
+`docs/CLASSEMENTS.md` §6 :
+- le **titre de gouverneur de région** — marqué "idée à valider" par
+  Adrien lui-même, pas codé ;
+- le **classement des plus grands attaquants** — exclu par choix
+  délibéré du document, pas de code ;
+- le **Jalon 8bis "Les palmarès"** (bilans journaliers `city_stats_jour`,
+  classements annexes par période, `pg_cron`) — jalon séparé, pas
+  commencé.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1343,3 +1443,35 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     effets unitaires faibles, cumul des attaques de la journée, plafond de
     10 %/jour, paliers visibles. Ajouté à `ROADMAP.md` comme jalon **à
     placer par Adrien**. Pas de code d'ici là.
+23. **Titre de gouverneur de région ?** (idée à valider,
+    `docs/CLASSEMENTS.md` §2 et §6 question 2) — badge et historique pour
+    la ville n°1 d'une région, sur le modèle du président du pays, sans
+    pouvoir particulier pour l'instant. Non codé au Jalon 8. → **À
+    trancher par Adrien.**
+24. **Régions réelles pour le Japon, et d'autres pays ?** Le Jalon 8 a
+    donné des régions réelles aux 6 pays cités nommément par Adrien
+    (France, Allemagne, Belgique, Suisse, Canada, États-Unis) ; le Japon,
+    présent dans les villes de test, a reçu la région de repli "Tout le
+    pays" comme les ~240 autres pays (décision de Claude Code, §4,
+    journal du Jalon 8, à contester si besoin). → **À trancher par
+    Adrien** : étendre à d'autres pays (Japon, Espagne, Italie,
+    Royaume-Uni ?) ne demande qu'une nouvelle migration insert.
+25. **Jalon 8bis "Les palmarès"** (`docs/CLASSEMENTS.md` §3 et §5) :
+    bilans journaliers (`city_stats_jour`), classements annexes par
+    période (croissance, habitants perdus, influence, visites, jumelages,
+    attaques reçues) sur 4 périodes × 3 échelles, calculés via `pg_cron`.
+    Pas commencé. Questions encore ouvertes pour Adrien
+    (`docs/CLASSEMENTS.md` §6, questions 3 et 4, la 1 et la 2 sont
+    couvertes par les points 23 et l'absence de classement des
+    attaquants déjà tranchée) : d'autres classements annexes en tête ?
+26. **Noms uniques (pseudos et villes) pas encore faits.**
+    `docs/A-INTEGRER.md` §8 demandait cette règle **dans le Jalon 8**
+    ("qui touche déjà l'écran de création"), mais le contenu réel de ce
+    jalon a été fixé par `docs/CLASSEMENTS.md` (régions + classements)
+    avant que ce §8 ne soit pris en compte — la demande d'unicité n'a
+    pas été codée ici. Aujourd'hui, ni `users.pseudo` ni `cities.nom`
+    n'ont de contrainte d'unicité (toujours vrai depuis les migrations
+    0001-0010). → **À trancher par Adrien** : mini-jalon dédié (colonne
+    normalisée + index unique, vérification à la création, migration de
+    dédoublonnage des données existantes, écran de rattrapage) ou
+    intégré à un prochain jalon proche.

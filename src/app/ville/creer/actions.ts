@@ -29,8 +29,9 @@ export async function creerVille(
   const pseudo = String(formData.get("pseudo") ?? "").trim();
   const nomVille = String(formData.get("nomVille") ?? "").trim();
   const countryId = String(formData.get("countryId") ?? "").trim();
+  const regionId = String(formData.get("regionId") ?? "").trim();
 
-  if (!pseudo || !nomVille || !countryId) {
+  if (!pseudo || !nomVille || !countryId || !regionId) {
     return { erreur: "creationVille.erreurChamps" };
   }
 
@@ -39,6 +40,7 @@ export async function creerVille(
     p_pseudo: pseudo,
     p_country_id: countryId,
     p_nom_ville: nomVille,
+    p_region_id: regionId,
   });
 
   if (error) {
