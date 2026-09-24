@@ -11,10 +11,17 @@ démarche générale et `ROADMAP.md` pour les jalons à venir.
 Posées avant la première ligne de code, à ne jamais contourner "juste pour
 un jalon" :
 
-1. **Zéro coût, zéro royalties.** Uniquement des outils et niveaux de
-   service gratuits (Next.js, Supabase free tier, Vercel free tier, GitHub
-   privé gratuit). Aucun logiciel payant, aucune licence à l'unité, aucune
-   royalty sur les revenus futurs.
+1. **Dépenses sous contrôle, zéro royalties** (assoupli le 25/09/2026,
+   `docs/A-INTEGRER.md` §10, décision d'Adrien — remplace l'ancienne
+   règle "zéro coût"). Par défaut, uniquement des outils et niveaux de
+   service gratuits (Next.js, Supabase free tier, Vercel free tier,
+   GitHub privé gratuit). Une dépense raisonnable reste possible pour un
+   résultat carré (nom de domaine, service d'e-mails...), **mais
+   uniquement après validation explicite d'Adrien, montant et
+   fournisseur à l'appui** — jamais engagée seule, même pour un petit
+   montant, et jamais de carte bancaire ni de compte payant créé sans
+   cette validation préalable. Toujours aucune royalty sur les revenus
+   futurs, aucune licence à l'unité.
 2. **Anti-triche côté serveur.** Toute règle qui affecte le classement, la
    population, l'influence ou les ressources d'un joueur est validée côté
    serveur. Le client ne fait que demander et afficher.
@@ -1243,6 +1250,82 @@ depuis un cache froid.
 
 ---
 
+### Jalon 9 — naissance d'un pays — 25/09/2026
+
+**Contenu.** Nouvel onglet `/pays` : nom du pays, population totale,
+influence totale, activité moyenne et nombre de villes, agrégés à
+partir des villes membres (`stats_pays()`) ; sélecteur pour voir un
+autre pays ; villes principales du pays (top 10 par population) avec
+lien vers la liste complète (`/villes?pays=...`, déjà existante depuis
+le Jalon 7). Lien "Mon pays" ajouté sur Ma ville. Pas de vote (Jalon 10)
+ni de président (Jalon 11) dans ce jalon — la ROADMAP les garde
+séparés.
+
+**"Activité" enfin définie, décidé sans attendre Adrien (à contester si
+besoin).** La colonne `cities.activite` existe depuis le Jalon 1 mais
+n'avait jamais de définition réelle : toujours 0 pour une vraie ville
+(bug visible, jamais remarqué jusqu'ici, sur la tuile "Activité" de Ma
+ville), seules les villes de test avaient une valeur, arbitraire
+(`activite_7j` du seed, sans lien avec une vraie mécanique — voir
+DECISIONS.md §4, journal du Jalon 6). Définition retenue : le nombre de
+jours, sur les 7 derniers jours, où le propriétaire de la ville a été
+actif — même notion d'activité que `reclamer_bonus_jumelages()`
+(Jalon 5) pour une seule journée (au moins une visite donnée, une
+action d'influence ou une action AntiVille lancée), étendue ici sur une
+fenêtre glissante de 7 jours (`activite_7j_de()`, réutilisée par
+`activite_ville()` pour Ma ville et par `stats_pays()` pour la moyenne
+nationale). Calculée à la volée, pas stockée — même logique que les
+palmarès du Jalon 8bis ; la colonne `cities.activite` reste donc
+inutilisée par ce jalon (pas supprimée, juste plus lue). Corrige au
+passage l'affichage de la tuile Activité sur Ma ville, restée bloquée à
+0 depuis le Jalon 1.
+
+**Incident de vérification, sans lien avec le code applicatif.**
+L'API Auth de Supabase est devenue injoignable en pleine vérification
+(la REST API répondait en 150 ms, l'API Auth restait bloquée plus de
+15 s sans réponse) — suite e2e massivement rouge sur des jalons
+anciens et inchangés (1, 2, 3, 5, 6bis, 8, 8bis), tous bloqués à l'étape
+"se connecter". Revenue à la normale une heure plus tard (signalé par
+Adrien). Trois bugs réels trouvés en re-testant après coup, tous dans
+le test lui-même, pas dans l'application :
+- l'instantané "avant" de `stats_pays` dans le test était pris *après*
+  la création des deux villes de test, faussant le delta attendu ;
+- une mise à jour directe de `population` sans `population_max`
+  échouait silencieusement contre la contrainte SQL
+  `population_max >= population` (Jalon 6), laissant une ville de test
+  à 1 habitant donc absente du "top 10" attendu ;
+- plusieurs comptes de test orphelins de tentatives interrompues par la
+  panne (le `finally` n'avait pas pu s'exécuter, même piège déjà
+  documenté aux Jalons 6bis et 8) faussaient un autre test par une
+  ville en double — nettoyés à la main.
+
+**Flakiness confirmée liée à l'environnement, pas au code** : sous 2
+workers Playwright (réglage habituel du projet), plusieurs tests de
+jalons anciens et inchangés échouent occasionnellement à l'étape
+"se connecter", y compris en relançant plusieurs fois de suite. Avec
+`--workers=1`, la suite complète passe systématiquement (à l'exception
+d'un test du Jalon 8 déjà identifié comme lourd, 4 comptes créés). Cette
+machine ne semble pas absorber 2 workers Playwright + serveur de dev
+Next.js aussi bien qu'attendu — observation notée ici, pas une
+régression de ce jalon, et pas un changement de réglage forcé (le
+projet garde `workers: 2` par défaut).
+
+**Testé.** `tests/e2e/jalon9-naissance-dun-pays.spec.ts` (nouveau,
+4 tests) : `stats_pays` agrège exactement la population et l'influence
+(delta isolé et connu) ; `activite_7j_de`/`activite_ville` comptent
+exactement les jours actifs (0 puis 1 après une visite) ; la page
+`/pays` affiche les statistiques, liste les villes principales et
+permet de changer de pays via le sélecteur, avec un lien vers la liste
+complète ; la tuile "Activité" de Ma ville n'est plus bloquée à 0 après
+une visite donnée. Vérifié aussi à l'œil avec des comptes jetables,
+dont `/villes?pays=DE` en navigation directe pour confirmer que le
+symptôme observé pendant les échecs (page bloquée) était bien un délai
+de compilation à froid et non une vraie erreur serveur. Poids du
+paquet toujours dans le budget (112 Ko pour `/pays`). Suite complète :
+63 tests unitaires + 36 tests e2e, verte à `--workers=1`.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1278,6 +1361,14 @@ créée. Défaut : français. Pas de clé orpheline en prod.
 
 Dès qu'un de ces paliers est approché (ex. > 70 % du quota), c'est un point
 ouvert à signaler à Adrien, pas une décision technique à prendre seul.
+
+- **Suivi des dépenses en cours** (§1 point 1, assoupli le 25/09/2026) —
+  aucune ligne pour l'instant, à remplir dès qu'une dépense est validée
+  par Adrien :
+
+| Dépense | Montant | Fournisseur | Approuvée le | Motif |
+|---|---|---|---|---|
+| *(aucune pour l'instant)* | — | — | — | — |
 
 ---
 

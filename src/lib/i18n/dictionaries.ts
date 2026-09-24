@@ -160,6 +160,7 @@ export const dictionaries = {
 
     "nav.classement": "Classement",
     "nav.palmares": "Palmarès",
+    "nav.pays": "Pays",
 
     "classement.titre": "Se classer",
     "classement.mondial": "Mondial",
@@ -189,6 +190,14 @@ export const dictionaries = {
     "palmares.uniteAttaques": "attaques reçues",
     "palmares.uniteVisitesDonnees": "visites données",
     "palmares.uniteJumelage": "jours de bonus",
+
+    "pays.eyebrow": "Pays",
+    "pays.nbVilles": "Villes",
+    "pays.autrePays": "Voir un autre pays",
+    "pays.villesPrincipales": "Villes principales",
+    "pays.voirToutesLesVilles": "Voir toutes les villes de ce pays →",
+    "pays.aucuneVille": "Aucune ville dans ce pays pour l'instant.",
+    "pays.voirMonPays": "Mon pays :",
 
     "region.titre": "Choisis ta région",
     "region.introduction":
@@ -352,6 +361,7 @@ export const dictionaries = {
 
     "nav.classement": "Rankings",
     "nav.palmares": "Leaderboards",
+    "nav.pays": "Country",
 
     "classement.titre": "Get ranked",
     "classement.mondial": "World",
@@ -381,6 +391,14 @@ export const dictionaries = {
     "palmares.uniteAttaques": "attacks received",
     "palmares.uniteVisitesDonnees": "visits given",
     "palmares.uniteJumelage": "bonus days",
+
+    "pays.eyebrow": "Country",
+    "pays.nbVilles": "Cities",
+    "pays.autrePays": "View another country",
+    "pays.villesPrincipales": "Leading cities",
+    "pays.voirToutesLesVilles": "See all cities in this country →",
+    "pays.aucuneVille": "No city in this country yet.",
+    "pays.voirMonPays": "My country:",
 
     "region.titre": "Pick your region",
     "region.introduction":

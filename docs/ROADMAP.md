@@ -119,9 +119,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 3 — Le pays prend forme
 
-- [ ] **Jalon 9 — Naissance d'un pays.** Page pays, agrégation des
-  statistiques nationales (population, influence, activité) à partir des
-  villes membres.
+- [x] **Jalon 9 — Naissance d'un pays.** Page pays (`/pays`), agrégation
+  des statistiques nationales (population, influence, activité) à
+  partir des villes membres, sélecteur de pays, villes principales.
+  "Activité" enfin définie (jours actifs sur 7 jours, calculée à la
+  volée) — corrige au passage la tuile Activité de Ma ville, bloquée à
+  0 depuis le Jalon 1. Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-9.md`.
 - [ ] **Jalon 10 — Voter pour son pays.** Vote hebdomadaire de ressource
   (Industrie / Techno / Culture / Commerce), résultat proportionnel aux
   votes, attribution des ressources nationales.
@@ -166,5 +170,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 24/09/2026, jalon 8bis terminé (fin de la
-Phase 2), avant le jalon 9 "Naissance d'un pays".*
+*Dernière mise à jour : 25/09/2026, jalon 9 terminé, avant le jalon 10
+"Voter pour son pays".*

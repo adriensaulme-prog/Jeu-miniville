@@ -80,6 +80,12 @@ export default async function VillePage() {
   const rang = (nbVillesDevant ?? 0) + 1;
   const president = rang === 1;
 
+  // Activité (7j) calculée à la volée (Jalon 9) : la colonne
+  // cities.activite n'a jamais eu de vraie définition (toujours 0 pour
+  // une ville réelle, voir DECISIONS.md §4, journal du Jalon 9).
+  const { data: activiteVecue } = await supabase.rpc("activite_ville", { p_ville_id: ville.id });
+  const activite = typeof activiteVecue === "number" ? activiteVecue : ville.activite;
+
   const progression = progressionNiveau(ville.population_max);
   const nomNiveauSuivant =
     progression.seuilSuivant != null ? libelleNiveau(progression.niveau + 1, locale) : null;
@@ -87,7 +93,7 @@ export default async function VillePage() {
   const stats: Array<{ cle: "ville.population" | "ville.influence" | "ville.activite"; valeur: number }> = [
     { cle: "ville.population", valeur: ville.population },
     { cle: "ville.influence", valeur: ville.influence },
-    { cle: "ville.activite", valeur: ville.activite },
+    { cle: "ville.activite", valeur: activite },
   ];
 
   return (
@@ -112,6 +118,11 @@ export default async function VillePage() {
           {traduire(locale, "region.actuelle")} : {nomRegion} ·{" "}
           <Link href="/ville/region" style={{ color: "var(--focus)" }}>
             {traduire(locale, "region.changerBouton")}
+          </Link>
+        </p>
+        <p className="note">
+          <Link href="/pays" style={{ color: "var(--focus)" }}>
+            {traduire(locale, "pays.voirMonPays")} {nomPays} →
           </Link>
         </p>
         <div className="stage">

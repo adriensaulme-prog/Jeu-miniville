@@ -14,8 +14,10 @@ journal existant, puis ce fichier peut être supprimé.*
 > ouvertes) ;
 > **§8 (noms uniques) pas fait** malgré la demande "à faire dans le
 > Jalon 8" — le contenu réel du jalon a suivi `docs/CLASSEMENTS.md`
-> plutôt que ce §8, voir `DECISIONS.md` §10 point 26. Ce fichier peut
-> être supprimé quand Adrien aura répondu aux questions restantes.
+> plutôt que ce §8, voir `DECISIONS.md` §10 point 26 ; **§10 (dépenses
+> sous contrôle) fait le 25/09/2026** — règle §1 point 1 réécrite,
+> nouveau tableau "dépenses en cours" en §7. Ce fichier peut être
+> supprimé quand Adrien aura répondu aux questions restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -281,3 +283,31 @@ pendant `npm run dev`. Ajouter un test ou une vérification qui empêche
 la régression. Documenter le geste de dépannage (Unregister + Clear
 site data) dans `docs/GUIDE-METHODE.md` au cas où ça se reproduise
 malgré tout (cache déjà enregistré chez un joueur avant la correction).
+
+## 10. Assouplissement de la règle "zéro coût" (décision d'Adrien, 25/09/2026)
+
+**Adrien accepte des dépenses raisonnables pour un résultat carré**
+(nom de domaine, service d'e-mails, etc.), **à condition d'être
+systématiquement demandé avant, même pour un petit montant.** Ce n'est
+pas un blanc-seing : aucune dépense ne doit être engagée sans validation
+préalable explicite, quel que soit le montant.
+
+**À corriger dans `docs/DECISIONS.md` §1 point 1** ("Zéro coût, zéro
+royalties") : remplacer par une règle en deux temps —
+1. par défaut, on reste sur des outils et niveaux de service gratuits ;
+2. une dépense reste possible (nom de domaine, service payant...), mais
+   **seulement après qu'Adrien l'a explicitement approuvée**, montant et
+   fournisseur à l'appui. Aucune carte bancaire ni compte payant ne doit
+   être créé sans cette validation.
+
+Renommer la règle en conséquence (ex. "Dépenses sous contrôle" plutôt
+que "Zéro coût"), et adapter le point du §9 sur les paliers gratuits en
+"dépenses en cours" (fournisseur, montant, date, approuvé par Adrien
+le ...).
+
+**Déclencheur de cette décision** : connexion Google/Facebook (gratuite)
+et e-mails de vérification envoyés depuis une adresse à Adrien plutôt
+que Supabase (nécessite un nom de domaine, ~10-15 €/an, + un service
+d'envoi avec palier gratuit). Proposition détaillée à venir dans
+`docs/AUTHENTIFICATION.md` une fois qu'Adrien aura choisi un nom de jeu
+(le domaine en dépend) et un service d'e-mails.
