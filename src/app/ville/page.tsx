@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
-import { libelleNiveau } from "@/lib/game/niveauVille";
+import { progressionNiveau, libelleNiveau } from "@/lib/game/niveauVille";
+import { ligneLocale } from "@/lib/game/ligneLocale";
+import { ordinal } from "@/lib/game/ordinal";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { VilleScene } from "@/components/VilleScene";
+import { SincroniserScene } from "@/components/SincroniserScene";
 
 // Repli si le pays de la ville n'a pas encore de géo/fuseau renseignés
 // (quelques territoires ISO 3166-1 sur 250 — voir DECISIONS.md §4,
@@ -35,7 +37,7 @@ export default async function VillePage() {
     population_max: number;
     influence: number;
     activite: number;
-    niveau: number;
+    country_id: string;
     pays:
       | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }
       | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }[]
@@ -46,7 +48,7 @@ export default async function VillePage() {
   const { data } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, influence, activite, niveau, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire)`
+      `id, nom, population, population_max, influence, activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire)`
     )
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -57,11 +59,23 @@ export default async function VillePage() {
   }
 
   const paysBrut = Array.isArray(ville.pays) ? ville.pays[0] : ville.pays;
-  const nomPays = paysBrut?.nom;
+  const nomPays = paysBrut?.nom ?? "";
   const pays =
     paysBrut?.latitude != null && paysBrut?.longitude != null && paysBrut?.fuseau_horaire
       ? { latitude: paysBrut.latitude, longitude: paysBrut.longitude, fuseauHoraire: paysBrut.fuseau_horaire }
       : PAYS_PAR_DEFAUT;
+
+  const { count: nbVillesDevant } = await supabase
+    .from("cities")
+    .select("id", { count: "exact", head: true })
+    .eq("country_id", ville.country_id)
+    .gt("population", ville.population);
+  const rang = (nbVillesDevant ?? 0) + 1;
+  const president = rang === 1;
+
+  const progression = progressionNiveau(ville.population_max);
+  const nomNiveauSuivant =
+    progression.seuilSuivant != null ? libelleNiveau(progression.niveau + 1, locale) : null;
 
   const stats: Array<{ cle: "ville.population" | "ville.influence" | "ville.activite"; valeur: number }> = [
     { cle: "ville.population", valeur: ville.population },
@@ -70,25 +84,53 @@ export default async function VillePage() {
   ];
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-6 p-8">
-      <div>
-        <h1 className="text-2xl font-bold">{ville.nom}</h1>
-        <p className="text-sm text-gray-500">
-          {traduire(locale, "ville.pays")} : {nomPays} —{" "}
-          {traduire(locale, "ville.niveau")} : {libelleNiveau(ville.niveau, locale)}
-        </p>
-      </div>
-      <div className="aspect-video w-full overflow-hidden rounded border border-gray-200 bg-slate-900">
-        <VilleScene seed={ville.id} populationMax={ville.population_max} pays={pays} />
-      </div>
-      <dl className="grid grid-cols-3 gap-4 text-center">
-        {stats.map(({ cle, valeur }) => (
-          <div key={cle} className="rounded border border-gray-200 p-4">
-            <dt className="text-xs uppercase text-gray-500">{traduire(locale, cle)}</dt>
-            <dd className="text-2xl font-semibold">{valeur}</dd>
+    <main className="screen" aria-label={traduire(locale, "villes.maVille")}>
+      <SincroniserScene seed={ville.id} populationMax={ville.population_max} pays={pays} />
+      <div className="dock dock-float dock-left">
+        <div className="head-row">
+          <span className="eyebrow">{traduire(locale, "villes.maVille")}</span>
+          {president ? (
+            <span className="badge pres">{traduire(locale, "classement.president")}</span>
+          ) : (
+            <span className="badge">
+              {ordinal(rang, locale)} {traduire(locale, "classement.dans")} {nomPays}
+            </span>
+          )}
+        </div>
+        <h1 className="sign">
+          <span>{ville.nom}</span>
+        </h1>
+        <p className="sign-sub">{ligneLocale({ nom: nomPays, ...pays }, locale)}</p>
+        <div className="stage">
+          <div className="stage-top">
+            <span className="stage-name">{libelleNiveau(progression.niveau, locale)}</span>
+            <span className="stage-next">
+              {nomNiveauSuivant
+                ? `${nomNiveauSuivant} ${traduire(locale, "ville.seuilA")} ${new Intl.NumberFormat(locale).format(
+                    progression.seuilSuivant!
+                  )} ${traduire(locale, "ville.habitantsAbrege")}`
+                : traduire(locale, "ville.stadeMaximal")}
+            </span>
           </div>
-        ))}
-      </dl>
+          <div
+            className="bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progression.pourcentage)}
+          >
+            <i style={{ width: `${progression.pourcentage}%` }} />
+          </div>
+        </div>
+        <div className="tiles">
+          {stats.map(({ cle, valeur }) => (
+            <div key={cle} className="tile">
+              <b>{new Intl.NumberFormat(locale).format(valeur)}</b>
+              <span>{traduire(locale, cle)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }

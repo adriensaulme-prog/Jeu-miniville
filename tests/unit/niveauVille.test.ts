@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   libelleNiveau,
   niveauPourPopulation,
+  progressionNiveau,
   NIVEAU_MAX,
   NIVEAU_MIN,
   SEUILS_NIVEAU,
@@ -56,5 +57,29 @@ describe("niveauPourPopulation", () => {
 
   it("refuse une population non entière", () => {
     expect(() => niveauPourPopulation(2.5)).toThrow(RangeError);
+  });
+});
+
+describe("progressionNiveau", () => {
+  it("démarre juste après 2 % pile au seuil d'un niveau (barre jamais totalement vide)", () => {
+    expect(progressionNiveau(1000).niveau).toBe(1);
+    expect(progressionNiveau(1000).pourcentage).toBeGreaterThanOrEqual(2);
+  });
+
+  it("approche 100 % juste avant le seuil suivant", () => {
+    const p = progressionNiveau(4999);
+    expect(p.niveau).toBe(1);
+    expect(p.pourcentage).toBeGreaterThan(95);
+  });
+
+  it("annonce le bon seuil suivant", () => {
+    expect(progressionNiveau(1000).seuilSuivant).toBe(5000);
+  });
+
+  it("n'a plus de seuil suivant au niveau maximal (Métropole)", () => {
+    const p = progressionNiveau(1_000_000);
+    expect(p.niveau).toBe(NIVEAU_MAX);
+    expect(p.seuilSuivant).toBeNull();
+    expect(p.pourcentage).toBe(100);
   });
 });

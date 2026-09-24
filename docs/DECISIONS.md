@@ -26,6 +26,25 @@ un jalon" :
    progression (cahier des charges §19).
 5. **i18n dès le premier texte**, fr et en remplis immédiatement, jamais de
    trou "provisoire".
+6. **Application légère** (règle ferme d'Adrien, ajoutée le 23/09/2026 via
+   `docs/A-INTEGRER.md` §4) : c'est une appli de 2 à 5 minutes par jour, elle
+   doit rester légère. Budget mesuré sur `next build` (tailles déjà
+   compressées gzip/brotli qu'il affiche, jamais celles de `.next/` après
+   `npm run dev` qui ne veulent rien dire) : premier chargement complet
+   ≤ 500 Ko (JS + CSS + polices) ; chaque visite suivante ≈ 0 Ko de code
+   grâce au service worker ; une page affiche son texte avant que la 3D ne
+   soit prête (Three.js ne doit jamais faire partie du paquet initial du
+   layout — voir §4, Jalon 7, correction post-recette, pour le cas où ça
+   n'a pas été respecté et comment c'est corrigé). Pas de nouvelle
+   dépendance npm sans peser son poids et l'inscrire ici.
+7. **Aucun outil de triche ou de démonstration dans le jeu jouable**
+   (règle ferme d'Adrien, `docs/A-INTEGRER.md` §1) : pas de curseur
+   "Habitants", de bouton "Voir grandir", de curseur d'heure ni de
+   simulateur — la population ne monte que par les visites d'autres
+   joueurs, l'heure affichée est toujours l'heure réelle du pays. Ces
+   outils existent dans la maquette (`docs/prototypes/maquette-ecrans.html`)
+   pour la démonstration seulement ; pour tester, on utilise les villes de
+   test et les scripts de seed, jamais un contrôle accessible au joueur.
 
 ---
 
@@ -720,6 +739,218 @@ compte de vérification par sabotage, et les bugs trouvés en route.)*
 
 ---
 
+### Corrections post-Jalon 6bis — 23/09/2026
+
+Trouvées en testant le rendu 3D sur le téléphone d'Adrien (`teste sur
+mon téléphone`), corrigées dans la foulée (pas de nouveau jalon, juste
+des bugs sur du code déjà livré) :
+
+1. **Barre de nav débordait sur mobile.** `tailwind.config.ts` ne
+   scannait que `src/app/**` et `src/lib/**` — `src/components/**` en
+   était absent depuis le début du projet. Résultat : toute classe
+   Tailwind utilisée *seulement* dans un composant de `src/components/`
+   (ici `flex-wrap`/`whitespace-nowrap` ajoutés à `Nav.tsx`) n'était
+   jamais générée dans le CSS final, silencieusement (pas d'erreur, la
+   classe est juste absente du bundle). Corrigé en ajoutant
+   `./src/components/**/*.{js,ts,jsx,tsx,mdx}` aux `content` globs. Bug
+   latent qui aurait pu ressurgir sur n'importe quel futur composant, pas
+   spécifique à ce jalon.
+2. **Ciel/fond délavé en gris-bleu au lieu du bleu nuit (ou du vert
+   prairie de jour).** Le shader (`shaders.ts`) fait tout le pipeline
+   colorimétrique à la main (linéarisation, ACES, gamma 1/2.2) — c'est
+   volontaire, à l'identique du prototype WebGL2 porté. Mais la couleur
+   d'effacement (`renderer.setClearColor`, le ciel/brouillard) passe par
+   `new THREE.Color(...)`, et Three.js applique automatiquement *sa
+   propre* gestion des couleurs dessus (elle suppose une couleur linéaire
+   et la ré-encode en sRGB) sans savoir qu'elle était déjà encodée par le
+   shader — double encodage gamma, qui éclaircit et désature
+   spécifiquement le fond (environ 94 % de l'image à l'écran vu le
+   cadrage large observé). Les objets réels (arbres, bâtiments), dessinés
+   par le shader lui-même, n'étaient pas affectés — d'où des arbres verts
+   normaux sur un fond gris-bleu délavé. Diagnostiqué en calculant à la
+   main la couleur attendue (`docs/DECISIONS.md`, position du soleil via
+   `soleilVille.ts`) puis en la comparant aux pixels réellement affichés
+   (lecture directe du canvas). Corrigé par une ligne dans `scene.ts` :
+   `renderer.outputColorSpace = THREE.LinearSRGBColorSpace` (égale à
+   l'espace de travail interne de Three.js, donc aucune conversion n'est
+   appliquée — le shader garde la main sur 100 % du pipeline couleur,
+   comme prévu).
+
+   **Rectificatif du 24/09/2026** : ce double encodage était réel et la
+   correction reste valable (la couleur du ciel est maintenant exacte),
+   mais ce n'était **pas** la cause de "l'herbe est grise". Les ~94 % de
+   "fond" mesurés ici étaient justement le signe que le sol n'était pas
+   dessiné du tout — mal interprété sur le moment. Vraie cause et
+   correction : voir le journal du Jalon 7, "Correction post-recette :
+   le sol n'était pas dessiné".
+
+**Vérification** : suite unitaire complète (33 tests) et `tsc --noEmit`
+repassés après les deux corrections, tous verts. Pas de vérification par
+sabotage — bugs purement visuels, aucun impact sur score/anti-triche.
+
+Point encore ouvert trouvé pendant ce même test : `DECISIONS.md` §10
+point 14 (halo de lampadaire qui semblerait traverser les bâtiments).
+
+---
+
+### Jalon 7 — Un jeu agréable à regarder — 24/09/2026
+
+**Contexte et réordonnancement.** L'ancien Jalon 7 "Se classer" est devenu
+le Jalon 8 : une note de passage de relais (`docs/A-INTEGRER.md`, déposée
+par une session Claude chat/Cowork le 23/09/2026 au soir, avec une
+maquette cliquable `docs/prototypes/maquette-ecrans.html`) proposait de
+faire d'abord la refonte visuelle de toutes les pages. Adrien a tranché
+pour cet ordre le 23/09/2026 (§10 point 15).
+
+**Ce qui a été fait** : toutes les pages du jeu reskinnées selon la
+maquette validée — accueil, connexion, inscription, création de ville
+(avec aperçu 3D en direct du nom tapé), Ma ville, Villes, Jumelages,
+navigation. Nouveau système visuel porté depuis la maquette dans
+`src/app/globals.css` (jetons de couleur clair/sombre via
+`prefers-color-scheme`, panneaux vitrés flous, panneau d'entrée
+d'agglomération pour les noms de ville, typographie Barlow/Barlow
+Condensed via `next/font/google`). La scène 3D du Jalon 6bis est
+maintenant **unique et persistante** dans `src/app/layout.tsx`
+(`src/components/SceneVilleFond.tsx`, un contexte React) plutôt que
+recréée à chaque page : les pages serveur annoncent juste "voici la ville
+à afficher" via `src/components/SincroniserScene.tsx`, ce qui évite de
+reconstruire le contexte WebGL à chaque navigation et permet à la caméra
+de rester stable. La page Villes devient une liste classée + panneau de
+détail (visite/influence/AntiVille/jumelage inchangés en logique, juste
+reskinnés), avec bascule liste/détail en un seul panneau sur mobile.
+
+**Classement minimal inclus** (nécessaire à l'affichage, pas le Jalon 8
+complet) : tri de la liste par population, badge de rang ("3ᵉ de
+France"/"3rd in France" — `src/lib/game/ordinal.ts`) et badge "Président"
+(n°1 de son pays), tous deux calculés à la volée sur `population`
+courante, pas `population_max`. Le Jalon 8 pourra ajouter un mondial et
+une page dédiée par-dessus cette base.
+
+**Explicitement exclu de ce jalon** (voir §10 points 16 et 17) :
+- Le système de développement des villes (7 activités, jauges, maire,
+  mégaprojets, "Simuler 30 jours") présent dans la maquette mais non
+  validé par Adrien — la maquette reste une proposition de design, pas
+  une spécification à coder telle quelle.
+- Le "Bulletin municipal" (journal quotidien des événements de la ville)
+  et le lien de partage personnalisé ("Fais grandir ta ville") : tous
+  deux demanderaient un nouveau modèle de données (une table
+  d'événements, un mécanisme d'invitation anonyme) qui n'existe pas —
+  plutôt qu'une fausse façade, ces deux "clins d'œil" sont reportés à un
+  jalon qui les spécifie vraiment.
+- La ville qui grandit sans limite (`docs/A-INTEGRER.md` §2) : reportée
+  au Jalon 7bis (scission volontaire, même logique que 6/6bis — c'est un
+  changement du générateur 3D indépendant de la refonte visuelle).
+
+**Bug trouvé en cours de route (pas dans le nouveau code, latent depuis
+le Jalon 1)** : `owner:users(pseudo)` dans la requête de la page Villes
+échouait silencieusement (`data: null`, donc "Aucune ville ne
+correspond." pour tout le monde) — `cities` a deux relations de clé
+étrangère vers `users` (`owner_id` et `city_id` en sens inverse),
+PostgREST refuse d'embarquer sans préciser laquelle. Corrigé avec
+`owner:users!cities_owner_id_fkey(pseudo)`, et une erreur de requête sur
+cette page journalise désormais côté serveur au lieu d'échouer
+silencieusement.
+
+**Tests.** Unitaires nouveaux, purs et déterministes :
+`tests/unit/ordinal.test.ts` (suffixes fr/en, y compris l'exception
+11/12/13 "th" en anglais), `tests/unit/ligneLocale.test.ts` (jour/nuit/
+lever/coucher selon l'heure et la position réelle du soleil, cf. Jalon
+6bis), et l'ajout de `progressionNiveau()` dans
+`tests/unit/niveauVille.test.ts` (pourcentage vers le seuil suivant,
+jamais à 0 % pile au seuil, 100 % au niveau maximal). E2e : les parcours
+UI des Jalons 2 à 5 ont dû être adaptés (la page Villes n'est plus un
+`<table>` mais une liste + panneau de détail — cliquer une ville ouvre le
+détail où vivent maintenant les boutons d'action, avant de rester "à
+demeure" sur chaque ligne). Comportement vérifié inchangé : mêmes RPC
+appelées, mêmes quotas, mêmes messages ; seuls les sélecteurs de test ont
+changé. Suite complète (`npm test` + `npm run test:e2e`, 47 tests
+unitaires + 20 tests e2e) verte, deux fois de suite. Vérifié aussi à
+l'œil dans le navigateur, poste et mobile : accueil, connexion,
+inscription, création avec aperçu 3D en direct, Ma ville, Villes (liste,
+sélection, actions réelles testées avec des comptes jetables), Jumelages.
+
+**Vérification rouge par sabotage** : aucune, ce jalon ne touche à
+aucune règle de jeu sensible (score/ressources/anti-triche) — seule la
+présentation change ; les fonctions SQL et actions serveur qui portent la
+vraie logique sont inchangées. Le classement (rang/président) est un
+calcul d'affichage pur (compte de lignes), sans écriture, donc pas de
+surface à saboter.
+
+**Correction post-recette (24/09/2026)** : Adrien a testé et signalé
+qu'il ne pouvait plus tourner/zoomer/déplacer la caméra sur aucune page.
+Cause : `.screen` (le conteneur de page, transparent, posé par-dessus le
+canvas 3D plein écran) capturait tous les clics/molette de tout l'écran
+avant qu'ils n'atteignent le canvas en dessous — la maquette avait
+`pointer-events: none` sur cet élément (et `auto` seulement sur les
+panneaux vitrés), règle perdue au moment du portage. Corrigé dans
+`globals.css`. Reproduit et vérifié avec un compte jetable amené
+artificiellement à l'échelle Métropole (~97 000 habitants, non testée
+avant ce signalement — les jalons précédents n'avaient vérifié le rendu
+qu'à l'échelle Hameau) : rotation/zoom fonctionnent de nouveau.
+
+**Correction post-recette : le sol n'était pas dessiné (24/09/2026) —
+la vraie cause de "l'herbe est grise" et des "bâtiments pas finis".**
+Le prototype WebGL2 désactive le culling (`gl.disable(gl.CULL_FACE)`),
+et les quads horizontaux produits par `geometrie.ts` (prairie, routes,
+trottoirs, parcelles, toits plats) sont enroulés face vers le bas. Le
+port Three.js gardait le culling par défaut de Three.js (`FrontSide`) :
+tous ces quads étaient éliminés avant d'être dessinés. On voyait donc la
+couleur de fond à la place du sol ("l'herbe est grise", "les routes sont
+grises") et les tours n'avaient plus de toit — seuls les contours des
+hélipads flottaient au-dessus ("les bâtiments ne sont pas finis", "pas
+3D comme la maquette"). Bug présent depuis le Jalon 6bis. **Trouvé et
+corrigé par Adrien** : `side: THREE.DoubleSide` sur le matériau principal
+et sur celui de la passe d'ombres (`scene.ts`), soit le même rendu que
+le prototype.
+
+Ce que ma propre investigation avait conclu à tort : j'avais comparé
+avec la maquette ouverte dans le navigateur, vérifié la palette, les
+uniformes d'éclairage et le calcul ACES/gamma pixel par pixel, et conclu
+"pas de bug, c'est la direction artistique" — alors que la mesure clé
+était sous mes yeux : ~92 % des pixels d'un hameau exactement à la
+couleur de fond, c'est-à-dire rien de dessiné, pas un sol délavé. J'avais
+formulé l'hypothèse "géométrie absente" puis l'avais écartée en lisant
+que la prairie couvre ±1 800 m, sans penser au culling. Les quelques
+milliers de pixels de chaussée "corrects" trouvés venaient de surfaces
+non éliminées (faces latérales, trottoirs en boîtes). Leçon : quand la
+couleur mesurée est *exactement* celle du fond, chercher d'abord pourquoi
+la géométrie n'est pas dessinée (culling, profondeur, clipping) avant de
+remettre en cause l'éclairage. Les explications précédentes de ce
+journal (brouillard à l'échelle Métropole, ciel sans dégradé, densité
+urbaine) sont donc à ignorer pour ce symptôme.
+
+**Test de non-régression** (`tests/e2e/jalon6bis-rendu-3d.spec.ts`, "le
+sol est bien dessiné") : heure figée à midi en France
+(`page.clock.setFixedTime`, pour que l'herbe soit franchement verte quel
+que soit le moment où la suite tourne), hameau fraîchement créé, puis
+part des pixels nettement verts dans le carré central 40 % × 40 % du
+canvas. Mesuré : ~58 % avec le sol dessiné, ~9 % (les arbres seuls) sans
+— seuil fixé à 25 %. **Vérification rouge par sabotage** : `side` remis à
+`FrontSide` sur le matériau principal → le test échoue (8,6 % mesuré),
+puis passe de nouveau une fois `DoubleSide` rétabli.
+
+**Deuxième correction post-recette, contrainte "application légère"
+(§1 point 6, ajoutée le même jour).** En relisant `docs/A-INTEGRER.md`
+après la première correction, découverte que ce jalon enfreignait la
+contrainte de poids qui venait d'y être ajoutée : la scène 3D
+(Three.js) était importée directement dans `src/app/layout.tsx`,
+donc chargée dans le paquet initial de **toutes** les pages — mesuré
+avec `next build` (le seul qui compte, `.next/` après `npm run dev` ne
+veut rien dire) : 256-264 Ko de JS au premier chargement de `/`,
+`/ville`, `/villes`, `/jumelages`, contre un budget de 500 Ko pour toute
+l'appli. Corrigé en séparant le vrai canvas Three.js
+(`src/components/CanvasVilleInterne.tsx`, nouveau) du contexte React qui
+l'entoure (`SceneVilleFond.tsx`, inchangé pour les pages) et en chargeant
+le premier avec `next/dynamic(..., { ssr: false })` — le texte de chaque
+page s'affiche donc immédiatement, la 3D arrive juste après en tâche de
+fond. Après correction : 104-113 Ko sur ces mêmes pages. Les appels à
+`definirVille()` reçus avant que le canvas ne soit monté sont mémorisés
+et rejoués dès qu'il l'est (pas de perte d'état). Suite complète
+(47 tests unitaires + 20 tests e2e, dont la vérification que le canvas
+peint bien des pixels) repassée après cette correction, verte.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -919,7 +1150,56 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     Jalon 6bis** : Adrien a confirmé Three.js (reco de Claude), portage
     complet du prototype effectué — voir `DECISIONS.md` §4, journal du
     Jalon 6bis.
-13. **Fluidité sur mobile** : maintenant testable (le rendu 3D existe
-    depuis le Jalon 6bis) — à vérifier sur le téléphone d'Adrien dès le
-    ombres sur écran tactile). Toujours ouvert — pas testable avant le
-    jalon du rendu.
+13. ~~Fluidité sur mobile.~~ **Testé après le Jalon 6bis** (23/09/2026,
+    sur le téléphone d'Adrien via l'IP locale du PC) : fluide. Au passage,
+    deux bugs trouvés et corrigés lors de ce test (voir `DECISIONS.md`
+    §4, entête "Corrections post-Jalon 6bis") : la nav mobile qui
+    débordait (classes Tailwind de `src/components/` jamais scannées) et
+    un double encodage gamma qui délavait le ciel/fond en gris-bleu.
+14. **Halo des lampadaires qui semble traverser les bâtiments la nuit**
+    (signalé par Adrien le 23/09/2026, après les corrections ci-dessus).
+    **Probablement expliqué le 24/09/2026** par le bug de culling (voir
+    §4, journal du Jalon 7, "le sol n'était pas dessiné") : sans leurs
+    toits (et sans les faces éliminées), on voyait à travers les
+    bâtiments les fenêtres éclairées des murs du fond. → **À reconfirmer
+    par Adrien de nuit** avant de clore ; l'hypothèse ci-dessous sur le
+    halo au sol reste une piste secondaire.
+    Hypothèse la plus probable après relecture du code : le halo au sol
+    des lampadaires (`ao.ts`, fonction `bakeAO`) est une carte 2D floutée
+    autour de chaque lampadaire, sans notion des murs — un halo peut donc
+    déborder sous un bâtiment proche d'un trottoir. Pas reproduit
+    visuellement avec certitude (ville de test = un hameau avec une seule
+    maison, écran trop petit/sombre pour trancher). → **À reprendre** dès
+    qu'Adrien peut décrire précisément l'effet ou envoyer une capture
+    (idéalement de jour, sur une ville avec plusieurs bâtiments) — pas de
+    correction à l'aveugle sur un shader.
+15. ~~Jalon 7 : classement ou refonte visuelle d'abord ?~~ **Tranché par
+    Adrien le 23/09/2026** : refonte visuelle d'abord (nouveau Jalon 7
+    "Un jeu agréable à regarder", proposé dans `docs/A-INTEGRER.md`
+    déposé par une session Claude chat/Cowork le même jour). "Se classer"
+    devient le Jalon 8. Détail dans `ROADMAP.md` et `DECISIONS.md` §4,
+    journal du Jalon 7.
+16. **Système de développement des villes (7 activités, jauges,
+    mégaprojets, décisions du maire — `docs/SYSTEME-DEVELOPPEMENT.md`).**
+    Proposition déposée le 23/09/2026, explicitement **non validée par
+    Adrien** — présente dans la maquette du Jalon 7
+    (`docs/prototypes/maquette-ecrans.html`) mais volontairement exclue de
+    l'implémentation de ce jalon (gaz d'échappement de la maquette, pas
+    une spécification). → **À trancher par Adrien** avant tout code sur
+    ce système. Note associée : à l'échelle 100 000 habitants, la
+    contamination à −10 % serait trop forte si ce système était activé un
+    jour (2 000 habitants perdus d'un coup pour une ville de 20 000) —
+    proposition en attente : −1 % et plafond de 3 % de pertes/jour toutes
+    causes confondues (sans lien avec ce système, applicable dès
+    maintenant si Adrien le souhaite pour l'antiville existante — à
+    confirmer séparément).
+17. **"Bulletin municipal" (journal d'événements) et lien de partage
+    personnalisé** — présents dans la maquette du Jalon 7 comme "clins
+    d'œil", mais demanderaient chacun une vraie fonctionnalité qui
+    n'existe pas encore (une table d'événements par ville ; un mécanisme
+    d'invitation/visite anonyme via un lien). Non codés en façade pour ce
+    jalon plutôt que de simuler quelque chose de creux. → **À trancher
+    par Adrien** : si ces "clins d'œil" valent la peine d'un mini-jalon
+    dédié, et avec quel contenu réel pour le bulletin (quels événements
+    logger : nouveaux habitants, influence reçue, attaques subies,
+    étages construits ?).

@@ -73,9 +73,10 @@ test.describe("Jalon 5 — villes jumelles", () => {
       await expect(page).toHaveURL(/\/ville$/);
 
       await page.goto("/villes");
-      const ligneB = page.getByRole("row", { name: new RegExp(b.villeNom) });
-      await ligneB.getByRole("button", { name: "Proposer un jumelage" }).click();
-      await expect(ligneB.getByText("Déjà jumelée")).toBeVisible();
+      const ligneB = page.getByRole("link", { name: new RegExp(b.villeNom) });
+      await ligneB.click();
+      await page.getByRole("button", { name: "Proposer un jumelage" }).click();
+      await expect(page.getByText("Demande envoyée")).toBeVisible();
 
       // B accepte via l'API directement (plus rapide que refaire tout
       // le parcours UI, déjà couvert côté "proposition" ci-dessus).

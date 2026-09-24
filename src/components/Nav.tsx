@@ -3,6 +3,7 @@ import { getLocale, traduire } from "@/lib/i18n";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { deconnexion } from "@/lib/supabase/auth-actions";
 import { LangSwitcher } from "./LangSwitcher";
+import { NavTabs } from "./NavTabs";
 
 export async function Nav() {
   const locale = await getLocale();
@@ -12,36 +13,25 @@ export async function Nav() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-gray-200 px-4 py-3 sm:px-8">
-      <Link href="/" className="text-sm font-semibold text-blue-600">
-        jeu_miniville
-      </Link>
-      <div className="flex items-center gap-4">
-        {user ? (
-          <nav className="flex items-center gap-4 text-sm">
-            <Link href="/ville" className="text-gray-600 hover:text-gray-900">
-              {traduire(locale, "nav.maVille")}
-            </Link>
-            <Link href="/villes" className="text-gray-600 hover:text-gray-900">
-              {traduire(locale, "nav.villes")}
-            </Link>
-            <Link href="/jumelages" className="text-gray-600 hover:text-gray-900">
-              {traduire(locale, "nav.jumelages")}
-            </Link>
-          </nav>
-        ) : null}
-        <LangSwitcher locale={locale} />
-        {user ? (
-          <form action={deconnexion}>
-            <button
-              type="submit"
-              className="text-sm text-gray-500 hover:text-gray-800"
-            >
-              {traduire(locale, "nav.seDeconnecter")}
-            </button>
-          </form>
-        ) : null}
-      </div>
-    </header>
+    <>
+      <header className="topbar">
+        <Link href="/" className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          jeu_miniville
+        </Link>
+        {user ? <NavTabs locale={locale} className="tabs" tabClassName="tab" /> : null}
+        <div className="who">
+          <LangSwitcher locale={locale} />
+          {user ? (
+            <form action={deconnexion}>
+              <button type="submit" className="btn small">
+                {traduire(locale, "nav.seDeconnecter")}
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </header>
+      {user ? <NavTabs locale={locale} className="tabbar" tabClassName="tab" /> : null}
+    </>
   );
 }

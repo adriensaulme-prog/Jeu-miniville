@@ -179,6 +179,14 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.autoClear = false;
+  // Le shader (shaders.ts) fait tout le pipeline colorimétrique à la main
+  // (linéarisation, ACES, gamma 1/2.2), à l'identique du prototype WebGL2
+  // porté. Sans ça, la gestion automatique des couleurs de Three.js
+  // réencode une seconde fois en sRGB la couleur d'effacement (le ciel,
+  // via setClearColor plus bas) puisqu'elle est déjà encodée : le fond
+  // ressort trop clair et désaturé (voir docs/DECISIONS.md §4 ; ce n'était
+  // pas la cause de "l'herbe est grise", voir le culling plus bas).
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-100, 100, 100, -100, 10, 2600);
@@ -216,12 +224,19 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     vertexShader: VS,
     fragmentShader: FS,
     uniforms,
+    // Le prototype WebGL2 désactive le culling (gl.disable(gl.CULL_FACE)) :
+    // les quads horizontaux de geometrie.ts (sol, routes, parcelles, toits
+    // plats) sont enroulés face vers le bas. Avec le culling par défaut de
+    // Three.js (FrontSide), ils disparaissent et on voit le fond à travers
+    // le sol ("l'herbe est grise"). DoubleSide = même rendu que le prototype.
+    side: THREE.DoubleSide,
   });
   const shadowMaterial = new THREE.RawShaderMaterial({
     glslVersion: THREE.GLSL3,
     vertexShader: SVS,
     fragmentShader: SFS,
     uniforms: { uLightVP: uniforms.uLightVP },
+    side: THREE.DoubleSide,
   });
 
   let mesh: THREE.Mesh | null = null;

@@ -40,35 +40,33 @@ export function ConnexionForm({
   }
 
   return (
-    <form onSubmit={envoyer} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
-        {traduire(locale, "connexion.email")}
+    <form onSubmit={envoyer} className="field">
+      <div className="field">
+        <label htmlFor="connexionEmail">{traduire(locale, "connexion.email")}</label>
         <input
+          id="connexionEmail"
+          className="input"
           type="email"
           required
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-2"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {traduire(locale, "connexion.motDePasse")}
+      </div>
+      <div className="field">
+        <label htmlFor="connexionMotDePasse">{traduire(locale, "connexion.motDePasse")}</label>
         <input
+          id="connexionMotDePasse"
+          className="input"
           type="password"
           required
           autoComplete="current-password"
           value={motDePasse}
           onChange={(e) => setMotDePasse(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-2"
         />
-      </label>
-      {erreur ? <p className="text-sm text-red-600">{erreur}</p> : null}
-      <button
-        type="submit"
-        disabled={enCours}
-        className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-      >
+      </div>
+      {erreur ? <p className="note" style={{ color: "var(--bad)" }}>{erreur}</p> : null}
+      <button type="submit" disabled={enCours} className="btn primary block">
         {traduire(locale, "connexion.bouton")}
       </button>
     </form>

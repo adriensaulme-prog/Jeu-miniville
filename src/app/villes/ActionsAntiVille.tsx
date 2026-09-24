@@ -9,21 +9,18 @@ function BoutonAction({
   name,
   value,
   label,
+  note,
 }: {
   name: string;
   value: string;
   label: string;
+  note: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      name={name}
-      value={value}
-      disabled={pending}
-      className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
-    >
+    <button type="submit" name={name} value={value} disabled={pending} className="btn">
       {label}
+      <small>{note}</small>
     </button>
   );
 }
@@ -62,40 +59,39 @@ export function ActionsAntiVille({
   );
 
   if (quotaAtteint) {
-    return (
-      <span className="text-xs text-gray-400">
-        {traduire(locale, "villes.quotaAntiVilleAtteint")}
-      </span>
-    );
+    return <p className="note">{traduire(locale, "villes.quotaAntiVilleAtteint")}</p>;
   }
 
   if (protectionActive) {
-    return (
-      <span className="text-xs text-gray-400">
-        {traduire(locale, "villes.protectionActive")}
-      </span>
-    );
+    return <p className="note">{traduire(locale, "villes.protectionActive")}</p>;
   }
 
   const message = messagePourEtat(etat, locale);
 
   return (
-    <form action={action} className="flex flex-col items-end gap-1">
+    <form action={action} className="row" style={{ display: "grid", gap: 8 }}>
       <input type="hidden" name="villeId" value={villeId} />
-      <div className="flex gap-1">
-        <BoutonAction name="typeAction" value="greve" label={traduire(locale, "villes.greve")} />
+      <div className="anti">
+        <BoutonAction
+          name="typeAction"
+          value="greve"
+          label={traduire(locale, "villes.greve")}
+          note={traduire(locale, "villes.greveNote")}
+        />
         <BoutonAction
           name="typeAction"
           value="contamination"
           label={traduire(locale, "villes.contamination")}
+          note={traduire(locale, "villes.contaminationNote")}
         />
         <BoutonAction
           name="typeAction"
           value="propagande"
           label={traduire(locale, "villes.propagande")}
+          note={traduire(locale, "villes.propagandeNote")}
         />
       </div>
-      {message ? <p className="max-w-[16rem] text-right text-xs text-gray-500">{message}</p> : null}
+      {message ? <p className="note">{message}</p> : null}
     </form>
   );
 }

@@ -1,454 +1,348 @@
-<title>Maquette de ville</title>
+<title>Maquette des écrans</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>
   :root {
     --bg: #e9eef2;
     --panel: #ffffff;
-    --panel-alpha: rgba(255, 255, 255, 0.92);
+    --glass: rgba(255, 255, 255, 0.93);
     --ink: #1a232d;
     --muted: #5a6672;
     --line: #d3dbe2;
+    --chip: #eef2f5;
     --accent: #c23b2c;
     --accent-ink: #ffffff;
-    --chip: #eef2f5;
+    --accent-soft: #fbe9e6;
+    --good: #2f7d4f;
+    --good-soft: #e3f3e9;
+    --warn: #a86400;
+    --warn-soft: #fbf0dc;
+    --bad: #b3261e;
+    --bad-soft: #fbe4e2;
+    --focus: #1f6fb2;
     --sign-bg: #ffffff;
     --sign-ink: #121212;
     --sign-red: #c8261c;
-    --focus: #1f6fb2;
+    --shadow: 0 10px 34px rgba(16, 28, 40, 0.16);
     --font-ui: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-sign: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+    --topbar: 58px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #0f151b;
-      --panel: #19212a;
-      --panel-alpha: rgba(25, 33, 42, 0.92);
-      --ink: #e7edf2;
-      --muted: #9aa7b3;
-      --line: #2b3641;
-      --accent: #e0604e;
-      --chip: #222c36;
-      --focus: #6fb0e8;
+      --bg: #0f151b; --panel: #19212a; --glass: rgba(25, 33, 42, 0.93); --ink: #e7edf2; --muted: #9aa7b3;
+      --line: #2b3641; --chip: #222c36; --accent: #e0604e; --accent-soft: #3a2320;
+      --good: #6fcf97; --good-soft: #1b3326; --warn: #f2b35c; --warn-soft: #3a2c16; --bad: #ff8a80; --bad-soft: #3a1f1d; --focus: #6fb0e8;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0f151b;
-    --panel: #19212a;
-    --panel-alpha: rgba(25, 33, 42, 0.92);
-    --ink: #e7edf2;
-    --muted: #9aa7b3;
-    --line: #2b3641;
-    --accent: #e0604e;
-    --chip: #222c36;
-    --focus: #6fb0e8;
+    --bg: #0f151b; --panel: #19212a; --glass: rgba(25, 33, 42, 0.93); --ink: #e7edf2; --muted: #9aa7b3;
+    --line: #2b3641; --chip: #222c36; --accent: #e0604e; --accent-soft: #3a2320;
+    --good: #6fcf97; --good-soft: #1b3326; --warn: #f2b35c; --warn-soft: #3a2c16; --bad: #ff8a80; --bad-soft: #3a1f1d; --focus: #6fb0e8;
   }
 
   html, body { height: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--font-ui);
-    font-size: 15px;
-    overflow: hidden;
-  }
-  .scene {
-    position: fixed;
-    inset: 0;
-    background: #d6e2ea;
-  }
-  .scene canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    cursor: grab;
-  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; overflow: hidden; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .scene { position: fixed; inset: 0; background: #d6e2ea; }
+  .scene canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   .scene canvas:active { cursor: grabbing; }
-  .fallback {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding-inline: 24px;
-    text-align: center;
-    color: #1a232d;
-    font-size: 16px;
+  .fallback { position: absolute; inset: 0; display: grid; place-items: center; padding-inline: 24px; text-align: center; color: #1a232d; }
+
+  /* ---------- barre du haut ---------- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+    height: var(--topbar); padding-top: env(safe-area-inset-top, 0px); box-sizing: content-box;
+    display: flex; align-items: center; gap: 16px; padding-inline: 16px;
+    background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-sign); font-weight: 700; font-size: 22px; letter-spacing: .02em; white-space: nowrap; }
+  .brand-mark { width: 30px; height: 20px; border: 3px solid var(--sign-red); border-radius: 4px; background: var(--sign-bg); box-sizing: border-box; }
+  .brand small { font-family: var(--font-ui); font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: 0; }
+  .tabs { display: flex; gap: 4px; margin-inline: auto; }
+  .tab {
+    border: 0; background: transparent; padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; color: var(--muted);
+  }
+  .tab:hover { color: var(--ink); background: var(--chip); }
+  .tab[aria-current="page"] { color: var(--ink); background: var(--chip); box-shadow: inset 0 -3px 0 var(--accent); }
+  .who { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .who b { color: var(--ink); font-weight: 600; }
+  .tabbar { display: none; }
+  .mock-chip { font-size: 11px; font-weight: 600; letter-spacing: .05em; padding: 3px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+
+  /* ---------- écrans ---------- */
+  .screen { position: fixed; inset: calc(var(--topbar) + env(safe-area-inset-top, 0px)) 0 0 0; pointer-events: none; z-index: 2; }
+  .screen[hidden], .dock[hidden], .tabs[hidden], .tabbar[hidden], .btn[hidden] { display: none !important; }
+  .dock {
+    pointer-events: auto; position: absolute; top: 16px; box-sizing: border-box;
+    max-height: calc(100% - 32px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    padding: 16px; display: grid; gap: 14px; align-content: start;
+  }
+  .dock-left { left: 16px; width: min(350px, calc(100% - 32px)); }
+  .dock-right { right: 16px; width: min(330px, calc(100% - 32px)); }
+  .center-card {
+    pointer-events: auto; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(440px, calc(100% - 32px)); box-sizing: border-box;
+    background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 26px 24px; display: grid; gap: 16px;
   }
 
-  .panel {
-    position: absolute;
-    top: calc(16px + env(safe-area-inset-top, 0px));
-    left: 16px;
-    width: min(330px, calc(100% - 32px));
-    box-sizing: border-box;
-    background: var(--panel-alpha);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px 16px;
-    display: grid;
-    gap: 14px;
-    box-shadow: 0 10px 34px rgba(16, 28, 40, 0.16);
+  @media (min-width: 641px) {
+    .center-card.hero { left: 48px; top: 50%; transform: translateY(-50%); width: min(460px, calc(100% - 96px)); }
   }
-  .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .eyebrow {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .proto {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: var(--chip);
-    color: var(--muted);
-  }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  .display { font-family: var(--font-sign); font-weight: 700; font-size: 44px; line-height: 1; letter-spacing: .01em; }
+  .h2 { font-family: var(--font-sign); font-weight: 700; font-size: 26px; line-height: 1.05; }
+  .h3 { font-weight: 600; font-size: 15px; }
+  .lead { margin: 0; font-size: 16px; line-height: 1.5; color: var(--muted); }
+  .note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
 
-  /* Le nom de la ville, présenté comme un panneau d'entrée d'agglomération */
-  .sign {
-    display: block;
-    background: var(--sign-bg);
-    border: 4px solid var(--sign-red);
-    border-radius: 7px;
-    box-shadow: inset 0 0 0 2px var(--sign-bg), inset 0 0 0 3px rgba(0,0,0,0.08), 0 2px 0 rgba(0,0,0,0.12);
-    padding: 2px 6px;
-  }
-  .sign input {
-    width: 100%;
-    box-sizing: border-box;
-    border: 0;
-    background: transparent;
-    color: var(--sign-ink);
-    font-family: var(--font-sign);
-    font-weight: 700;
-    font-size: 30px;
-    line-height: 1.15;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    text-align: center;
-    padding: 2px 0;
-  }
+  /* panneau d'entrée d'agglomération */
+  .sign { display: block; background: var(--sign-bg); border: 4px solid var(--sign-red); border-radius: 7px; padding: 4px 8px; text-align: center;
+    box-shadow: inset 0 0 0 2px var(--sign-bg), inset 0 0 0 3px rgba(0,0,0,.08), 0 2px 0 rgba(0,0,0,.12); }
+  .sign span, .sign input { display: block; width: 100%; box-sizing: border-box; border: 0; background: transparent; color: var(--sign-ink);
+    font-family: var(--font-sign); font-weight: 700; font-size: 30px; line-height: 1.15; letter-spacing: .05em; text-transform: uppercase; text-align: center; padding: 1px 0; overflow-wrap: anywhere; }
   .sign input:focus { outline: none; }
   .sign:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .sign.small span { font-size: 20px; }
+  .sign-sub { font-size: 13px; color: var(--muted); text-align: center; margin-top: -6px; }
 
-  .stage-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .stage-name {
-    font-family: var(--font-sign);
-    font-weight: 700;
-    font-size: 24px;
-    letter-spacing: 0.02em;
-    text-wrap: balance;
-  }
-  .stage-sub {
-    font-size: 13px;
-    color: var(--muted);
-    text-align: right;
-  }
+  .stage { display: grid; gap: 6px; }
+  .stage-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .stage-name { font-family: var(--font-sign); font-weight: 700; font-size: 26px; }
+  .stage-next { font-size: 12.5px; color: var(--muted); text-align: right; }
+  .bar { height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile { background: var(--chip); border-radius: 10px; padding: 8px 10px; display: grid; gap: 1px; }
+  .tile b { font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 700; }
+  .tile span { font-size: 12px; color: var(--muted); }
+
+  .btn { border-radius: 10px; border: 1px solid var(--line); background: var(--panel); padding: 9px 13px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--muted); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.block { width: 100%; }
+  .btn.small { font-size: 13px; padding: 5px 10px; border-radius: 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .spread { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
   .field { display: grid; gap: 6px; }
-  .field-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 10px;
-  }
   .field label { font-weight: 600; font-size: 14px; }
-  .field output {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    font-size: 15px;
-  }
-  input[type="range"] {
-    width: 100%;
-    accent-color: var(--accent);
-    margin: 0;
-  }
-  input[type="range"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .input, .select { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--panel); font-size: 15px; width: 100%; box-sizing: border-box; }
 
-  .facts {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .fact {
-    background: var(--chip);
-    border-radius: 10px;
-    padding: 8px 10px;
-    display: grid;
-    gap: 2px;
-  }
-  .fact b {
-    font-variant-numeric: tabular-nums;
-    font-size: 18px;
-    font-weight: 600;
-  }
-  .fact span { font-size: 12px; color: var(--muted); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+  .badge.pres { background: var(--accent); color: var(--accent-ink); }
+  .badge.good { background: var(--good-soft); color: var(--good); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .counter { font-variant-numeric: tabular-nums; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .btn {
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--panel);
-    color: var(--ink);
-    padding: 8px 12px;
-    cursor: pointer;
-  }
-  .btn:hover { border-color: var(--muted); }
-  .btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-  .btn.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
-  }
-  .btn[aria-pressed="true"] {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: var(--panel);
-  }
-  .btn.icon { padding-inline: 11px; }
+  .share { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+  .share code { display: block; font-size: 13px; background: var(--chip); padding: 7px 9px; border-radius: 8px; overflow-wrap: anywhere; user-select: all; }
 
-  .country-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .country-row label { font-weight: 600; font-size: 14px; }
-  .country-row select {
-    font: inherit;
-    font-size: 14px;
-    color: var(--ink);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 5px 8px;
-    max-width: 60%;
-  }
-  .country-row select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-  .time-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .btn.small { font-size: 13px; padding: 5px 10px; border-radius: 8px; }
-  .sky-state {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-  }
-  .rule {
-    margin: 0;
-    font-size: 12.5px;
-    line-height: 1.45;
-    color: var(--muted);
-  }
+  .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .list button.rowbtn { width: 100%; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: baseline;
+    text-align: left; background: transparent; border: 0; border-radius: 9px; padding: 7px 8px; cursor: pointer; }
+  .list button.rowbtn:hover { background: var(--chip); }
+  .list button.rowbtn[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
+  .rk { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--muted); }
+  .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pp { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
+  .meta { grid-column: 2 / 4; font-size: 12px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 
-  .ranking {
-    position: absolute;
-    top: calc(16px + env(safe-area-inset-top, 0px));
-    right: 16px;
-    width: min(300px, calc(100% - 32px));
-    box-sizing: border-box;
-    background: var(--panel-alpha);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 10px 34px rgba(16, 28, 40, 0.16);
-    color: var(--ink);
-  }
-  .ranking summary {
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 12px 14px;
-    list-style-position: inside;
-  }
-  .ranking summary:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; border-radius: 14px; }
-  .rank-filter {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 0 14px 8px; font-size: 13px; color: var(--muted);
-  }
-  .rank-filter select {
-    font: inherit; font-size: 13px; color: var(--ink); background: var(--panel);
-    border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px;
-  }
-  .rank-list {
-    list-style: none; margin: 0; padding: 0 6px 4px; overflow-y: auto;
-    max-height: calc(100vh - 250px); max-height: calc(100dvh - 250px);
-  }
-  .rank-list button {
-    width: 100%; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: baseline;
-    text-align: left; font: inherit; color: inherit; background: transparent; border: 0;
-    border-radius: 9px; padding: 6px 8px; cursor: pointer;
-  }
-  .rank-list button:hover { background: var(--chip); }
-  .rank-list button:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-  .rank-list button[aria-current="true"] { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
-  .rank-n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--muted); font-size: 13px; }
-  .rank-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rank-pop { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; }
-  .rank-meta { grid-column: 2 / 4; font-size: 12px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; }
-  .tag { font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 999px; background: var(--chip); }
-  .tag.pres { background: var(--accent); color: var(--accent-ink); }
-  .rank-note { margin: 0; padding: 6px 14px 12px; font-size: 12px; color: var(--muted); }
-  .hint {
-    position: absolute;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    font-size: 12.5px;
-    color: #243140;
-    background: rgba(255, 255, 255, 0.78);
-    border-radius: 999px;
-    padding: 6px 12px;
-    pointer-events: none;
-  }
+  .actions { display: grid; gap: 8px; }
+  .act { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--panel); }
+  .act p { margin: 0; font-size: 12.5px; color: var(--muted); grid-column: 1; }
+  .act .h3 { grid-column: 1; }
+  .act .btn { grid-column: 2; grid-row: 1 / 3; }
+  .anti { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .anti .btn { padding: 8px 6px; display: grid; gap: 1px; justify-items: center; }
+  .anti .btn small { font-weight: 500; font-size: 11px; color: var(--muted); }
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .toast { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--good-soft); color: var(--good); font-weight: 600; }
+  .toast.bad { background: var(--bad-soft); color: var(--bad); }
 
+  .journal { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .journal li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; font-size: 13.5px; line-height: 1.4; }
+  .journal .ic { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: var(--chip); }
+  .journal .ic.good { background: var(--good-soft); color: var(--good); }
+  .journal .ic.bad { background: var(--bad-soft); color: var(--bad); }
+  .journal .ic.warn { background: var(--warn-soft); color: var(--warn); }
+  .journal time { display: block; font-size: 12px; color: var(--muted); }
+
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--panel); display: grid; gap: 6px; }
+  details.demo { border-top: 1px solid var(--line); padding-top: 10px; }
+  details.demo summary { cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--muted); }
+  details.demo[open] summary { margin-bottom: 10px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+  .back { display: none; }
+  .empty { font-size: 13px; color: var(--muted); margin: 0; }
+
+
+  /* ---------- développement ---------- */
+  .gauges { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .gauges li { display: grid; grid-template-columns: 22px minmax(0, 1fr) 84px 50px; align-items: center; gap: 8px; font-size: 13.5px; }
+  .gauges.compact li { grid-template-columns: 20px minmax(0, 1fr) 66px 50px; font-size: 13px; }
+  .gauges .gn { font-weight: 600; }
+  .gauges .gv { white-space: nowrap; }
+  .reco-dot { font-size: 10px; font-weight: 700; color: var(--accent); margin-left: 2px; }
+  .gauges .gn .badge { font-size: 10px; }
+  .gauges .gb { position: relative; height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+  .gauges .gb i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--muted); }
+  .gauges .gb em { position: absolute; top: -2px; bottom: -2px; left: 66.6%; width: 2px; background: var(--ink); opacity: .35; }
+  .gauges .gv { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; font-size: 13px; }
+  .gauges li.bad .gb i { background: var(--bad); } .gauges li.bad .gv { color: var(--bad); }
+  .gauges li.warn .gb i { background: var(--warn); } .gauges li.warn .gv { color: var(--warn); }
+  .gauges li.good .gb i { background: var(--good); }
+  .gauges li.strong .gb i { background: var(--focus); } .gauges li.strong .gv { color: var(--focus); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12.5px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+  .chip.good { background: var(--good-soft); color: var(--good); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .mrow { display: grid; grid-template-columns: 112px 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; }
+  .visit { display: grid; gap: 8px; }
+  .actgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .actbtn { position: relative; display: grid; justify-items: center; gap: 1px; padding: 8px 4px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 12px; }
+  .actbtn:hover { border-color: var(--muted); }
+  .actbtn .ai { font-size: 20px; line-height: 1.1; }
+  .actbtn b { font-size: 11.5px; font-weight: 600; }
+  .actbtn .av { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 12px; }
+  .actbtn.bad .av { color: var(--bad); } .actbtn.warn .av { color: var(--warn); } .actbtn.good .av { color: var(--good); } .actbtn.strong .av { color: var(--focus); }
+  .actbtn.reco { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .rk-reco { position: absolute; top: -8px; right: 4px; font-size: 9.5px; font-weight: 700; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
   @media (max-width: 640px) {
-    .panel {
-      top: auto;
-      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-      left: 16px;
-      right: 16px;
-      width: auto;
-      padding: 10px 12px 12px;
-      gap: 10px;
+    :root { --topbar: 52px; }
+    .tabs, .who .pseudo, .mock-chip .long { display: none; }
+    .brand { font-size: 19px; }
+    .brand small { display: none; }
+    .tabbar {
+      display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+      background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line);
     }
-    .sign input { font-size: 24px; }
-    .stage-name { font-size: 20px; }
-    .facts { display: none; }
-    .rule { display: none; }
-    .hint { display: none; }
-    .eyebrow { display: none; }
-    .ranking { top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px; left: 16px; width: auto; }
-    .rank-list { max-height: 30vh; max-height: 30dvh; }
+    .tabbar .tab { flex: 1; padding: 8px 4px; font-size: 13.5px; }
+    .tabbar[hidden] { display: none; }
+    .screen { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+    .screen.nobar { bottom: 0; }
+    .dock { top: auto; bottom: 10px; left: 12px; right: 12px; width: auto; max-height: 55%; padding: 12px; gap: 10px; }
+    .dock-right { display: none; }
+    .screen.detail .dock-left { display: none; }
+    .screen.detail .dock-right { display: grid; }
+    .back { display: inline-flex; }
+    .display { font-size: 34px; }
+    .sign span, .sign input { font-size: 24px; }
+    .tiles.four { grid-template-columns: repeat(4, 1fr); }
+    .tiles.four .tile b { font-size: 15px; }
+    .optional-mobile { display: none; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    * { scroll-behavior: auto !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
 <div class="scene" id="scene">
-  <canvas id="view" aria-label="Vue 3D de la ville"></canvas>
+  <canvas id="view" aria-label="Vue 3D de la ville affichée"></canvas>
 </div>
 
-<section class="panel" aria-label="Réglages de la maquette">
-  <div class="panel-head">
-    <span class="eyebrow">Ta ville</span>
-    <span class="proto">Prototype de rendu</span>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span>jeu_miniville <small>nom provisoire</small></div>
+  <nav class="tabs" id="tabs" aria-label="Navigation principale">
+    <button class="tab" type="button" data-go="ville">Ma ville</button>
+    <button class="tab" type="button" data-go="villes">Villes</button>
+    <button class="tab" type="button" data-go="jumelages">Jumelages</button>
+  </nav>
+  <div class="who" id="who">
+    <span class="mock-chip">Maquette<span class="long"> · données fictives</span></span>
+    <span class="pseudo" id="whoPseudo"></span>
+    <button class="btn small" type="button" id="logout">Se déconnecter</button>
   </div>
+</header>
 
-  <div class="sign">
-    <input id="cityName" type="text" value="Paris" maxlength="18" spellcheck="false"
-           aria-label="Nom de la ville (chaque nom donne une ville différente)">
-  </div>
+<nav class="tabbar" id="tabbar" aria-label="Navigation principale (mobile)">
+  <button class="tab" type="button" data-go="ville">Ma ville</button>
+  <button class="tab" type="button" data-go="villes">Villes</button>
+  <button class="tab" type="button" data-go="jumelages">Jumelages</button>
+</nav>
 
-  <div class="country-row">
-    <label for="country">Pays</label>
-    <select id="country">
-      <option value="fr" selected>France</option>
-      <option value="de">Allemagne</option>
-      <option value="be">Belgique</option>
-      <option value="ch">Suisse</option>
-      <option value="es">Espagne</option>
-      <option value="it">Italie</option>
-      <option value="gb">Royaume-Uni</option>
-      <option value="ma">Maroc</option>
-      <option value="sn">Sénégal</option>
-      <option value="ca">Canada (Québec)</option>
-      <option value="us">États-Unis (New York)</option>
-      <option value="br">Brésil</option>
-      <option value="jp">Japon</option>
-      <option value="au">Australie</option>
-    </select>
-  </div>
-
-  <div class="stage-row">
-    <div class="stage-name" id="stageName">Métropole</div>
-    <div class="stage-sub" id="stageSub">16 blocs sur 16</div>
-  </div>
-
-  <div class="field">
-    <div class="field-top">
-      <label for="conn">Habitants</label>
-      <output id="connOut" for="conn">65 000</output>
+<!-- Accueil (non connecté) -->
+<section class="screen nobar" id="screen-accueil" hidden aria-label="Accueil">
+  <div class="center-card hero dock-left">
+    <span class="eyebrow">Jeu social · ville, pays, monde</span>
+    <h1 class="display">Ta ville grandit grâce aux autres.</h1>
+    <p class="lead">Chaque personne qui passe par ta ville y ajoute un habitant. Deviens la plus grande ville de ton pays, fais-en le président, et pèse chaque semaine sur le monde. 2 à 5 minutes par jour.</p>
+    <div class="row">
+      <button class="btn primary" type="button" data-go="creer">Créer ma ville</button>
+      <button class="btn" type="button" id="login">Se connecter</button>
     </div>
-    <input id="conn" type="range" min="0" max="250000" step="100" value="65000">
+    <p class="note">Derrière : une ville qui grandit, du premier habitant à la métropole.</p>
   </div>
-
-  <div class="field">
-    <div class="field-top">
-      <label for="hour">Heure dans la ville</label>
-      <output id="hourOut" for="hour">14:00</output>
-    </div>
-    <input id="hour" type="range" min="0" max="23.75" step="0.25" value="14">
-    <div class="time-row">
-      <button class="btn small" id="realtime" type="button" aria-pressed="true">Heure réelle</button>
-      <span class="sky-state" id="skyState">Jour</span>
-    </div>
-  </div>
-
-  <div class="facts">
-    <div class="fact"><b id="factFloors">0</b><span>étages, plus haute tour</span></div>
-    <div class="fact"><b id="factNext">—</b><span>habitants avant la prochaine construction</span></div>
-  </div>
-
-  <div class="actions">
-    <button class="btn primary" id="play" type="button" aria-pressed="false">Voir grandir</button>
-    <button class="btn icon" id="rotL" type="button" aria-label="Tourner la vue à gauche">⟲</button>
-    <button class="btn icon" id="rotR" type="button" aria-label="Tourner la vue à droite">⟳</button>
-  </div>
-
-  <p class="rule">Les maisons arrivent d'abord, une par une, du centre vers l'extérieur. Les petits immeubles apparaissent au stade Bourg, le premier gratte-ciel au stade Ville, sur un square réservé ; il gagne un étage tous les 500 habitants. Et la ville ne s'arrête jamais : un nouveau bloc tous les 5 000 habitants. Le soleil suit l'heure réelle du pays de la ville.</p>
 </section>
 
-<details class="ranking" id="ranking" open>
-  <summary>Classement des villes de test</summary>
-  <div class="rank-filter">
-    <label for="rankScope">Afficher</label>
-    <select id="rankScope">
-      <option value="all" selected>Monde</option>
-      <option value="fr">France</option>
-      <option value="de">Allemagne</option>
-      <option value="be">Belgique</option>
-      <option value="ch">Suisse</option>
-      <option value="ca">Canada (Québec)</option>
-      <option value="jp">Japon</option>
-    </select>
-  </div>
-  <ol class="rank-list" id="rankList"></ol>
-  <p class="rank-note">Villes fictives pour les essais. Clique une ville pour la voir.</p>
-</details>
+<!-- Créer sa ville -->
+<section class="screen nobar" id="screen-creer" hidden aria-label="Créer ma ville">
+  <form class="dock dock-left" id="formCreer" novalidate>
+    <span class="eyebrow">Nouvelle partie</span>
+    <h2 class="h2">Fonde ta ville</h2>
+    <div class="field">
+      <label for="newPseudo">Ton pseudo</label>
+      <input class="input" id="newPseudo" autocomplete="nickname" maxlength="20" value="adrien">
+    </div>
+    <div class="field">
+      <label for="newCity">Nom de ta ville</label>
+      <div class="sign"><input id="newCity" maxlength="18" spellcheck="false" value="Saint-Adrien"></div>
+    </div>
+    <div class="field">
+      <label for="newCountry">Pays</label>
+      <select class="select" id="newCountry"></select>
+    </div>
+    <p class="note">Ta ville naîtra au croisement de deux routes, avec une première maison. Son plan est unique et ne changera plus : c'est celui que tu vois derrière.</p>
+    <button class="btn primary block" type="submit">Fonder ma ville</button>
+    <button class="btn block" type="button" data-go="accueil">Retour</button>
+  </form>
+</section>
 
-<div class="hint">Glisser : tourner · Molette ou pincer : zoomer · Maj + glisser : déplacer</div>
+<!-- Ma ville -->
+<section class="screen" id="screen-ville" hidden aria-label="Ma ville">
+  <div class="dock dock-left" id="dockVille"></div>
+  <aside class="dock dock-right" aria-label="Bulletin municipal">
+    <div class="section-title"><h2 class="h3">Bulletin municipal</h2><span class="counter">aujourd'hui</span></div>
+    <ul class="journal" id="journal"></ul>
+  </aside>
+</section>
+
+<!-- Les villes -->
+<section class="screen" id="screen-villes" hidden aria-label="Les villes du monde">
+  <div class="dock dock-left">
+    <div class="head-row"><h2 class="h2">Les villes du monde</h2></div>
+    <div class="row">
+      <select class="select" id="filterCountry" aria-label="Filtrer par pays" style="flex:1"></select>
+    </div>
+    <div class="row">
+      <input class="input" id="search" type="search" placeholder="Chercher une ville" aria-label="Chercher une ville">
+    </div>
+    <ol class="list" id="cityList"></ol>
+    <p class="note">Visite une ville pour lui offrir un habitant (une fois par jour). Clique une ville pour la voir et agir.</p>
+  </div>
+  <aside class="dock dock-right" id="dockCity" aria-label="Ville visitée"></aside>
+</section>
+
+<!-- Jumelages -->
+<section class="screen" id="screen-jumelages" hidden aria-label="Jumelages">
+  <div class="dock dock-left" id="dockJum"></div>
+</section>
+
+<div id="liveRegion" class="sr-only" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></div>
 
 <script>
 (() => {
@@ -1312,8 +1206,10 @@
   // WebGL2
   // ------------------------------------------------------------------
   const canvas = document.getElementById('view');
-  const panelEl = document.querySelector('.panel');
-  const rankEl = document.getElementById('ranking');
+  const NORECT = { width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 };
+  const dockRect = (sel) => { const e = document.querySelector('.screen:not([hidden]) ' + sel); if (!e || e.hidden) return NORECT; const r = e.getBoundingClientRect(); return r.width ? r : NORECT; };
+  const panelEl = { getBoundingClientRect: () => dockRect('.dock-left') };
+  const rankEl = { getBoundingClientRect: () => dockRect('.dock-right') };
   const gl = canvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true });
   if (!gl) {
     document.getElementById('scene').insertAdjacentHTML('beforeend', '<div class="fallback">Ton navigateur ne gère pas WebGL 2 : la maquette 3D ne peut pas s\'afficher ici. Essaie un navigateur récent (Chrome, Firefox, Safari 15+).</div>');
@@ -1887,80 +1783,6 @@
     });
   }
 
-  // ------------------------------------------------------------------
-  // Panneau
-  // ------------------------------------------------------------------
-  const $ = (id) => document.getElementById(id);
-  const fmt = new Intl.NumberFormat('fr-FR');
-  const STAGES = STAGE_AT.map((t, i) => [t, ['Hameau', 'Village', 'Bourg', 'Ville', 'Grande ville', 'Métropole'][i]]);
-  function updatePanel() {
-    const C = state.conn;
-    let stage = STAGES[0][1];
-    for (const [t, n] of STAGES) if (C >= t) stage = n;
-    $('stageName').textContent = stage;
-    const st = state.stats;
-    $('stageSub').textContent = st.active + (st.active > 1 ? ' blocs construits' : ' bloc construit');
-    $('connOut').textContent = fmt.format(C);
-    $('factFloors').textContent = st.maxFloors;
-    $('factNext').textContent = isFinite(st.next) ? fmt.format(Math.ceil(st.next - C)) : '—';
-  }
-
-  const hourInput = $('hour'), rtBtn = $('realtime'), countrySel = $('country');
-  function updateClock() {
-    const t = cityTime();
-    const hh = Math.floor(t.h), mm = Math.round((t.h - hh) * 60) % 60;
-    if (state.realtime) hourInput.value = Math.round(t.h * 4) / 4;
-    $('hourOut').textContent = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
-    const el = solar(t).el;
-    $('skyState').textContent = el > 12 ? 'Jour' : el > -2 ? (t.h < 12 ? 'Lever du soleil' : 'Coucher du soleil') : el > -10 ? (t.h < 12 ? 'Aube' : 'Crépuscule') : 'Nuit';
-    rtBtn.setAttribute('aria-pressed', String(state.realtime));
-  }
-  countrySel.addEventListener('change', () => { state.country = countrySel.value; updateClock(); schedule(false); });
-  hourInput.addEventListener('input', () => { state.realtime = false; state.hour = +hourInput.value; updateClock(); schedule(false); });
-  rtBtn.addEventListener('click', () => { state.realtime = !state.realtime; if (!state.realtime) state.hour = +hourInput.value; updateClock(); schedule(false); });
-  setInterval(() => { if (state.realtime) { updateClock(); schedule(false); } }, 30000);
-
-  const nameInput = $('cityName'), connInput = $('conn');
-  nameInput.addEventListener('input', () => { state.name = nameInput.value; schedule(true); });
-  connInput.addEventListener('input', () => { state.conn = +connInput.value; schedule(true); });
-
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function rotateBy(deg) {
-    if (reduceMotion) { state.az += deg; schedule(false); return; }
-    const start = state.az, t0 = performance.now(), dur = 450;
-    const step = (t) => {
-      const k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      state.az = start + deg * e; render();
-      if (k < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
-  $('rotL').addEventListener('click', () => rotateBy(-90));
-  $('rotR').addEventListener('click', () => rotateBy(90));
-
-  let playing = false, lastT = 0;
-  const playBtn = $('play');
-  function setPlaying(on) {
-    playing = on;
-    playBtn.setAttribute('aria-pressed', String(on));
-    playBtn.textContent = on ? 'Pause' : 'Voir grandir';
-    if (on) {
-      if (state.conn >= MAX_POP) state.conn = 0;
-      lastT = performance.now();
-      requestAnimationFrame(tick);
-    }
-  }
-  function tick(t) {
-    if (!playing) return;
-    const dt = Math.min(0.1, (t - lastT) / 1000); lastT = t;
-    state.conn = Math.min(MAX_POP, state.conn + dt * (state.conn < 5000 ? 400 : state.conn < 20000 ? 1500 : 4000));
-    const snapped = Math.round(state.conn / 100) * 100;
-    if (+connInput.value !== snapped) { connInput.value = snapped; rebuild(); render(); }
-    if (state.conn >= MAX_POP) { setPlaying(false); return; }
-    requestAnimationFrame(tick);
-  }
-  playBtn.addEventListener('click', () => setPlaying(!playing));
-
   // Glisser / zoomer / déplacer
   const pointers = new Map();
   let pinchDist = 0, lastMid = null;
@@ -2009,52 +1831,495 @@
   window.addEventListener('resize', () => schedule(false));
 
   // ------------------------------------------------------------------
-  // Villes de test : classement cliquable
+  // Interface du jeu (maquette d'écrans, données fictives)
   // ------------------------------------------------------------------
-  const TEST_CITIES = [{"id": "test-01", "v": "Belval-sur-Loire", "p": "fr", "c": 114000}, {"id": "test-02", "v": "Montclair", "p": "fr", "c": 78400}, {"id": "test-03", "v": "Saint-Aubin-les-Vignes", "p": "fr", "c": 39000}, {"id": "test-04", "v": "Rochemaure", "p": "fr", "c": 20500}, {"id": "test-05", "v": "Ormassville", "p": "fr", "c": 10750}, {"id": "test-06", "v": "Castelviel", "p": "fr", "c": 5250}, {"id": "test-07", "v": "Les Grandes-Ormes", "p": "fr", "c": 2760}, {"id": "test-08", "v": "Valcourt", "p": "fr", "c": 930}, {"id": "test-09", "v": "Pierrefeu", "p": "fr", "c": 410}, {"id": "test-10", "v": "Le Hameau-Fleuri", "p": "fr", "c": 30}, {"id": "test-11", "v": "Neustadt-am-See", "p": "de", "c": 108000}, {"id": "test-12", "v": "Lindenfeld", "p": "de", "c": 65200}, {"id": "test-13", "v": "Rosenheide", "p": "de", "c": 33000}, {"id": "test-14", "v": "Altmark-Ost", "p": "de", "c": 16000}, {"id": "test-15", "v": "Kleinbrück", "p": "de", "c": 8000}, {"id": "test-16", "v": "Wiesental", "p": "de", "c": 3240}, {"id": "test-17", "v": "Birkenau-Dorf", "p": "de", "c": 600}, {"id": "test-18", "v": "Eichwalde", "p": "de", "c": 80}, {"id": "test-19", "v": "Beaufays", "p": "be", "c": 13500}, {"id": "test-20", "v": "Hautrive", "p": "be", "c": 730}, {"id": "test-21", "v": "Lac-aux-Pins", "p": "ch", "c": 3880}, {"id": "test-22", "v": "Grünau", "p": "ch", "c": 200}, {"id": "test-23", "v": "Saint-Laurent-du-Fleuve", "p": "ca", "c": 9500}, {"id": "test-24", "v": "Sakuragawa", "p": "jp", "c": 27000}];
-  const COUNTRY_NAMES = { fr: 'France', de: 'Allemagne', be: 'Belgique', ch: 'Suisse', es: 'Espagne', it: 'Italie', gb: 'Royaume-Uni', ma: 'Maroc', sn: 'Sénégal', ca: 'Canada', us: 'États-Unis', br: 'Brésil', jp: 'Japon', au: 'Australie' };
-  const stageOf = (c) => { let n = STAGES[0][1]; for (const [t, s] of STAGES) if (c >= t) n = s; return n; };
-  const presidents = new Set();
-  for (const code of new Set(TEST_CITIES.map((v) => v.p))) {
-    const best = TEST_CITIES.filter((v) => v.p === code).sort((a, b) => b.c - a.c)[0];
-    presidents.add(best.id);
+  const $ = (id) => document.getElementById(id);
+  const fmt = new Intl.NumberFormat('fr-FR');
+  const STAGE_NAMES = ['Hameau', 'Village', 'Bourg', 'Ville', 'Grande ville', 'Métropole'];
+  const stageIndex = (p) => { let i = 0; STAGE_AT.forEach((t, k) => { if (p >= t) i = k; }); return i; };
+  const COUNTRY_NAMES = { fr: 'France', de: 'Allemagne', be: 'Belgique', ch: 'Suisse', es: 'Espagne', it: 'Italie', gb: 'Royaume-Uni', ma: 'Maroc', sn: 'Sénégal', ca: 'Canada (Québec)', us: 'États-Unis', br: 'Brésil', jp: 'Japon', au: 'Australie' };
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const slug = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const live = (msg) => { $('liveRegion').textContent = msg; };
+
+  // ------------------------------------------------------------------
+  // Développement : 7 activités, jauges, effets, mégaprojets
+  // (règles : docs/SYSTEME-DEVELOPPEMENT.md)
+  // ------------------------------------------------------------------
+  const ACTS = [
+    { k: 'res', ic: '🏠', n: 'Résidentiel', w: 0.30 },
+    { k: 'ind', ic: '🏭', n: 'Industrie', w: 0.12 },
+    { k: 'com', ic: '🛒', n: 'Commerce', w: 0.14 },
+    { k: 'loi', ic: '🌳', n: 'Loisirs', w: 0.12 },
+    { k: 'ser', ic: '🏥', n: 'Services', w: 0.12 },
+    { k: 'ene', ic: '⚡', n: 'Énergie', w: 0.12 },
+    { k: 'rec', ic: '🔬', n: 'Recherche', w: 0.08 },
+  ];
+  const ACT = Object.fromEntries(ACTS.map((a) => [a.k, a]));
+  const DECAY = 0.967; // chaque jour, l'élan de chaque activité compte 3,3 % de moins (la ville regarde surtout le dernier mois)
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const ramp = (g) => clamp01((g - 0.6) / 0.9);
+  const pctTxt = (x, d) => (Math.round(x * (d ? 1000 : 100)) / (d ? 10 : 1)).toLocaleString('fr-FR') + ' %';
+  function gauges(pts) {
+    const T = ACTS.reduce((s, a) => s + pts[a.k], 0);
+    const g = {};
+    for (const a of ACTS) g[a.k] = ((pts[a.k] + 20 * a.w) / (T + 20)) / a.w;
+    return g;
   }
-  const rankList = $('rankList'), rankScope = $('rankScope');
-  let currentTestId = null;
-  function renderRanking() {
-    const scope = rankScope.value;
-    const rows = TEST_CITIES.filter((v) => scope === 'all' || v.p === scope).sort((a, b) => b.c - a.c);
-    rankList.innerHTML = '';
-    rows.forEach((v, i) => {
-      const li = document.createElement('li');
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.setAttribute('aria-current', String(v.id === currentTestId));
-      b.innerHTML = '<span class="rank-n">' + (i + 1) + '</span><span class="rank-name"></span><span class="rank-pop">' + fmt.format(v.c) + '</span>' +
-        '<span class="rank-meta"><span class="c"></span><span>· ' + stageOf(v.c) + '</span>' + (presidents.has(v.id) ? '<span class="tag pres">Président</span>' : '') + '</span>';
-      b.querySelector('.rank-name').textContent = v.v;
-      b.querySelector('.c').textContent = COUNTRY_NAMES[v.p] || v.p;
-      b.addEventListener('click', () => {
-        currentTestId = v.id;
-        state.name = v.v; state.country = v.p; state.conn = v.c; state.autoFrame = true;
-        nameInput.value = v.v; countrySel.value = v.p; connInput.value = v.c;
-        if (playing) setPlaying(false);
-        updateClock(); renderRanking(); schedule(true);
-      });
-      li.appendChild(b); rankList.appendChild(li);
+  const gState = (v) => v < 0.6 ? 'bad' : v < 0.9 ? 'warn' : v <= 1.2 ? 'good' : 'strong';
+  function effects(g) {
+    const e = [];
+    if (g.res < 0.6) e.push({ k: 'bad', t: '🏠 Crise du logement : ' + pctTxt(g.res / 0.6) + ' des visites apportent un habitant' });
+    if (g.ind > 1.2) e.push({ k: 'good', t: '🏭 Grèves raccourcies de ' + pctTxt(0.6 * ramp(g.ind)) }); else if (g.ind < 0.6) e.push({ k: 'bad', t: '🏭 Grèves plus longues (+50 %)' });
+    if (g.com > 1.2) e.push({ k: 'good', t: '🛒 Croissance +' + pctTxt(0.25 * clamp01((g.com - 1) / 0.5)) }); else if (g.com < 0.6) e.push({ k: 'bad', t: '🛒 Plus de bonus de jumelage' });
+    if (g.loi > 1.2) e.push({ k: 'good', t: '🌳 Départs réduits de ' + pctTxt(0.5 * ramp(g.loi)) }); else if (g.loi < 0.6) e.push({ k: 'bad', t: '🌳 Départs plus nombreux (+50 %)' });
+    if (g.ser > 1.2) e.push({ k: 'good', t: '🏥 Coups durs amortis de ' + pctTxt(0.35 * ramp(g.ser)) }); else if (g.ser < 0.6) e.push({ k: 'bad', t: '🏥 Coups durs plus forts (+25 %)' });
+    if (g.ene > 1.2) e.push({ k: 'good', t: '⚡ Risque de manifestation divisé par 2' }); else if (g.ene < 0.6) e.push({ k: 'bad', t: '⚡ Pénurie : les gratte-ciel ne montent plus' });
+    if (g.rec > 1.2) e.push({ k: 'good', t: '🔬 Influence double ' + pctTxt(0.5 * ramp(g.rec)) + ' du temps' }); else if (g.rec < 0.6) e.push({ k: 'bad', t: '🔬 Recherche à l\'arrêt : aucune technologie' });
+    return e;
+  }
+  function manifRisk(g) {
+    let n = 0;
+    for (const a of ACTS) if (g[a.k] < 0.6) n += a.k === 'ene' ? 2 : 1;
+    let r = 0.1 * n;
+    if (g.ene > 1.2) r /= 2;
+    return Math.min(0.9, r);
+  }
+  function visitGain(g, rnd) {
+    let h = (g.res >= 0.6 || rnd() < g.res / 0.6) ? 1 : 0;
+    if (g.com > 1 && rnd() < 0.25 * clamp01((g.com - 1) / 0.5)) h++;
+    return h;
+  }
+  const TECHS = [[100, 'Éclairage public LED'], [300, 'Panneaux solaires sur les toits'], [800, 'Tramway sur les grands axes'], [2000, 'Toits végétalisés'], [5000, 'Livraisons par drones'], [10000, 'Quartier zéro carbone']];
+  const techsOf = (r) => TECHS.filter(([t]) => r >= t);
+  const MEGA = {
+    ecole: { n: 'Grande école', th: 'ser', at: 5000, cost: [400, 400, 250], bonus: 'coups durs −10 %' },
+    sports: { n: 'Parc des sports', th: 'loi', at: 5000, cost: [400, 400, 250], bonus: 'départs −10 %' },
+    marche: { n: 'Marché couvert', th: 'com', at: 5000, cost: [400, 400, 250], bonus: 'croissance +5 %' },
+    hopital: { n: 'Hôpital', th: 'ser', at: 15000, cost: [1200, 1200, 750], bonus: 'coups durs −20 %' },
+    stade: { n: 'Stade', th: 'loi', at: 15000, cost: [1200, 1200, 750], bonus: 'départs −25 %' },
+    solaire: { n: 'Centrale solaire', th: 'ene', at: 15000, cost: [1200, 1200, 750], bonus: 'Énergie comptée +20 %' },
+    logistique: { n: 'Zone logistique', th: 'ind', at: 15000, cost: [1200, 1200, 750], bonus: 'grèves −25 %' },
+  };
+  function seedDev(c, visitsPerDay, bias) {
+    const r = rngFrom('dev|' + c.id);
+    const shares = ACTS.map((a) => a.w * (0.55 + 0.9 * r()) * ((bias && bias[a.k]) || 1));
+    const S = shares.reduce((x, y) => x + y, 0);
+    const mass = visitsPerDay / (1 - DECAY);
+    c.pts = {}; ACTS.forEach((a, i) => { c.pts[a.k] = mass * shares[i] / S; });
+    c.cumRec = Math.round(c.pop * shares[6] / S);
+    c.stock = { mat: Math.round(c.pop * 0.02), rev: Math.round(c.pop * 0.02) };
+    c.built = []; c.mega = null;
+    const g = gauges(c.pts);
+    c.reco = ACTS.reduce((m, a) => (g[a.k] < g[m] ? a.k : m), 'res');
+  }
+  function megaAdd(c, kind, n, day) {
+    if (!c.mega) return null;
+    const m = MEGA[c.mega.id];
+    if (kind === 'mat') { const t = Math.min(n, m.cost[0] - c.mega.prog[0], c.stock.mat); c.stock.mat -= t; c.mega.prog[0] += t; }
+    if (kind === 'rev') { const t = Math.min(n, m.cost[1] - c.mega.prog[1], c.stock.rev); c.stock.rev -= t; c.mega.prog[1] += t; }
+    if (kind === m.th) c.mega.prog[2] = Math.min(m.cost[2], c.mega.prog[2] + n);
+    if (c.mega.prog.every((v, i) => v >= m.cost[i])) { const done = c.mega.id; c.built.push(done); c.mega = null; return done; }
+    return null;
+  }
+  // une visite (ou la contribution du maire) : +habitants, +1 point dans l'activité choisie
+  function contribute(c, k, rnd) {
+    const g = gauges(c.pts);
+    const h = visitGain(g, rnd);
+    c.pop += h; c.record = Math.max(c.record, c.pop);
+    c.pts[k] += 1;
+    if (k === 'rec') c.cumRec += 1;
+    if (k === 'ind') c.stock.mat += 1;
+    if (k === 'com') c.stock.rev += 1;
+    let done = megaAdd(c, 'mat', 1e9) || megaAdd(c, 'rev', 1e9);
+    done = done || megaAdd(c, k, 1);
+    return { h, before: g[k], after: gauges(c.pts)[k], done };
+  }
+  function gaugeRows(c, compact) {
+    const g = gauges(c.pts);
+    return '<ul class="gauges' + (compact ? ' compact' : '') + '">' + ACTS.map((a) => {
+      const v = g[a.k], st = gState(v), w = Math.min(100, v / 1.5 * 100);
+      return '<li class="' + st + '"><span class="gi" aria-hidden="true">' + a.ic + '</span><span class="gn">' + a.n +
+        (c.reco === a.k ? ' <span class="reco-dot" title="Recommandé par le maire">conseillé</span>' : '') + '</span>' +
+        '<span class="gb" role="img" aria-label="' + a.n + ' ' + Math.round(v * 100) + ' %"><i style="width:' + w.toFixed(1) + '%"></i><em></em></span>' +
+        '<span class="gv">' + Math.round(v * 100) + ' %</span></li>';
+    }).join('') + '</ul>';
+  }
+  function effectChips(c) {
+    const g = gauges(c.pts), e = effects(g), risk = manifRisk(g);
+    return '<div class="chips">' + (e.length ? e.map((x) => '<span class="chip ' + x.k + '">' + x.t + '</span>').join('') : '<span class="chip">Ville équilibrée : aucun bonus, aucune crise</span>') + '</div>' +
+      '<p class="note">Risque de manifestation aujourd\'hui : <b>' + pctTxt(risk) + '</b>' + (risk === 0 ? ' — une ville équilibrée n\'en a jamais.' : ' (jauges en rouge).') + '</p>';
+  }
+  function megaCard(c) {
+    const built = c.built.map((id) => '<span class="badge good">' + MEGA[id].n + ' ✓</span>').join(' ');
+    if (!c.mega) return built ? '<div class="card"><div class="h3">Mégaprojets</div><div class="row">' + built + '</div></div>' : '';
+    const m = MEGA[c.mega.id], p = c.mega.prog;
+    const bar = (lab, v, tot) => '<div class="mrow"><span>' + lab + '</span><span class="bar"><i style="width:' + Math.min(100, v / tot * 100).toFixed(1) + '%"></i></span><span class="counter">' + fmt.format(Math.floor(v)) + ' / ' + fmt.format(tot) + '</span></div>';
+    const total = (Math.min(p[0], m.cost[0]) + Math.min(p[1], m.cost[1]) + Math.min(p[2], m.cost[2])) / (m.cost[0] + m.cost[1] + m.cost[2]);
+    return '<div class="card"><div class="spread"><div class="h3">Chantier : ' + ACT[m.th].ic + ' ' + m.n + '</div><span class="counter">' + Math.floor(total * 100) + ' %</span></div>' +
+      bar('🏭 Matériaux', p[0], m.cost[0]) + bar('🛒 Revenus', p[1], m.cost[1]) + bar(ACT[m.th].ic + ' ' + ACT[m.th].n, p[2], m.cost[2]) +
+      '<p class="note">Une fois construit : ' + m.bonus + '. ' + (built ? 'Déjà construit : ' + built : '') + '</p></div>';
+  }
+
+
+  const QUOTA_INFLUENCE = 5, QUOTA_ANTI = 3, MAX_JUMELAGES = 3, PROTECTION = 2;
+
+  // Joueur et villes fictives
+  const TEST = [{"id": "test-01", "v": "Belval-sur-Loire", "p": "fr", "c": 114000}, {"id": "test-02", "v": "Montclair", "p": "fr", "c": 78400}, {"id": "test-03", "v": "Saint-Aubin-les-Vignes", "p": "fr", "c": 39000}, {"id": "test-04", "v": "Rochemaure", "p": "fr", "c": 20500}, {"id": "test-05", "v": "Ormassville", "p": "fr", "c": 10750}, {"id": "test-06", "v": "Castelviel", "p": "fr", "c": 5250}, {"id": "test-07", "v": "Les Grandes-Ormes", "p": "fr", "c": 2760}, {"id": "test-08", "v": "Valcourt", "p": "fr", "c": 930}, {"id": "test-09", "v": "Pierrefeu", "p": "fr", "c": 410}, {"id": "test-10", "v": "Le Hameau-Fleuri", "p": "fr", "c": 30}, {"id": "test-11", "v": "Neustadt-am-See", "p": "de", "c": 108000}, {"id": "test-12", "v": "Lindenfeld", "p": "de", "c": 65200}, {"id": "test-13", "v": "Rosenheide", "p": "de", "c": 33000}, {"id": "test-14", "v": "Altmark-Ost", "p": "de", "c": 16000}, {"id": "test-15", "v": "Kleinbrück", "p": "de", "c": 8000}, {"id": "test-16", "v": "Wiesental", "p": "de", "c": 3240}, {"id": "test-17", "v": "Birkenau-Dorf", "p": "de", "c": 600}, {"id": "test-18", "v": "Eichwalde", "p": "de", "c": 80}, {"id": "test-19", "v": "Beaufays", "p": "be", "c": 13500}, {"id": "test-20", "v": "Hautrive", "p": "be", "c": 730}, {"id": "test-21", "v": "Lac-aux-Pins", "p": "ch", "c": 3880}, {"id": "test-22", "v": "Grünau", "p": "ch", "c": 200}, {"id": "test-23", "v": "Saint-Laurent-du-Fleuve", "p": "ca", "c": 9500}, {"id": "test-24", "v": "Sakuragawa", "p": "jp", "c": 27000}];
+  const player = { pseudo: 'adrien', id: 'moi', v: 'Rochemaure', p: 'fr', pop: 20500, record: 20500, influence: 2460, activite: 34 };
+  const cities = TEST.filter((c) => c.v !== 'Rochemaure').map((c) => {
+    const r = rngFrom('ui|' + c.id);
+    return { id: c.id, v: c.v, p: c.p, pop: c.c, record: c.c, influence: Math.round(c.c * (0.08 + 0.1 * r())),
+      owner: 'test_' + slug(c.v).slice(0, 12), visited: false, influenced: 0, anti: 0, greve: false, jum: null };
+  });
+  const byName = (n) => cities.find((c) => c.v === n);
+  byName('Belval-sur-Loire').jum = 'actif'; byName('Castelviel').jum = 'actif';
+  byName('Lindenfeld').jum = 'recu'; byName('Beaufays').jum = 'recu';
+  byName('Saint-Laurent-du-Fleuve').jum = 'envoye';
+  const quotas = { influence: QUOTA_INFLUENCE, anti: QUOTA_ANTI };
+  for (const c of cities) seedDev(c, Math.round(c.pop / 400) + 6);
+  byName('Neustadt-am-See').mega = { id: 'stade', prog: [1200, 780, 310] }; byName('Neustadt-am-See').built = ['sports'];
+  byName('Belval-sur-Loire').built = ['ecole', 'hopital'];
+  byName('Lindenfeld').mega = { id: 'logistique', prog: [640, 900, 120] };
+  function seedPlayer() {
+    // Rochemaure : ville déséquilibrée pour la démo (trop peu d'énergie et de services)
+    const share = { res: 0.38, ind: 0.14, com: 0.16, loi: 0.10, ser: 0.085, ene: 0.07, rec: 0.065 };
+    const mass = 60 / (1 - DECAY);
+    player.pts = {}; for (const a of ACTS) player.pts[a.k] = mass * share[a.k];
+    player.cumRec = 1330; player.stock = { mat: 0, rev: 0 };
+    player.built = ['marche']; player.mega = { id: 'solaire', prog: [1200, 950, 410] };
+    player.reco = 'ene'; player.maireUsed = false;
+  }
+  seedPlayer();
+  const journal = [
+    { k: 'good', i: '+1', t: 'Un nouvel habitant est arrivé : <b>test_montclair</b> est passé par ta ville.', w: 'il y a 12 min' },
+    { k: 'good', i: '+1', t: 'Jumelage avec <b>Belval-sur-Loire</b> : vous étiez actifs tous les deux, +1 habitant.', w: 'il y a 40 min' },
+    { k: 'good', i: '★', t: 'Le gratte-ciel du bloc central a gagné un étage.', w: 'il y a 1 h' },
+    { k: 'bad', i: '−2', t: '<b>Neustadt-am-See</b> a lancé une propagande contre toi : −2 influence.', w: 'il y a 2 h' },
+    { k: 'warn', i: '!', t: '<b>Lindenfeld</b> te propose un jumelage.', w: 'il y a 3 h' },
+    { k: 'good', i: '+1', t: '<b>Sakuragawa</b> t\'a apporté +1 influence.', w: 'hier' },
+  ];
+
+  const allRanked = () => [...cities, { ...player, owner: player.pseudo, isMe: true }].sort((a, b) => b.pop - a.pop);
+  const presidents = () => {
+    const s = new Set();
+    for (const code of new Set(allRanked().map((c) => c.p))) s.add(allRanked().find((c) => c.p === code).id);
+    return s;
+  };
+
+
+  // --- scène : quelle ville est affichée ---
+  function show(name, country, pop, keepCamera) {
+    state.name = name; state.country = country; state.conn = pop;
+    if (!keepCamera) state.autoFrame = true;
+    schedule(true);
+  }
+  function localLine(country) {
+    const saved = state.country; state.country = country;
+    const ct = cityTime(); state.country = saved;
+    const hh = Math.floor(ct.h), mm = Math.round((ct.h - hh) * 60) % 60;
+    const el = solar(ct).el;
+    const sky = el > 12 ? 'jour' : el > -2 ? (ct.h < 12 ? 'lever du soleil' : 'coucher du soleil') : el > -10 ? (ct.h < 12 ? 'aube' : 'crépuscule') : 'nuit';
+    return (COUNTRY_NAMES[country] || country) + ' · ' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ' · ' + sky;
+  }
+  function stageBlock(pop) {
+    const i = stageIndex(pop);
+    const next = STAGE_AT[i + 1];
+    const pct = next ? Math.max(2, Math.min(100, ((pop - STAGE_AT[i]) / (next - STAGE_AT[i])) * 100)) : 100;
+    return '<div class="stage"><div class="stage-top"><span class="stage-name">' + STAGE_NAMES[i] + '</span>' +
+      '<span class="stage-next">' + (next ? STAGE_NAMES[i + 1] + ' à ' + fmt.format(next) + ' hab.' : 'stade maximal') + '</span></div>' +
+      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(pct) + '" aria-label="Progression vers le stade suivant"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>';
+  }
+
+  // --- navigation ---
+  let screen = 'accueil', loggedIn = false, selectedId = null;
+  function go(to) {
+    if (!loggedIn && ['ville', 'villes', 'jumelages'].includes(to)) to = 'accueil';
+    screen = to;
+    stopDemo(); stopTour();
+    for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== 'screen-' + to;
+    for (const t of document.querySelectorAll('[data-go].tab')) t.setAttribute('aria-current', t.dataset.go === to ? 'page' : 'false');
+    const inGame = loggedIn && ['ville', 'villes', 'jumelages'].includes(to);
+    $('tabs').hidden = !inGame; $('tabbar').hidden = !inGame; $('logout').hidden = !loggedIn;
+    $('whoPseudo').innerHTML = loggedIn ? 'Connecté : <b>' + esc(player.pseudo) + '</b>' : '';
+    if (to === 'accueil') startTour();
+    if (to === 'creer') { $('screen-creer').querySelector('input').focus({ preventScroll: true }); previewNew(); }
+    if (to === 'ville') { renderVille(); show(player.v, player.p, player.record); }
+    if (to === 'villes') { renderList(); if (selectedId) selectCity(selectedId); else { $('screen-villes').classList.remove('detail'); $('dockCity').hidden = true; show(player.v, player.p, player.record); } }
+    if (to === 'jumelages') { renderJum(); show(player.v, player.p, player.record); }
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+  $('logout').addEventListener('click', () => { loggedIn = false; go('accueil'); });
+  $('login').addEventListener('click', () => { loggedIn = true; go('ville'); });
+
+  // --- accueil : une ville qui grandit en boucle derrière la carte ---
+  let tourRaf = 0, tourPop = 1, tourLast = 0;
+  function startTour() {
+    tourPop = 1; tourLast = performance.now();
+    state.realtime = true;
+    show('Paris', 'fr', 1);
+    const step = (t) => {
+      const dt = Math.min(0.1, (t - tourLast) / 1000); tourLast = t;
+      tourPop = Math.max(tourPop, 40) * Math.pow(1.32, dt);
+      if (tourPop > 160000) tourPop = 1;
+      const snapped = Math.round(tourPop);
+      if (Math.abs(snapped - state.conn) >= Math.max(1, state.conn * 0.012)) { state.conn = snapped; state.autoFrame = true; rebuild(); render(); }
+      tourRaf = requestAnimationFrame(step);
+    };
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) tourRaf = requestAnimationFrame(step);
+    else show('Paris', 'fr', 65000);
+  }
+  function stopTour() { cancelAnimationFrame(tourRaf); tourRaf = 0; }
+
+  // --- créer sa ville ---
+  const countryOptions = Object.keys(COUNTRY_NAMES).map((k) => '<option value="' + k + '">' + COUNTRY_NAMES[k] + '</option>').join('');
+  $('newCountry').innerHTML = countryOptions; $('newCountry').value = 'fr';
+  function previewNew() { show($('newCity').value || 'Ma ville', $('newCountry').value, 1); }
+  $('newCity').addEventListener('input', previewNew);
+  $('newCountry').addEventListener('change', previewNew);
+  $('formCreer').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('newCity').value.trim();
+    if (name.length < 2) { $('newCity').focus(); live('Donne un nom d\'au moins 2 lettres à ta ville.'); return; }
+    Object.assign(player, { pseudo: $('newPseudo').value.trim() || 'joueur', v: name, p: $('newCountry').value, pop: 1, record: 1, influence: 0, activite: 1 });
+    player.pts = {}; for (const a of ACTS) player.pts[a.k] = 0;
+    player.cumRec = 0; player.stock = { mat: 0, rev: 0 }; player.built = []; player.mega = null; player.reco = 'res'; player.maireUsed = false;
+    journal.unshift({ k: 'good', i: '★', t: 'Ta ville <b>' + esc(name) + '</b> est née au croisement de deux routes. Partage ton lien pour attirer tes premiers habitants.', w: 'à l\'instant' });
+    loggedIn = true; go('ville');
+  });
+
+  // --- ma ville ---
+  let demoRaf = 0;
+  function stopDemo() { cancelAnimationFrame(demoRaf); demoRaf = 0; const b = $('demoPlay'); if (b) { b.textContent = 'Voir grandir'; b.setAttribute('aria-pressed', 'false'); } }
+  function renderVille() {
+    const rank = allRanked().filter((c) => c.p === player.p).findIndex((c) => c.isMe) + 1;
+    const pres = presidents().has(player.id);
+    const link = 'jeu-miniville.app/v/' + slug(player.v);
+    $('dockVille').innerHTML =
+      '<div class="head-row"><span class="eyebrow">Ma ville</span>' + (pres ? '<span class="badge pres">Président</span>' : '<span class="badge">' + rank + '<sup>e</sup> de ' + esc(COUNTRY_NAMES[player.p]) + '</span>') + '</div>' +
+      '<div class="sign"><span>' + esc(player.v) + '</span></div>' +
+      '<div class="sign-sub" id="villeLocal">' + esc(localLine(player.p)) + '</div>' +
+      stageBlock(player.pop) +
+      '<div class="tiles">' +
+        '<div class="tile"><b>' + fmt.format(player.pop) + '</b><span>habitants</span></div>' +
+        '<div class="tile"><b>' + fmt.format(player.influence) + '</b><span>influence</span></div>' +
+        '<div class="tile"><b>' + player.activite + '</b><span>connexions (7 jours)</span></div>' +
+        '<div class="tile"><b id="nextBuild">—</b><span>habitants avant la prochaine construction</span></div>' +
+      '</div>' +
+      '<div class="section-title"><h3 class="h3">Développement</h3><span class="counter">100 % = équilibre</span></div>' +
+      gaugeRows(player) + effectChips(player) + megaCard(player) +
+      '<div class="card"><div class="h3">Décisions du maire</div>' +
+        '<div class="field"><label for="maireReco">Recommander aux visiteurs</label><select class="select" id="maireReco">' + ACTS.map((a) => '<option value="' + a.k + '"' + (player.reco === a.k ? ' selected' : '') + '>' + a.ic + ' ' + a.n + '</option>').join('') + '</select></div>' +
+        '<div class="row"><select class="select" id="maireAct" aria-label="Activité de ta contribution du jour" style="flex:1">' + ACTS.map((a) => '<option value="' + a.k + '"' + (player.reco === a.k ? ' selected' : '') + '>' + a.ic + ' ' + a.n + '</option>').join('') + '</select>' +
+        '<button class="btn small primary" type="button" id="maireGo"' + (player.maireUsed ? ' disabled' : '') + '>' + (player.maireUsed ? 'Faite aujourd\'hui' : 'Ma contribution du jour') + '</button></div>' +
+      '</div>' +
+      '<div class="share"><div class="h3">Fais grandir ta ville</div>' +
+        '<p class="note">Chaque personne qui ouvre ton lien ajoute un habitant à ta ville (une fois par jour et par personne).</p>' +
+        '<code id="shareLink">' + esc(link) + '</code>' +
+        '<div class="row"><button class="btn small" type="button" id="copyLink">Copier le lien</button><span class="counter" id="copyState"></span></div></div>' +
+      '<details class="demo"><summary>Simuler la croissance (démo)</summary>' +
+        '<div class="field"><div class="spread"><label for="demoPop">Habitants</label><span class="counter" id="demoOut">' + fmt.format(player.pop) + '</span></div>' +
+        '<input type="range" id="demoPop" min="1" max="250000" step="1" value="' + player.pop + '"></div>' +
+        '<div class="row" style="margin-top:8px"><button class="btn small primary" type="button" id="demoPlay" aria-pressed="false">Voir grandir</button>' +
+        '<span class="note">Les vrais habitants viennent des visites.</span></div>' +
+        '<div class="field" style="margin-top:12px"><label for="simStrat">Simuler 30 jours de visites (60 par jour)</label>' +
+        '<select class="select" id="simStrat"><option value="maire">Le maire conseille la jauge la plus basse, la moitié des visiteurs suit</option><option value="hasard">Les visiteurs choisissent au hasard</option><option value="res">Tout le monde choisit Résidentiel</option></select>' +
+        '<button class="btn small" type="button" id="simGo">Simuler 30 jours</button></div></details>';
+    $('maireReco').addEventListener('change', (e) => { player.reco = e.target.value; renderVille(); });
+    $('maireGo').addEventListener('click', () => {
+      const k = $('maireAct').value, res = contribute(player, k, Math.random);
+      player.maireUsed = true;
+      journal.unshift({ k: 'good', i: ACT[k].ic, t: 'Ta contribution du jour : ' + ACT[k].n + ' passe de ' + pctTxt(res.before, 1) + ' à ' + pctTxt(res.after, 1) + '.', w: 'à l\'instant' });
+      if (res.done) journal.unshift({ k: 'good', i: '★', t: 'Mégaprojet terminé : <b>' + MEGA[res.done].n + '</b> !', w: 'à l\'instant' });
+      renderVille(); show(player.v, player.p, player.record, true);
+    });
+    $('simGo').addEventListener('click', () => { simulate(30, $('simStrat').value); });
+    $('journal').innerHTML = journal.map((j) => '<li><span class="ic ' + j.k + '" aria-hidden="true">' + j.i + '</span><div>' + j.t + '<time>' + j.w + '</time></div></li>').join('');
+    $('copyLink').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText('https://' + link); $('copyState').textContent = 'Lien copié'; }
+      catch { const r = document.createRange(); r.selectNodeContents($('shareLink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copyState').textContent = 'Sélectionné, fais Ctrl+C'; }
+    });
+    const setPop = (p) => {
+      player.pop = p; player.record = Math.max(player.record, p);
+      $('demoOut').textContent = fmt.format(p);
+      state.conn = player.record; state.autoFrame = true; rebuild(); render();
+      const d = $('dockVille');
+      d.querySelector('.stage').outerHTML = stageBlock(player.pop);
+      d.querySelector('.tile b').textContent = fmt.format(player.pop);
+    };
+    $('demoPop').addEventListener('input', (e) => { stopDemo(); player.record = +e.target.value; setPop(+e.target.value); });
+    $('demoPlay').addEventListener('click', (e) => {
+      if (demoRaf) { stopDemo(); return; }
+      e.currentTarget.textContent = 'Pause'; e.currentTarget.setAttribute('aria-pressed', 'true');
+      let p = player.pop >= 240000 ? 1 : player.pop, last = performance.now();
+      if (p === 1) player.record = 1;
+      const step = (t) => {
+        const dt = Math.min(0.1, (t - last) / 1000); last = t;
+        p = Math.min(250000, p * Math.pow(1.25, dt) + dt * 80);
+        $('demoPop').value = Math.round(p); setPop(Math.round(p));
+        if (p >= 250000) { stopDemo(); return; }
+        demoRaf = requestAnimationFrame(step);
+      };
+      demoRaf = requestAnimationFrame(step);
     });
   }
-  rankScope.addEventListener('change', renderRanking);
-  if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) $('ranking').open = false;
-  $('ranking').addEventListener('toggle', () => schedule(false));
-  renderRanking();
+  function simulate(days, strat) {
+    const rnd = rngFrom('sim|' + strat + '|' + player.pop);
+    const pickW = () => { let x = rnd(), acc = 0; for (const a of ACTS) { acc += a.w; if (x <= acc) return a.k; } return 'res'; };
+    const start = { pop: player.pop, g: gauges(player.pts) };
+    let manifs = 0, lost = 0;
+    const techBefore = techsOf(player.cumRec).length;
+    for (let d = 1; d <= days; d++) {
+      for (const a of ACTS) player.pts[a.k] *= DECAY;
+      if (strat === 'maire') { const g0 = gauges(player.pts); player.reco = ACTS.reduce((m, a) => (g0[a.k] < g0[m] ? a.k : m), 'res'); }
+      for (let v = 0; v < 60; v++) {
+        const k = strat === 'res' ? (rnd() < 0.9 ? 'res' : pickW()) : strat === 'hasard' ? ACTS[Math.floor(rnd() * 7)].k : (rnd() < 0.5 ? player.reco : pickW());
+        const r = contribute(player, k, rnd);
+        if (r.done) journal.unshift({ k: 'good', i: '★', t: 'Jour ' + d + ' : mégaprojet terminé, <b>' + MEGA[r.done].n + '</b> !', w: 'simulation' });
+      }
+      const g = gauges(player.pts);
+      if (rnd() < manifRisk(g)) {
+        const base = 0.01 * (g.loi < 0.6 ? 1.5 : 1 - 0.5 * ramp(g.loi)) * (g.ser < 0.6 ? 1.25 : 1 - 0.35 * ramp(g.ser));
+        const l = Math.round(player.pop * base); player.pop -= l; lost += l; manifs++;
+        const worst = ACTS.reduce((m, a) => (g[a.k] < g[m] ? a.k : m), 'res');
+        journal.unshift({ k: 'bad', i: '!', t: 'Jour ' + d + ' : manifestation contre le manque ' + ({ res: 'de logements', ind: 'd\'emplois', com: 'de commerces', loi: 'de loisirs', ser: 'de services', ene: 'd\'énergie', rec: 'de recherche' })[worst] + ' : −' + fmt.format(l) + ' habitants.', w: 'simulation' });
+      }
+    }
+    const techs = techsOf(player.cumRec);
+    for (const [, n] of techs.slice(techBefore)) journal.unshift({ k: 'good', i: '🔬', t: 'Nouvelle technologie : <b>' + n + '</b>.', w: 'simulation' });
+    const g = gauges(player.pts);
+    journal.unshift({ k: manifs ? 'warn' : 'good', i: '30', t: '<b>Bilan de 30 jours</b> : ' + (player.pop - start.pop >= 0 ? '+' : '') + fmt.format(player.pop - start.pop) + ' habitants, ' + manifs + ' manifestation' + (manifs > 1 ? 's' : '') + (lost ? ' (−' + fmt.format(lost) + ')' : '') + '. Jauges en crise : ' + ACTS.filter((a) => start.g[a.k] < 0.6).length + ' → ' + ACTS.filter((a) => g[a.k] < 0.6).length + ' ; Énergie ' + pctTxt(start.g.ene) + ' → ' + pctTxt(g.ene) + ', Résidentiel ' + pctTxt(start.g.res) + ' → ' + pctTxt(g.res) + '.', w: 'simulation' });
+    player.maireUsed = false;
+    renderVille(); show(player.v, player.p, player.record, true);
+  }
+  function updatePanel() {
+    const n = $('nextBuild');
+    if (n && screen === 'ville') n.textContent = isFinite(state.stats.next) ? fmt.format(Math.ceil(state.stats.next - state.conn)) : '—';
+  }
+
+  // --- les villes ---
+  $('filterCountry').innerHTML = '<option value="all">Tous les pays</option>' +
+    [...new Set([player.p, ...cities.map((c) => c.p)])].map((k) => '<option value="' + k + '">' + COUNTRY_NAMES[k] + '</option>').join('');
+  $('filterCountry').addEventListener('change', renderList);
+  $('search').addEventListener('input', renderList);
+  function renderList() {
+    const f = $('filterCountry').value, q = $('search').value.trim().toLowerCase();
+    const pres = presidents();
+    const ranked = allRanked().filter((c) => f === 'all' || c.p === f);
+    $('cityList').innerHTML = ranked.map((c, i) => {
+      if (q && !c.v.toLowerCase().includes(q)) return '';
+      const badges = (pres.has(c.id) ? '<span class="badge pres">Président</span>' : '') +
+        (c.isMe ? '<span class="badge">Ma ville</span>' : '') +
+        (c.jum === 'actif' ? '<span class="badge good">Jumelée</span>' : '') +
+        (c.visited ? '<span class="badge good">Visitée</span>' : '') +
+        (c.greve ? '<span class="badge bad">En grève</span>' : '');
+      return '<li><button class="rowbtn" type="button" data-city="' + c.id + '" aria-current="' + (c.id === selectedId) + '">' +
+        '<span class="rk">' + (i + 1) + '</span><span class="nm">' + esc(c.v) + '</span><span class="pp">' + fmt.format(c.pop) + '</span>' +
+        '<span class="meta">' + esc(COUNTRY_NAMES[c.p]) + ' · ' + STAGE_NAMES[stageIndex(c.pop)] + ' ' + badges + '</span></button></li>';
+    }).join('') || '<li><p class="empty">Aucune ville ne correspond.</p></li>';
+  }
+  $('cityList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-city]'); if (!b) return;
+    if (b.dataset.city === 'moi') { go('ville'); return; }
+    selectCity(b.dataset.city);
+  });
+  let lastMsg = null;
+  function selectCity(id) {
+    selectedId = id; const c = cities.find((x) => x.id === id);
+    $('screen-villes').classList.add('detail'); $('dockCity').hidden = false;
+    renderList(); renderCity(c);
+    show(c.v, c.p, c.record);
+  }
+  function renderCity(c) {
+    const pres = presidents().has(c.id);
+    const protectedToday = c.anti >= PROTECTION;
+    const jumBtn = c.jum === 'actif' ? '<span class="badge good">Jumelée avec ta ville</span>'
+      : c.jum === 'envoye' ? '<span class="badge">Demande envoyée</span>'
+      : c.jum === 'recu' ? '<button class="btn small" type="button" data-act="accepter">Accepter son jumelage</button>'
+      : '<button class="btn small" type="button" data-act="jumeler"' + (activeJum() >= MAX_JUMELAGES ? ' disabled' : '') + '>Proposer un jumelage</button>';
+    $('dockCity').innerHTML =
+      '<div class="head-row"><button class="btn small back" type="button" data-act="retour">← Toutes les villes</button><span class="eyebrow">En visite</span>' + (pres ? '<span class="badge pres">Président</span>' : '') + '</div>' +
+      '<div class="sign"><span>' + esc(c.v) + '</span></div>' +
+      '<div class="sign-sub">de <b>' + esc(c.owner) + '</b> · ' + esc(localLine(c.p)) + '</div>' +
+      stageBlock(c.pop) +
+      '<div class="tiles"><div class="tile"><b>' + fmt.format(c.pop) + '</b><span>habitants</span></div><div class="tile"><b>' + fmt.format(c.influence) + '</b><span>influence</span></div></div>' +
+      '<details class="demo"' + (c.visited ? ' open' : '') + '><summary>Développement de la ville</summary>' + gaugeRows(c, true) + effectChips(c) + megaCard(c) + '</details>' +
+      (lastMsg ? '<div class="toast' + (lastMsg.bad ? ' bad' : '') + '" role="status">' + lastMsg.t + '</div>' : '') +
+      '<div class="actions">' +
+        (c.visited
+          ? '<div class="act"><span class="h3">Visitée aujourd\'hui</span><p>Reviens demain pour un nouvel habitant.</p><button class="btn" type="button" disabled>Visitée</button></div>'
+          : '<div class="visit"><div class="section-title"><h3 class="h3">Visiter : que viens-tu développer ?</h3><span class="counter">+1 habitant</span></div>' +
+            '<div class="actgrid">' + ACTS.map((a) => { const v = gauges(c.pts)[a.k]; return '<button class="actbtn ' + gState(v) + (c.reco === a.k ? ' reco' : '') + '" type="button" data-act="visiter" data-a="' + a.k + '"><span class="ai" aria-hidden="true">' + a.ic + '</span><b>' + a.n + '</b><span class="av">' + Math.round(v * 100) + ' %</span>' + (c.reco === a.k ? '<span class="rk-reco">conseillé</span>' : '') + '</button>'; }).join('') + '</div>' +
+            '<p class="note">Le maire conseille ' + ACT[c.reco].ic + ' ' + ACT[c.reco].n + '. Les jauges en rouge causent des problèmes à la ville.</p></div>') +
+        '<div class="act"><span class="h3">Influencer</span><p>+1 influence · <span class="counter">' + quotas.influence + ' / ' + QUOTA_INFLUENCE + ' aujourd\'hui</span></p>' +
+          '<button class="btn" type="button" data-act="influencer"' + (quotas.influence <= 0 || c.greve ? ' disabled' : '') + '>Influencer</button></div>' +
+      '</div>' +
+      '<div class="section-title"><h3 class="h3">AntiVille</h3><span class="counter">' + quotas.anti + ' / ' + QUOTA_ANTI + ' aujourd\'hui</span></div>' +
+      (protectedToday ? '<p class="note"><span class="badge warn">Protégée</span> Tu l\'as déjà visée deux fois aujourd\'hui : ses effets seraient trop réduits.</p>' : '') +
+      '<div class="anti">' +
+        '<button class="btn" type="button" data-act="greve"' + (quotas.anti <= 0 || protectedToday || c.greve ? ' disabled' : '') + '>Grève<small>bloquée 24 h</small></button>' +
+        '<button class="btn" type="button" data-act="contamination"' + (quotas.anti <= 0 || protectedToday ? ' disabled' : '') + '>Contamination<small>−10 % hab.</small></button>' +
+        '<button class="btn" type="button" data-act="propagande"' + (quotas.anti <= 0 || protectedToday ? ' disabled' : '') + '>Propagande<small>−2 influence</small></button>' +
+      '</div>' +
+      '<p class="note">Une attaque ne détruit jamais de bâtiment : la ville reste dessinée à son record d\'habitants.</p>' +
+      '<div class="row">' + jumBtn + '</div>';
+  }
+  const activeJum = () => cities.filter((c) => c.jum === 'actif').length;
+  $('dockCity').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+    const c = cities.find((x) => x.id === selectedId); const a = b.dataset.act;
+    if (a === 'retour') { selectedId = null; $('screen-villes').classList.remove('detail'); renderList(); show(player.v, player.p, player.record); return; }
+    lastMsg = null;
+    if (a === 'visiter') {
+      const k = b.dataset.a, r = contribute(c, k, Math.random);
+      c.visited = true;
+      lastMsg = { t: (r.h ? '+' + r.h + ' habitant' + (r.h > 1 ? 's' : '') + ' pour ' + esc(c.v) + '. ' : 'Crise du logement : ton habitant n\'a pas trouvé de place. ') + ACT[k].ic + ' ' + ACT[k].n + ' : ' + pctTxt(r.before, 1) + ' → ' + pctTxt(r.after, 1) + '.' + (r.done ? ' Mégaprojet terminé : ' + MEGA[r.done].n + ' !' : '') };
+      show(c.v, c.p, c.record, true);
+    }
+    if (a === 'influencer') { quotas.influence--; c.influence++; lastMsg = { t: '+1 influence pour ' + esc(c.v) + '.' }; }
+    if (a === 'greve') { quotas.anti--; c.anti++; c.greve = true; lastMsg = { t: esc(c.v) + ' est en grève : son influence est bloquée 24 h.', bad: true }; }
+    if (a === 'contamination') { quotas.anti--; c.anti++; const lost = Math.round(c.pop * 0.1); c.pop -= lost; lastMsg = { t: esc(c.v) + ' perd ' + fmt.format(lost) + ' habitants. Ses bâtiments restent debout.', bad: true }; }
+    if (a === 'propagande') { quotas.anti--; c.anti++; c.influence = Math.max(0, c.influence - 2); lastMsg = { t: esc(c.v) + ' perd 2 d\'influence.', bad: true }; }
+    if (a === 'jumeler') { c.jum = 'envoye'; lastMsg = { t: 'Demande de jumelage envoyée à ' + esc(c.v) + '.' }; }
+    if (a === 'accepter') { c.jum = 'actif'; lastMsg = { t: 'Vous êtes maintenant jumelées.' }; }
+    live(lastMsg ? lastMsg.t.replace(/<[^>]+>/g, '') : '');
+    renderList(); renderCity(c);
+  });
+
+  // --- jumelages ---
+  function renderJum() {
+    const act = cities.filter((c) => c.jum === 'actif'), rec = cities.filter((c) => c.jum === 'recu'), env = cities.filter((c) => c.jum === 'envoye');
+    const card = (c, btns) => '<div class="card"><div class="spread"><div><div class="h3">' + esc(c.v) + '</div><div class="note">' + esc(COUNTRY_NAMES[c.p]) + ' · ' + STAGE_NAMES[stageIndex(c.pop)] + ' · ' + fmt.format(c.pop) + ' hab.</div></div>' +
+      '<button class="btn small" type="button" data-see="' + c.id + '">Voir</button></div>' + (btns ? '<div class="row">' + btns + '</div>' : '') + '</div>';
+    $('dockJum').innerHTML =
+      '<h2 class="h2">Jumelages</h2>' +
+      '<p class="note">Deux villes jumelées gagnent chacune +1 habitant chaque jour où leurs deux joueurs sont actifs. ' + MAX_JUMELAGES + ' jumelages au maximum.</p>' +
+      '<div class="section-title"><h3 class="h3">Actifs</h3><span class="counter">' + act.length + ' / ' + MAX_JUMELAGES + '</span></div>' +
+      (act.length ? act.map((c) => card(c, '<span class="badge good">+1 habitant aujourd\'hui</span>')).join('') : '<p class="empty">Aucun jumelage actif.</p>') +
+      '<div class="section-title"><h3 class="h3">Demandes reçues</h3><span class="counter">' + rec.length + '</span></div>' +
+      (rec.length ? rec.map((c) => card(c, '<button class="btn small primary" type="button" data-jum="accepter" data-id="' + c.id + '"' + (act.length >= MAX_JUMELAGES ? ' disabled' : '') + '>Accepter</button><button class="btn small" type="button" data-jum="refuser" data-id="' + c.id + '">Refuser</button>')).join('') : '<p class="empty">Aucune demande en attente.</p>') +
+      '<div class="section-title"><h3 class="h3">Demandes envoyées</h3><span class="counter">' + env.length + '</span></div>' +
+      (env.length ? env.map((c) => card(c, '<button class="btn small" type="button" data-jum="annuler" data-id="' + c.id + '">Annuler</button>')).join('') : '<p class="empty">Aucune demande envoyée.</p>');
+  }
+  $('dockJum').addEventListener('click', (e) => {
+    const see = e.target.closest('[data-see]');
+    if (see) { const c = cities.find((x) => x.id === see.dataset.see); show(c.v, c.p, c.record); return; }
+    const b = e.target.closest('[data-jum]'); if (!b || b.disabled) return;
+    const c = cities.find((x) => x.id === b.dataset.id);
+    if (b.dataset.jum === 'accepter') c.jum = 'actif';
+    if (b.dataset.jum === 'refuser' || b.dataset.jum === 'annuler') c.jum = null;
+    renderJum();
+  });
+
+  // l'heure affichée suit l'horloge
+  setInterval(() => { if (screen === 'ville' && $('villeLocal')) $('villeLocal').textContent = localLine(player.p); schedule(false); }, 30000);
 
   // Démarrage
-  state.name = nameInput.value;
-  state.conn = +connInput.value;
-  updateClock();
+  state.realtime = true;
+  state.name = 'Paris'; state.country = 'fr'; state.conn = 1;
   rebuild();
   render();
-  window.__maquette = { state, rebuild, render, updateClock, done: true };
+  go('accueil');
+  window.__maquette = { state, rebuild, render, go, done: true, login: () => { loggedIn = true; }, selectCity };
 })();
 </script>

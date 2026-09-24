@@ -84,8 +84,11 @@ export const dictionaries = {
     "villes.actionsRestantes": "Actions d'influence restantes aujourd'hui :",
     "villes.antiVille": "AntiVille",
     "villes.greve": "Grève",
+    "villes.greveNote": "bloquée 24 h",
     "villes.contamination": "Contamination",
+    "villes.contaminationNote": "−10 % hab.",
     "villes.propagande": "Propagande",
+    "villes.propagandeNote": "−2 influence",
     "villes.enGreve": "En grève",
     "villes.protectionActive": "Protection anti-harcèlement active",
     "villes.quotaAntiVilleAtteint": "Quota AntiVille atteint",
@@ -101,6 +104,35 @@ export const dictionaries = {
     "villes.jumelageQuotaAtteint": "Quota de jumelages atteint",
     "villes.jumelagePropose": "Jumelage proposé.",
     "villes.jumelageErreur": "La proposition a échoué. Réessaie dans un instant.",
+    "villes.tousLesPays": "Tous les pays",
+    "villes.rechercherPlaceholder": "Chercher une ville",
+    "villes.retour": "← Toutes les villes",
+    "villes.enVisite": "En visite",
+    "villes.visiteeAujourdhui": "Visitée aujourd'hui",
+    "villes.revenirDemain": "Reviens demain pour un nouvel habitant.",
+    "villes.deJoueur": "de",
+    "villes.aucuneVilleCorrespondante": "Aucune ville ne correspond.",
+    "villes.protegee": "Protégée",
+    "villes.protegeeNote":
+      "Tu l'as déjà visée deux fois aujourd'hui : ses effets seraient trop réduits.",
+    "villes.pasDeDestruction":
+      "Une attaque ne détruit jamais de bâtiment : la ville reste dessinée à son record d'habitants.",
+    "villes.maVille": "Ma ville",
+    "villes.jumelee": "Jumelée",
+
+    "classement.president": "Président",
+    "classement.dans": "de",
+
+    "ciel.jour": "jour",
+    "ciel.leverDuSoleil": "lever du soleil",
+    "ciel.coucherDuSoleil": "coucher du soleil",
+    "ciel.aube": "aube",
+    "ciel.crepuscule": "crépuscule",
+    "ciel.nuit": "nuit",
+
+    "ville.stadeMaximal": "Stade maximal",
+    "ville.seuilA": "à",
+    "ville.habitantsAbrege": "hab.",
 
     "jumelages.titre": "Mes jumelages",
     "jumelages.introduction":
@@ -116,6 +148,13 @@ export const dictionaries = {
     "jumelages.refuser": "Refuser",
     "jumelages.annuler": "Annuler",
     "jumelages.depuisLe": "depuis le",
+    "jumelages.jumeleeAvecTaVille": "Jumelée avec ta ville",
+    "jumelages.demandeEnvoyee": "Demande envoyée",
+    "jumelages.voir": "Voir",
+    "jumelages.bonusAujourdhui": "+1 habitant aujourd'hui",
+
+    "creationVille.note":
+      "Ta ville naîtra au croisement de deux routes, avec une première maison. Son plan est unique et ne changera plus : c'est celui que tu vois derrière.",
 
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
@@ -191,8 +230,11 @@ export const dictionaries = {
     "villes.actionsRestantes": "Influence actions left today:",
     "villes.antiVille": "AntiVille",
     "villes.greve": "Strike",
+    "villes.greveNote": "blocked 24h",
     "villes.contamination": "Contamination",
+    "villes.contaminationNote": "−10% res.",
     "villes.propagande": "Propaganda",
+    "villes.propagandeNote": "−2 influence",
     "villes.enGreve": "On strike",
     "villes.protectionActive": "Anti-harassment protection active",
     "villes.quotaAntiVilleAtteint": "AntiVille quota reached",
@@ -208,6 +250,35 @@ export const dictionaries = {
     "villes.jumelageQuotaAtteint": "Twinning quota reached",
     "villes.jumelagePropose": "Twinning proposed.",
     "villes.jumelageErreur": "The proposal failed. Please try again in a moment.",
+    "villes.tousLesPays": "All countries",
+    "villes.rechercherPlaceholder": "Search for a city",
+    "villes.retour": "← All cities",
+    "villes.enVisite": "Visiting",
+    "villes.visiteeAujourdhui": "Visited today",
+    "villes.revenirDemain": "Come back tomorrow for a new resident.",
+    "villes.deJoueur": "by",
+    "villes.aucuneVilleCorrespondante": "No matching city.",
+    "villes.protegee": "Protected",
+    "villes.protegeeNote":
+      "You've already targeted it twice today: its effects would be too reduced.",
+    "villes.pasDeDestruction":
+      "An attack never destroys a building: the city stays drawn at its all-time record population.",
+    "villes.maVille": "My city",
+    "villes.jumelee": "Twinned",
+
+    "classement.president": "President",
+    "classement.dans": "in",
+
+    "ciel.jour": "day",
+    "ciel.leverDuSoleil": "sunrise",
+    "ciel.coucherDuSoleil": "sunset",
+    "ciel.aube": "dawn",
+    "ciel.crepuscule": "dusk",
+    "ciel.nuit": "night",
+
+    "ville.stadeMaximal": "Max stage",
+    "ville.seuilA": "at",
+    "ville.habitantsAbrege": "res.",
 
     "jumelages.titre": "My twinnings",
     "jumelages.introduction":
@@ -223,6 +294,13 @@ export const dictionaries = {
     "jumelages.refuser": "Decline",
     "jumelages.annuler": "Cancel",
     "jumelages.depuisLe": "since",
+    "jumelages.jumeleeAvecTaVille": "Twinned with your city",
+    "jumelages.demandeEnvoyee": "Request sent",
+    "jumelages.voir": "View",
+    "jumelages.bonusAujourdhui": "+1 resident today",
+
+    "creationVille.note":
+      "Your city will be born at the crossing of two roads, with a first house. Its layout is unique and will never change: it's the one you see behind.",
 
     "erreurs.connexionRequise": "Log in to access this page.",
   },

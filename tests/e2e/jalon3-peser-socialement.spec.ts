@@ -63,10 +63,15 @@ test.describe("Jalon 3 — peser socialement", () => {
       await page.goto("/villes");
       await expect(page.getByText("Actions d'influence restantes aujourd'hui : 5/5")).toBeVisible();
 
-      const ligneCible = page.getByRole("row", { name: new RegExp(cible.villeNom) });
-      await ligneCible.getByRole("button", { name: "Influencer" }).click();
+      const ligneCible = page.getByRole("link", { name: new RegExp(cible.villeNom) });
+      await ligneCible.click();
+      await page.getByRole("button", { name: "Influencer" }).click();
 
-      await expect(ligneCible.getByText("Déjà influencée aujourd'hui")).toBeVisible();
+      // Le statut "déjà influencée" se voit dans le panneau de détail
+      // (le bouton "Influencer" se désactive) ; contrairement à "déjà
+      // visitée", il n'est pas repris en badge dans la liste compacte
+      // (mêmes choix d'affichage que la maquette du Jalon 7).
+      await expect(page.getByText("Déjà influencée aujourd'hui")).toBeVisible();
       await expect(page.getByText("Actions d'influence restantes aujourd'hui : 4/5")).toBeVisible();
 
       const { data: villeApresAction } = await supabaseAdmin
@@ -77,9 +82,7 @@ test.describe("Jalon 3 — peser socialement", () => {
       expect(villeApresAction?.influence).toBe(1);
 
       await page.reload();
-      await expect(
-        page.getByRole("row", { name: new RegExp(cible.villeNom) }).getByText("Déjà influencée aujourd'hui")
-      ).toBeVisible();
+      await expect(page.getByText("Déjà influencée aujourd'hui")).toBeVisible();
     } finally {
       await supprimerCompte(joueur.userId);
       await supprimerCompte(cible.userId);

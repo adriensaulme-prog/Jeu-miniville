@@ -67,7 +67,7 @@ test.describe("Jalon 6bis — rendu 3D", () => {
       await expect(page).toHaveURL(/\/ville$/);
       await expect(page.getByRole("heading", { level: 1 })).toContainText(joueur.villeNom);
 
-      const canvas = page.locator('canvas[aria-label="Vue 3D de la ville"]');
+      const canvas = page.locator('canvas[aria-label="Vue 3D de la ville affichée"]');
       await expect(canvas).toBeVisible();
 
       // Laisse le temps à la géométrie de se construire et au premier
@@ -95,6 +95,64 @@ test.describe("Jalon 6bis — rendu 3D", () => {
         (m) => !m.includes("webpack-hmr") && !m.includes("Failed to load resource")
       );
       expect(erreursReelles, erreursReelles.join("\n")).toEqual([]);
+    } finally {
+      await supprimerCompte(joueur.userId);
+    }
+  });
+
+  test("le sol est bien dessiné : de l'herbe verte au centre de la scène, pas le fond à travers", async ({
+    page,
+  }) => {
+    // Régression du 24/09/2026 (docs/DECISIONS.md §4, Jalon 7) : avec le
+    // culling par défaut de Three.js, les quads horizontaux (sol, routes,
+    // toits plats) enroulés face vers le bas n'étaient pas dessinés — on
+    // voyait la couleur de fond à leur place ("l'herbe est grise").
+    // Heure figée à midi en France : l'herbe doit être franchement verte
+    // quelle que soit l'heure à laquelle la suite tourne (au crépuscule,
+    // la lumière orangée rendrait le test ambigu).
+    await page.clock.setFixedTime(new Date("2026-06-21T12:00:00+02:00"));
+    const joueur = await creerCompteAvecVille("rendu3d-sol");
+
+    try {
+      await page.goto("/connexion");
+      await page.getByLabel("Adresse e-mail").fill(joueur.email);
+      await page.getByLabel("Mot de passe").fill(joueur.motDePasse);
+      await page.getByRole("button", { name: "Se connecter" }).click();
+      await expect(page).toHaveURL(/\/ville$/);
+
+      const canvas = page.locator('canvas[aria-label="Vue 3D de la ville affichée"]');
+      await expect(canvas).toBeVisible();
+
+      const mesurer = () =>
+        canvas.evaluate((el) => {
+          const c = el as HTMLCanvasElement;
+          const tmp = document.createElement("canvas");
+          tmp.width = c.width;
+          tmp.height = c.height;
+          const ctx = tmp.getContext("2d")!;
+          ctx.drawImage(c, 0, 0);
+          const { data } = ctx.getImageData(0, 0, c.width, c.height);
+          // Zone centrale (40 % × 40 %) : la caméra y cadre la ville et
+          // la prairie qui l'entoure.
+          const x0 = Math.floor(c.width * 0.3), x1 = Math.floor(c.width * 0.7);
+          const y0 = Math.floor(c.height * 0.3), y1 = Math.floor(c.height * 0.7);
+          let vert = 0, total = 0;
+          for (let y = y0; y < y1; y++) {
+            for (let x = x0; x < x1; x++) {
+              const i = (y * c.width + x) * 4;
+              const r = data[i], g = data[i + 1], b = data[i + 2];
+              if (g > r + 15 && g > b + 15) vert++;
+              total++;
+            }
+          }
+          return total ? vert / total : 0;
+        });
+
+      // Le canvas est chargé en différé (next/dynamic) : on attend qu'il
+      // ait réellement dessiné la ville plutôt qu'un délai fixe.
+      // Mesuré le 24/09/2026 : ~58 % de pixels verts avec le sol dessiné,
+      // ~9 % (les arbres seuls) quand il disparaît — seuil au milieu.
+      await expect.poll(mesurer, { timeout: 15_000 }).toBeGreaterThan(0.25);
     } finally {
       await supprimerCompte(joueur.userId);
     }

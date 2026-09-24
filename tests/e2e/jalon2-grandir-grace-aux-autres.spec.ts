@@ -63,17 +63,20 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
 
       await page.goto("/villes");
 
-      // Ma propre ville n'apparaît pas dans la liste des villes à visiter.
-      await expect(page.getByRole("main")).not.toContainText(visiteur.villeNom);
+      // Ma propre ville a le lien "/ville" (page dédiée), pas une entrée
+      // sélectionnable dans la liste des autres villes.
+      const ligneMoi = page.getByRole("link", { name: new RegExp(visiteur.villeNom) });
+      await expect(ligneMoi).toHaveAttribute("href", "/ville");
 
-      const ligneCible = page.getByRole("row", { name: new RegExp(cible.villeNom) });
+      const ligneCible = page.getByRole("link", { name: new RegExp(cible.villeNom) });
       await expect(ligneCible).toBeVisible();
       await expect(ligneCible.getByText("1")).toBeVisible(); // population de départ
 
-      await ligneCible.getByRole("button", { name: "Visiter" }).click();
+      await ligneCible.click();
+      await page.getByRole("button", { name: "Visiter" }).click();
 
       await expect(ligneCible.getByText("Déjà visitée aujourd'hui")).toBeVisible();
-      await expect(ligneCible.getByRole("button", { name: "Visiter" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Visiter" })).toHaveCount(0);
 
       const { data: villeApresVisite } = await supabaseAdmin
         .from("cities")
@@ -87,7 +90,7 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       // seulement dans le DOM issu du premier submit.
       await page.reload();
       await expect(
-        page.getByRole("row", { name: new RegExp(cible.villeNom) }).getByText("Déjà visitée aujourd'hui")
+        page.getByRole("link", { name: new RegExp(cible.villeNom) }).getByText("Déjà visitée aujourd'hui")
       ).toBeVisible();
     } finally {
       await supprimerCompte(visiteur.userId);

@@ -67,7 +67,7 @@ test.describe("Jalon 1 — naître quelque part", () => {
 
     await expect(page).toHaveURL(/\/ville$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Testopolis");
-    await expect(page.getByText("Pays : France")).toBeVisible();
+    await expect(page.getByText("France ·")).toBeVisible();
     await expect(page.getByText("Hameau")).toBeVisible();
     await expect(page.getByText("Population")).toBeVisible();
     await expect(page.getByRole("main").getByText("1", { exact: true })).toBeVisible();

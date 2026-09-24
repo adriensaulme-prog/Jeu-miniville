@@ -1,20 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { traduire, type DictionaryKey, type Locale } from "@/lib/i18n/dictionaries";
+import { useSceneVille } from "@/components/SceneVilleFond";
 import { creerVille, type EtatCreationVille } from "./actions";
 
 type Pays = { id: string; nom: string };
 
+const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
+
 function BoutonValider({ locale }: { locale: Locale }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-    >
+    <button type="submit" disabled={pending} className="btn primary block">
       {traduire(locale, "creationVille.bouton")}
     </button>
   );
@@ -28,35 +27,39 @@ export function CreerVilleForm({
   pays: Pays[];
 }) {
   const [etat, action] = useActionState<EtatCreationVille, FormData>(creerVille, null);
+  const [nomVille, setNomVille] = useState("");
+  const { definirVille } = useSceneVille();
+
+  useEffect(() => {
+    definirVille({ seed: "creation-preview", populationMax: 1, pays: PAYS_PAR_DEFAUT });
+    // definirVille est stable ; ce prévisualise une fois au montage, la
+    // ville d'aperçu ne change jamais de forme (seed fixe).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
-        {traduire(locale, "creationVille.pseudo")}
-        <input
-          name="pseudo"
-          required
-          maxLength={40}
-          className="rounded border border-gray-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {traduire(locale, "creationVille.nomVille")}
-        <input
-          name="nomVille"
-          required
-          maxLength={40}
-          className="rounded border border-gray-300 px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        {traduire(locale, "creationVille.pays")}
-        <select
-          name="countryId"
-          required
-          defaultValue=""
-          className="rounded border border-gray-300 px-3 py-2"
-        >
+    <form action={action} className="field">
+      <div className="field">
+        <label htmlFor="pseudo">{traduire(locale, "creationVille.pseudo")}</label>
+        <input id="pseudo" name="pseudo" required maxLength={40} className="input" />
+      </div>
+      <div className="field">
+        <label htmlFor="nomVille">{traduire(locale, "creationVille.nomVille")}</label>
+        <div className="sign small">
+          <input
+            id="nomVille"
+            name="nomVille"
+            required
+            maxLength={40}
+            value={nomVille}
+            onChange={(e) => setNomVille(e.target.value)}
+            placeholder={traduire(locale, "creationVille.nomVille")}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="countryId">{traduire(locale, "creationVille.pays")}</label>
+        <select id="countryId" name="countryId" required defaultValue="" className="select">
           <option value="" disabled>
             {traduire(locale, "creationVille.paysPlaceholder")}
           </option>
@@ -66,9 +69,10 @@ export function CreerVilleForm({
             </option>
           ))}
         </select>
-      </label>
+      </div>
+      <p className="note">{traduire(locale, "creationVille.note")}</p>
       {etat?.erreur ? (
-        <p className="text-sm text-red-600">
+        <p className="note" style={{ color: "var(--bad)" }}>
           {traduire(locale, etat.erreur as DictionaryKey)}
         </p>
       ) : null}

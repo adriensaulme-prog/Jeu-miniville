@@ -52,3 +52,27 @@ export function niveauPourPopulation(population: number): number {
   }
   return niveau;
 }
+
+export interface ProgressionNiveau {
+  niveau: number;
+  /** 0 à 100 — position entre le seuil du niveau actuel et celui du suivant. */
+  pourcentage: number;
+  /** Seuil du niveau suivant, ou null si déjà au niveau maximal. */
+  seuilSuivant: number | null;
+}
+
+/** Progression visuelle d'une ville vers son prochain niveau (barre de la page Ma ville / Villes). */
+export function progressionNiveau(population: number): ProgressionNiveau {
+  const niveau = niveauPourPopulation(population);
+  const seuilActuel = SEUILS_NIVEAU[niveau][1];
+  const seuilSuivantEntree = SEUILS_NIVEAU[niveau + 1];
+  if (!seuilSuivantEntree) {
+    return { niveau, pourcentage: 100, seuilSuivant: null };
+  }
+  const seuilSuivant = seuilSuivantEntree[1];
+  const pourcentage = Math.max(
+    2,
+    Math.min(100, ((population - seuilActuel) / (seuilSuivant - seuilActuel)) * 100)
+  );
+  return { niveau, pourcentage, seuilSuivant };
+}

@@ -11,15 +11,17 @@ export default async function ConnexionPage({
   const { redirection } = await searchParams;
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-6 p-8">
-      <h1 className="text-2xl font-bold">{traduire(locale, "connexion.titre")}</h1>
-      <ConnexionForm locale={locale} redirection={redirection} />
-      <p className="text-sm text-gray-500">
-        {traduire(locale, "connexion.pasDeCompte")}{" "}
-        <Link href="/inscription" className="text-blue-600 hover:underline">
-          {traduire(locale, "connexion.lienInscription")}
-        </Link>
-      </p>
+    <main className="screen nobar" aria-label={traduire(locale, "connexion.titre")}>
+      <div className="center-card">
+        <h1 className="h2">{traduire(locale, "connexion.titre")}</h1>
+        <ConnexionForm locale={locale} redirection={redirection} />
+        <p className="note">
+          {traduire(locale, "connexion.pasDeCompte")}{" "}
+          <Link href="/inscription" style={{ color: "var(--focus)" }}>
+            {traduire(locale, "connexion.lienInscription")}
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }

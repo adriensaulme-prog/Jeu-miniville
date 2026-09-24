@@ -32,12 +32,12 @@ export default async function CreerVillePage() {
     .order(colonneNom);
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-6 p-8">
-      <h1 className="text-2xl font-bold">{traduire(locale, "creationVille.titre")}</h1>
-      <p className="text-sm text-gray-600">
-        {traduire(locale, "creationVille.introduction")}
-      </p>
-      <CreerVilleForm locale={locale} pays={pays ?? []} />
+    <main className="screen nobar" aria-label={traduire(locale, "creationVille.titre")}>
+      <div className="center-card">
+        <span className="eyebrow">{traduire(locale, "creationVille.titre")}</span>
+        <p className="lead">{traduire(locale, "creationVille.introduction")}</p>
+        <CreerVilleForm locale={locale} pays={pays ?? []} />
+      </div>
     </main>
   );
 }

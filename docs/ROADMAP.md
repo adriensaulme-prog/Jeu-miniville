@@ -60,39 +60,63 @@ de vue du joueur — le titre dit ce qui change pour lui.
   `docs/recette-jalon-6bis.md`. Point encore ouvert : fluidité sur
   mobile, à vérifier sur le téléphone d'Adrien (§10 point 13).
 
+## Phase 1 ter — Un jeu agréable à regarder *(en cours)*
+
+- [x] **Jalon 7 — Un jeu agréable à regarder.** Refonte visuelle de toutes
+  les pages (accueil, connexion/inscription, création, Ma ville, Villes,
+  Jumelages, navigation) selon `docs/prototypes/maquette-ecrans.html` :
+  ville en 3D plein écran (scène persistante et partagée entre toutes les
+  pages, plus besoin de la recréer à chaque navigation), panneaux vitrés
+  flottants, panneau d'entrée d'agglomération pour le nom de ville,
+  typographie Barlow. Réutilise la scène Three.js du Jalon 6bis. Remplace
+  l'ancien Jalon 7 "Se classer" (voir `docs/DECISIONS.md` §4 et §10 pour
+  la décision de réordonnancement, prise à partir de
+  `docs/A-INTEGRER.md`). Le classement minimal nécessaire à cette refonte
+  (tri par population, rang dans le pays, badge Président) est inclus ;
+  le reste (page de classement dédiée, mondial) reste dans le Jalon 8.
+  Détail dans `DECISIONS.md` §4 — recette dans `docs/recette-jalon-7.md`.
+- [ ] **Jalon 7bis — La ville continue de grandir.** La ville ne
+  plafonne plus à 40 000 habitants pour son rendu 3D : un nouveau bloc
+  tous les 5 000 habitants au-delà, sans limite (voir
+  `docs/A-INTEGRER.md` §2). Scindé du Jalon 7 : c'est un changement
+  purement technique du générateur 3D, indépendant de la refonte visuelle
+  (même logique que la scission Jalon 6 / 6bis).
+
 ## Phase 2 — Rivalités entre villes
 
-- [ ] **Jalon 7 — Se classer.** Classement des villes (pays + mondial).
+- [ ] **Jalon 8 — Se classer.** Classement des villes (pays + mondial),
+  au-delà de ce que le Jalon 7 a déjà mis en place pour son propre
+  affichage.
 
 ## Phase 3 — Le pays prend forme
 
-- [ ] **Jalon 8 — Naissance d'un pays.** Page pays, agrégation des
+- [ ] **Jalon 9 — Naissance d'un pays.** Page pays, agrégation des
   statistiques nationales (population, influence, activité) à partir des
   villes membres.
-- [ ] **Jalon 9 — Voter pour son pays.** Vote hebdomadaire de ressource
+- [ ] **Jalon 10 — Voter pour son pays.** Vote hebdomadaire de ressource
   (Industrie / Techno / Culture / Commerce), résultat proportionnel aux
   votes, attribution des ressources nationales.
-- [ ] **Jalon 10 — Le président malgré lui.** La ville #1 du pays devient
+- [ ] **Jalon 11 — Le président malgré lui.** La ville #1 du pays devient
   automatiquement présidente, apparition dans un historique des
   présidents.
 
 ## Phase 4 — Le monde entre en scène
 
-- [ ] **Jalon 11 — Décider à l'international.** Décision diplomatique
+- [ ] **Jalon 12 — Décider à l'international.** Décision diplomatique
   hebdomadaire (alliance, paix, attaque/rivalité, embargo éventuel),
   agrégation des votes citoyens, le président peut proposer sans décider
   seul.
-- [ ] **Jalon 12 — France contre Allemagne.** Premier scénario de rivalité
+- [ ] **Jalon 13 — France contre Allemagne.** Premier scénario de rivalité
   internationale : coût en ressources, bonus défensif pour l'attaqué,
   mobilisation quotidienne, résultat en fin de période. Scénario de test
   explicitement prévu par le cahier des charges.
 
 ## Phase 5 — Tenir la route
 
-- [ ] **Jalon 13 — Rester dans la légalité.** Anti-triche côté serveur
+- [ ] **Jalon 14 — Rester dans la légalité.** Anti-triche côté serveur
   systématique : validation serveur de toutes les actions sensibles,
   limitation multi-compte, détection de comportements automatisés/répétitifs.
-- [ ] **Jalon 14 — Jouable partout.** Passage en PWA installable (manifest,
+- [ ] **Jalon 15 — Jouable partout.** Passage en PWA installable (manifest,
   service worker, mode hors-ligne minimal), vérification manuelle sur
   mobile (Android + iOS via navigateur) et PC.
 
@@ -113,5 +137,7 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 23/09/2026, jalon 6bis terminé (fin de la Phase
-1 bis), avant le début du jalon 7.*
+*Dernière mise à jour : 24/09/2026, jalon 7 terminé — "Un jeu agréable à
+regarder" (renumérotation depuis `docs/A-INTEGRER.md`, voir
+`DECISIONS.md` §4 et §10), avant le jalon 7bis (ville qui grandit sans
+limite).*

@@ -71,10 +71,11 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
       await expect(page).toHaveURL(/\/ville$/);
 
       await page.goto("/villes");
-      const ligneCible = page.getByRole("row", { name: new RegExp(cible.villeNom) });
-      await ligneCible.getByRole("button", { name: "Propagande" }).click();
+      const ligneCible = page.getByRole("link", { name: new RegExp(cible.villeNom) });
+      await ligneCible.click();
+      await page.getByRole("button", { name: "Propagande" }).click();
 
-      await expect(ligneCible.getByText("Action lancée.")).toBeVisible();
+      await expect(page.getByText("Action lancée.")).toBeVisible();
 
       const { data: villeApres } = await supabaseAdmin
         .from("cities")

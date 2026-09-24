@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
+import { libelleNiveau } from "@/lib/game/niveauVille";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { SincroniserScene } from "@/components/SincroniserScene";
 import { annulerJumelage, repondreJumelage } from "./actions";
+
+const QUOTA_JUMELAGES_ACTIFS = 3;
+const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 
 export default async function JumelagesPage() {
   const locale = await getLocale();
@@ -26,6 +31,12 @@ export default async function JumelagesPage() {
     redirect("/ville/creer");
   }
   const maVilleId = profil!.city_id as string;
+
+  const { data: maVille } = await supabase
+    .from("cities")
+    .select("id, population_max")
+    .eq("id", maVilleId)
+    .maybeSingle();
 
   // Déclenche le bonus quotidien de jumelage (idempotent — voir
   // reclamer_bonus_jumelages()) avant de lire l'état, pour que le
@@ -55,142 +66,140 @@ export default async function JumelagesPage() {
 
   const idsVillesLiees = new Set<string>();
   for (const j of jumelages) {
-    idsVillesLiees.add(
-      j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id
+    idsVillesLiees.add(j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id);
+  }
+
+  const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
+  const { data: villesLiees } =
+    idsVillesLiees.size > 0
+      ? await supabase
+          .from("cities")
+          .select(`id, nom, population, niveau, pays:countries(nom:${colonneNomPays})`)
+          .in("id", Array.from(idsVillesLiees))
+      : { data: [] as { id: string; nom: string; population: number; niveau: number; pays: { nom: string } | { nom: string }[] | null }[] };
+  type VilleLiee = { id: string; nom: string; population: number; niveau: number; pays: { nom: string } | { nom: string }[] | null };
+  const villeParId = new Map((villesLiees ?? []).map((v) => [v.id, v as VilleLiee]));
+
+  function villeDe(j: JumelageBrut): VilleLiee | undefined {
+    const autreId = j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
+    return villeParId.get(autreId);
+  }
+
+  const actifs = jumelages.filter((j) => j.statut === "actif");
+  const recues = jumelages.filter((j) => j.statut === "en_attente" && j.ville_ciblee_id === maVilleId);
+  const envoyees = jumelages.filter((j) => j.statut === "en_attente" && j.ville_proposante_id === maVilleId);
+
+  function Carte({ j, boutons }: { j: JumelageBrut; boutons?: React.ReactNode }) {
+    const v = villeDe(j);
+    if (!v) return null;
+    const nomPays = Array.isArray(v.pays) ? v.pays[0]?.nom : v.pays?.nom;
+    return (
+      <div className="card">
+        <div className="spread">
+          <div>
+            <div className="h3">{v.nom}</div>
+            <div className="note">
+              {nomPays} · {libelleNiveau(v.niveau, locale)} · {new Intl.NumberFormat(locale).format(v.population)}{" "}
+              {traduire(locale, "ville.habitantsAbrege")}
+            </div>
+          </div>
+        </div>
+        {boutons ? <div className="row">{boutons}</div> : null}
+      </div>
     );
   }
 
-  const { data: villesLiees } =
-    idsVillesLiees.size > 0
-      ? await supabase.from("cities").select("id, nom").in("id", Array.from(idsVillesLiees))
-      : { data: [] as { id: string; nom: string }[] };
-  const nomVilleParId = new Map((villesLiees ?? []).map((v) => [v.id, v.nom]));
-
-  const actifs = jumelages.filter((j) => j.statut === "actif");
-  const recues = jumelages.filter(
-    (j) => j.statut === "en_attente" && j.ville_ciblee_id === maVilleId
-  );
-  const envoyees = jumelages.filter(
-    (j) => j.statut === "en_attente" && j.ville_proposante_id === maVilleId
-  );
-
-  function nomAutreVille(j: JumelageBrut): string {
-    const autreId = j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
-    return nomVilleParId.get(autreId) ?? "?";
-  }
-
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
-      <div>
-        <h1 className="text-2xl font-bold">{traduire(locale, "jumelages.titre")}</h1>
-        <p className="text-sm text-gray-600">{traduire(locale, "jumelages.introduction")}</p>
+    <main className="screen" aria-label={traduire(locale, "jumelages.titre")}>
+      <SincroniserScene
+        seed={maVilleId}
+        populationMax={maVille?.population_max ?? 1}
+        pays={PAYS_PAR_DEFAUT}
+      />
+      <div className="dock dock-float dock-left">
+        <h2 className="h2">{traduire(locale, "jumelages.titre")}</h2>
+        <p className="note">{traduire(locale, "jumelages.introduction")}</p>
         {bonusAccordes > 0 ? (
-          <p className="mt-2 rounded bg-green-50 p-2 text-sm text-green-800">
+          <p className="toast">
             {traduire(locale, "jumelages.bonusAccordes")} {bonusAccordes}{" "}
             {traduire(locale, "jumelages.actifs").toLowerCase()}.
           </p>
         ) : null}
-      </div>
 
-      <section>
-        <h2 className="mb-2 font-semibold">{traduire(locale, "jumelages.actifs")}</h2>
+        <div className="section-title">
+          <h3 className="h3">{traduire(locale, "jumelages.actifs")}</h3>
+          <span className="counter">
+            {actifs.length} / {QUOTA_JUMELAGES_ACTIFS}
+          </span>
+        </div>
         {actifs.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            {traduire(locale, "jumelages.aucunJumelageActif")}
-          </p>
+          <p className="empty">{traduire(locale, "jumelages.aucunJumelageActif")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {actifs.map((j) => (
-              <li
-                key={j.id}
-                className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm"
-              >
-                <span>{nomAutreVille(j)}</span>
-                <form action={annulerJumelage}>
-                  <input type="hidden" name="jumelageId" value={j.id} />
-                  <button
-                    type="submit"
-                    className="rounded bg-gray-200 px-3 py-1 text-xs text-gray-700 hover:bg-gray-300"
-                  >
-                    {traduire(locale, "jumelages.annuler")}
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
+          actifs.map((j) => (
+            <Carte
+              key={j.id}
+              j={j}
+              boutons={<span className="badge good">{traduire(locale, "jumelages.bonusAujourdhui")}</span>}
+            />
+          ))
         )}
-      </section>
 
-      <section>
-        <h2 className="mb-2 font-semibold">{traduire(locale, "jumelages.recues")}</h2>
+        <div className="section-title">
+          <h3 className="h3">{traduire(locale, "jumelages.recues")}</h3>
+          <span className="counter">{recues.length}</span>
+        </div>
         {recues.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            {traduire(locale, "jumelages.aucuneDemandeRecue")}
-          </p>
+          <p className="empty">{traduire(locale, "jumelages.aucuneDemandeRecue")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {recues.map((j) => (
-              <li
-                key={j.id}
-                className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm"
-              >
-                <span>{nomAutreVille(j)}</span>
-                <div className="flex gap-2">
+          recues.map((j) => (
+            <Carte
+              key={j.id}
+              j={j}
+              boutons={
+                <>
                   <form action={repondreJumelage}>
                     <input type="hidden" name="jumelageId" value={j.id} />
                     <input type="hidden" name="accepter" value="true" />
-                    <button
-                      type="submit"
-                      className="rounded bg-teal-600 px-3 py-1 text-xs text-white hover:bg-teal-700"
-                    >
+                    <button type="submit" className="btn small primary" disabled={actifs.length >= QUOTA_JUMELAGES_ACTIFS}>
                       {traduire(locale, "jumelages.accepter")}
                     </button>
                   </form>
                   <form action={repondreJumelage}>
                     <input type="hidden" name="jumelageId" value={j.id} />
                     <input type="hidden" name="accepter" value="false" />
-                    <button
-                      type="submit"
-                      className="rounded bg-gray-200 px-3 py-1 text-xs text-gray-700 hover:bg-gray-300"
-                    >
+                    <button type="submit" className="btn small">
                       {traduire(locale, "jumelages.refuser")}
                     </button>
                   </form>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </>
+              }
+            />
+          ))
         )}
-      </section>
 
-      <section>
-        <h2 className="mb-2 font-semibold">{traduire(locale, "jumelages.envoyees")}</h2>
+        <div className="section-title">
+          <h3 className="h3">{traduire(locale, "jumelages.envoyees")}</h3>
+          <span className="counter">{envoyees.length}</span>
+        </div>
         {envoyees.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            {traduire(locale, "jumelages.aucuneDemandeEnvoyee")}
-          </p>
+          <p className="empty">{traduire(locale, "jumelages.aucuneDemandeEnvoyee")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {envoyees.map((j) => (
-              <li
-                key={j.id}
-                className="flex items-center justify-between rounded border border-gray-200 p-3 text-sm"
-              >
-                <span>{nomAutreVille(j)}</span>
+          envoyees.map((j) => (
+            <Carte
+              key={j.id}
+              j={j}
+              boutons={
                 <form action={annulerJumelage}>
                   <input type="hidden" name="jumelageId" value={j.id} />
-                  <button
-                    type="submit"
-                    className="rounded bg-gray-200 px-3 py-1 text-xs text-gray-700 hover:bg-gray-300"
-                  >
+                  <button type="submit" className="btn small">
                     {traduire(locale, "jumelages.annuler")}
                   </button>
                 </form>
-              </li>
-            ))}
-          </ul>
+              }
+            />
+          ))
         )}
-      </section>
+      </div>
     </main>
   );
 }
