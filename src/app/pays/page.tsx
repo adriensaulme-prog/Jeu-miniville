@@ -10,7 +10,7 @@ import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
 import { CartePays, type CarteRegionDonnees, type MarqueurVille } from "./CartePays";
 import { SelecteurPays } from "./SelecteurPays";
-import { voterPays } from "./actions";
+import { voterPays, proposerDecisionDiplomatique, soutenirDecisionDiplomatique } from "./actions";
 
 const TAILLE_TOP = 10;
 
@@ -47,6 +47,22 @@ const LABEL_CATEGORIE: Record<Categorie, DictionaryKey> = {
 
 type ResultatVote = { categorie: Categorie; nb_votes: number; pourcentage: number };
 type RessourcePays = { categorie: Categorie; total: number };
+
+type CategorieDiplomatie = "alliance" | "paix" | "rivalite" | "embargo";
+const CATEGORIES_DIPLOMATIE: CategorieDiplomatie[] = ["alliance", "paix", "rivalite", "embargo"];
+const LABEL_DIPLOMATIE: Record<CategorieDiplomatie, DictionaryKey> = {
+  alliance: "pays.diplomatie.alliance",
+  paix: "pays.diplomatie.paix",
+  rivalite: "pays.diplomatie.rivalite",
+  embargo: "pays.diplomatie.embargo",
+};
+type ResultatDecision = {
+  proposition_id: string;
+  pays_cible_id: string;
+  categorie: CategorieDiplomatie;
+  proposee_par_ville_id: string;
+  nb_soutiens: number;
+};
 
 type MandatBrut = {
   ville_id: string;
@@ -213,6 +229,34 @@ export default async function PaysPage({
     monVoteCetteSemaine = (monVote?.categorie as Categorie | undefined) ?? null;
   }
 
+  // Décision diplomatique (Jalon 12) : seule la présidente en exercice
+  // de son propre pays peut proposer une cible + une catégorie cette
+  // semaine ; n'importe quel citoyen peut ensuite soutenir. Ce que la
+  // décision *fait* une fois soutenue n'est pas encore défini (point
+  // ouvert, DECISIONS.md §10) — laissé au Jalon 13.
+  const jeSuisPresident = estMonPays && mandatActuel?.villeId === maVilleId;
+  const { data: resultatDecisionBrut } = await supabase.rpc("resultat_decision_semaine", {
+    p_country_id: countryId,
+    p_semaine: null,
+  });
+  const resultatDecision = (
+    Array.isArray(resultatDecisionBrut) ? resultatDecisionBrut[0] : resultatDecisionBrut
+  ) as ResultatDecision | undefined;
+  const nomPaysCible = resultatDecision
+    ? ((listePays ?? []).find((p) => p.id === resultatDecision.pays_cible_id)?.nom ?? resultatDecision.pays_cible_id)
+    : null;
+
+  let aiSoutenu = false;
+  if (estMonPays && resultatDecision) {
+    const { data: monSoutien } = await supabase
+      .from("votes_diplomatie")
+      .select("id")
+      .eq("joueur_id", user.id)
+      .eq("semaine", debutSemaineIso())
+      .maybeSingle();
+    aiSoutenu = !!monSoutien;
+  }
+
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
       {carte ? (
@@ -318,6 +362,61 @@ export default async function PaysPage({
               </>
             )}
           </>
+        ) : null}
+
+        <div className="head-row">
+          <h2 className="h3">{traduire(locale, "pays.diplomatie.titre")}</h2>
+        </div>
+        {resultatDecision ? (
+          <div className="card">
+            <div className="spread">
+              <span className="h3">
+                {traduire(locale, LABEL_DIPLOMATIE[resultatDecision.categorie])} · {nomPaysCible}
+              </span>
+              <span className="badge">
+                {new Intl.NumberFormat(locale).format(resultatDecision.nb_soutiens)}{" "}
+                {traduire(locale, "pays.diplomatie.soutiens")}
+              </span>
+            </div>
+            {estMonPays ? (
+              aiSoutenu ? (
+                <p className="note">{traduire(locale, "pays.diplomatie.dejaSoutenu")}</p>
+              ) : (
+                <form action={soutenirDecisionDiplomatique}>
+                  <button className="btn small" type="submit">
+                    {traduire(locale, "pays.diplomatie.soutenir")}
+                  </button>
+                </form>
+              )
+            ) : null}
+          </div>
+        ) : (
+          <p className="empty">{traduire(locale, "pays.diplomatie.aucunePropositionCetteSemaine")}</p>
+        )}
+        {jeSuisPresident && !resultatDecision ? (
+          <form action={proposerDecisionDiplomatique} className="row" style={{ flexWrap: "wrap" }}>
+            <select name="paysCibleId" className="select" aria-label={traduire(locale, "pays.diplomatie.choisirCible")} required>
+              <option value="">{traduire(locale, "pays.diplomatie.choisirCible")}</option>
+              {(listePays ?? [])
+                .filter((p) => p.id !== countryId)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom}
+                  </option>
+                ))}
+            </select>
+            <select name="categorie" className="select" aria-label={traduire(locale, "pays.diplomatie.choisirCategorie")} required>
+              <option value="">{traduire(locale, "pays.diplomatie.choisirCategorie")}</option>
+              {CATEGORIES_DIPLOMATIE.map((c) => (
+                <option key={c} value={c}>
+                  {traduire(locale, LABEL_DIPLOMATIE[c])}
+                </option>
+              ))}
+            </select>
+            <button className="btn small" type="submit">
+              {traduire(locale, "pays.diplomatie.proposer")}
+            </button>
+          </form>
         ) : null}
 
         <div className="head-row">

@@ -1601,6 +1601,61 @@ e2e, verte à `--workers=1`.
 
 ---
 
+### Jalon 12 — décider à l'international — 25/09/2026
+
+**Contenu.** Sur `/pays`, section « Décision diplomatique » : une fois
+par semaine ISO, la présidente **en exercice** (mandat ouvert dans
+`presidents`, Jalon 11) propose un pays cible + une catégorie (Alliance
+/ Paix / Rivalité / Embargo) ; n'importe quel citoyen peut ensuite
+soutenir cette proposition, une fois par semaine
+(`proposer_decision_diplomatique()`, `soutenir_decision_diplomatique()`,
+`resultat_decision_semaine()`).
+
+**Portée tranchée avec Adrien avant de coder**, contrairement aux
+jalons précédents où j'avais décidé seul : le cahier des charges
+("décision diplomatique hebdomadaire... le président peut proposer
+sans décider seul") laissait deux lectures possibles — une cible par
+semaine proposée par la présidente (retenu), ou une relation par paire
+de pays votable indépendamment (matrice n×n, plus lourd, sans lien
+direct avec un "vote hebdomadaire" unique). Un seul pays ne peut avoir
+qu'une proposition par semaine (contrainte `unique (country_id,
+semaine)`) : cohérent avec "un pays cible", et il ne peut de toute
+façon y avoir qu'une présidente à la fois.
+
+**Même écart que le Jalon 10, assumé pour la même raison** : ce jalon
+construit la proposition et le soutien, pas ce qu'une décision *fait*
+une fois soutenue (aucune règle de jeu ne change encore selon qu'un
+pays est "en rivalité" ou "allié" avec un autre) — laissé au Jalon 13
+("France contre Allemagne"), premier scénario concret qui donnera un
+sens réel à ces catégories.
+
+**Choix de conception** : pas de vote de rejet séparé — soutenir est un
+acte positif, l'absence de soutien suffit à mesurer le désaccord (même
+simplicité que les votes du Jalon 10, qui n'ont pas de "je suis
+contre"). La vérification "est-ce la présidente en exercice" réutilise
+directement la table `presidents` du Jalon 11 plutôt que d'introduire
+une nouvelle notion de rôle. Nouveaux codes d'erreur `P0013` (pas
+présidente), `P0014` (catégorie invalide), `P0015` (cible invalide :
+soi-même ou pays inconnu), `P0016` (soutien sans proposition cette
+semaine) — premiers codes libres après le `P0012` du Jalon 10.
+
+**Testé.** `tests/e2e/jalon12-decider-a-linternational.spec.ts`
+(nouveau, 3 tests) : sabotage — une citoyenne non présidente ne peut
+pas proposer (P0013), une cible = soi-même est refusée (P0015), une
+deuxième proposition la même semaine est refusée (23505, la première
+n'est pas écrasée) ; les soutiens sont comptés exactement (delta connu,
+doublon refusé, soutien sans proposition refusé avec P0016) ; la page
+`/pays` permet à la présidente de proposer et à un citoyen de soutenir,
+avec confirmation affichée. Vérifié aussi à l'œil avec un compte
+jetable devenu présidente — la page dégrade proprement avant la
+migration (fonctions absentes, pas de crash), fonctionne correctement
+après. Poids du paquet toujours dans le budget (112 Ko pour `/pays`).
+Suite complète : 73 tests unitaires + 49 tests e2e, verte à
+`--workers=1`, du premier coup sur un serveur de dev fraîchement
+démarré.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1949,3 +2004,10 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     CPU/GPU assumé). → **À trancher par Adrien** : lesquels de ces
     points valent une seconde passe, et avec quelle priorité par
     rapport aux autres jalons ?
+29. **Décisions diplomatiques (Jalon 12) : aucun effet de gameplay pour
+    l'instant.** Comme les ressources nationales du Jalon 10, une
+    alliance/paix/rivalité/embargo soutenu ne change encore rien dans
+    le jeu — construit pour être consommé par le Jalon 13 ("France
+    contre Allemagne"), volontairement pas anticipé ici.
+    → **Pas un vrai point ouvert** : c'est le Jalon 13 lui-même qui doit
+    trancher, pas une question isolée pour Adrien.

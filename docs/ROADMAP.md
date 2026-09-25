@@ -150,10 +150,12 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 4 — Le monde entre en scène
 
-- [ ] **Jalon 12 — Décider à l'international.** Décision diplomatique
-  hebdomadaire (alliance, paix, attaque/rivalité, embargo éventuel),
-  agrégation des votes citoyens, le président peut proposer sans décider
-  seul.
+- [x] **Jalon 12 — Décider à l'international.** Sur `/pays`, la
+  présidente en exercice propose un pays cible + une catégorie
+  (Alliance/Paix/Rivalité/Embargo) une fois par semaine ; les citoyens
+  soutiennent. Aucun effet de gameplay codé pour ces décisions (comme
+  les ressources du Jalon 10) — laissé au Jalon 13. Détail dans
+  `DECISIONS.md` §4 — recette dans `docs/recette-jalon-12.md`.
 - [ ] **Jalon 13 — France contre Allemagne.** Premier scénario de rivalité
   internationale : coût en ressources, bonus défensif pour l'attaqué,
   mobilisation quotidienne, résultat en fin de période. Scénario de test
@@ -185,5 +187,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 9 ter terminé (fin de la
-Phase 3), avant le jalon 12 "Décider à l'international".*
+*Dernière mise à jour : 25/09/2026, jalon 12 terminé, avant le jalon 13
+"France contre Allemagne".*
