@@ -1475,6 +1475,132 @@ verte à `--workers=1`, serveur de dev fraîchement démarré.
 
 ---
 
+### Jalon 9 ter — la carte du pays — 25/09/2026
+
+**Contenu.** Sur `/pays` uniquement, le fond 3D partagé (Jalon 7) est
+remplacé par une carte SVG illustrée du pays : régions colorées selon
+leur population (une seule teinte, l'accent rouge panneau, plus marquée
+si plus peuplée — `docs/CARTE-DU-PAYS.md` §2), pastilles cliquables
+pour la ville du joueur (anneau rouge), la présidente (cercle or) et la
+ville n°1 de chaque région (petit cercle brun, sans le mot
+"gouverneur" — ce titre reste un point ouvert §10 point 23, non
+tranché). Cliquer une pastille va sur la ville. Les autres pages
+gardent la 3D sans changement.
+
+**Comment la carte cohabite avec la scène 3D partagée, sans la
+démonter** : `SceneVilleFond` (Jalon 7) rend le canvas en position
+fixe, plein écran, `z-index: 0`, sous tout le reste de l'app — les
+pages n'ont jamais besoin de le démonter, seulement de ne pas le
+recouvrir. `/pays` ne l'annonce plus (`SincroniserScene` retiré de
+cette page) et affiche `.carte-pays` à la place, `position: fixed`,
+à l'intérieur de `.screen` (déjà au-dessus du canvas, Jalon 7) — la
+carte recouvre donc visuellement la 3D sans jamais la démonter ; le
+canvas continue de tourner en arrière-plan, invisible tant qu'on reste
+sur Pays (petit gaspillage CPU/GPU accepté plutôt que la complexité
+d'une vraie pause, `docs/DECISIONS.md` §10 point 28).
+
+**Chasse aux données géographiques : trois échecs avant la bonne
+source, à consigner pour la prochaine fois.** L'idée de départ
+(A-INTEGRER §11) était de générer les cartes une fois pour toutes à
+partir de Natural Earth. En pratique :
+1. Les miroirs GeoJSON habituels de Natural Earth sur GitHub
+   (`nvkelso/natural-earth-vector`, `martynafford/natural-earth-geojson`)
+   se sont révélés incomplets pour les subdivisions administratives
+   (admin-1) au moment d'écrire ce jalon — seulement 9 à 51 pays
+   couverts selon le fichier, jamais les 6 dont ce projet a besoin en
+   entier. Cause non identifiée avec certitude (snapshot dégradé du
+   dépôt ? reconstruction en cours ?).
+2. `world-atlas` (paquet npm, CDN jsdelivr) s'est révélé fiable mais ne
+   couvre que le contour des pays (admin-0), pas leurs régions — utilisé
+   pour les ~228 pays sans régions réelles.
+3. **geoBoundaries** (`geoboundaries.org`, projet académique William &
+   Mary, licence ouverte) a fourni des données admin-1 complètes et
+   fiables pour les 6 pays voulus, via son API
+   (`api/current/gbOpen/{ISO3}/ADM1/`) qui renvoie une URL vers sa
+   propre version pré-simplifiée (`simplifiedGeometryGeoJSON`) — la
+   version détaillée aurait dépassé la limite de taille de chaîne de
+   Node (500 Mo+ pour le Canada, à cause de son archipel arctique).
+   Piège rencontré : les fichiers sont servis via Git LFS, seul le
+   chemin `github.com/.../raw/<ref>/...` (pas
+   `raw.githubusercontent.com/...`) résout le vrai contenu au lieu
+   d'un pointeur texte de 130 octets.
+
+**Piège de projection, découvert en cours de route** : `d3-geo`
+(`geoMercator().fitSize(...)`, `geoBounds`) a d'abord renvoyé des
+projections dégénérées (tout le contenu tassé dans un coin de 16×15
+pixels) sur les polygones de geoBoundaries. Cause : ces polygones ont
+un sens de rotation (winding) qui fait que les algorithmes sphériques
+de d3-geo (conventions RFC 7946, extérieur en sens antihoraire) les
+lisent comme couvrant le globe entier. `geojson-rewind` n'a pas corrigé
+le symptôme non plus (raison non éclaircie). Solution retenue : une
+projection équirectangulaire maison (longitude compressée par
+cos(latitude centrale), simplification Douglas-Peucker écrite à la
+main après projection) — plus simple, sans dépendance à d3-geo, et
+largement suffisante pour "une carte illustrée, pas une carte GPS"
+(`docs/CARTE-DU-PAYS.md` §3). `d3-geo` et `topojson-server`/
+`topojson-simplify` ont été retirés des devDependencies après coup ;
+seuls `topojson-client` (décodage pur du TopoJSON de world-atlas, sans
+géométrie sphérique) et `world-countries` (correspondance code ISO
+numérique ↔ alpha-2) restent nécessaires — tous deux devDependencies,
+jamais importés par l'app, poids nul sur le paquet client
+(`docs/DECISIONS.md` §1 point 6), utilisés uniquement par
+`scripts/generer-cartes-pays.mjs`, exécuté une fois (pas à chaque
+build).
+
+**Corrections manuelles constatées en comparant aux id de la table
+`regions`** (Jalon 8) : Corse (`FR-20R` → `fr-cor`), Québec (`CA-QB` →
+`ca-qc`), Belgique (préfixe pays absent : `BRU`/`VLG`/`WAL` →
+`be-bru`/`be-vlg`/`be-wal`), et une coquille dans les données de
+geoBoundaries elles-mêmes (Dakota du Sud sous le pays "SU" au lieu de
+"US"). Codées en dur dans le script de génération, avec le
+raisonnement, pour ne pas se reperdre si les cartes sont régénérées un
+jour.
+
+**Limites connues, acceptées pour cette première version** :
+- **5 régions d'outre-mer françaises** (Guadeloupe, Martinique, Guyane,
+  Réunion, Mayotte) et **2 États américains** (Rhode Island, DC)
+  n'apparaissent pas sur la carte — absents des données sources
+  (France) ou perdus à la simplification (trop petits, États-Unis).
+  Les classements/votes/ressources de ces régions restent corrects
+  (non affectés, la carte n'est qu'un habillage visuel) ; seule la
+  carte elle-même ne les montre pas.
+- **Pas de scintillement nocturne** ni de **repères de jumelages en
+  bord de carte** (`docs/CARTE-DU-PAYS.md` §2) : explicitement permis
+  à différer par la proposition elle-même pour le premier point, pas
+  fait pour le second faute de temps — tous deux en point ouvert.
+- **Cliquer une région n'ouvre pas de résumé** (population, ville n°1)
+  — seules les pastilles de villes sont cliquables dans cette version.
+- **16 très petits territoires sans carte du tout** (îles inhabitées,
+  Kosovo — absent de world-atlas pour raison de statut contesté, etc.)
+  — retombent sur la vignette prévue par la proposition elle-même pour
+  "les petits pays".
+- **Une ville qui n'a pas de coordonnées propres** dans ce projet
+  (seulement une région) : sa pastille est placée au centroïde de sa
+  région, pas à sa position géographique réelle — approximation
+  assumée, cohérente avec "carte illustrée, pas une carte précise".
+
+**Testé.** `tests/unit/couleurRegion.test.ts` (nouveau, 4 tests) :
+région sans habitant neutre, région la plus peuplée à l'accent, gradient
+monotone, aucune région peuplée reste neutre.
+`tests/e2e/jalon9ter-carte-du-pays.spec.ts` (nouveau, 2 tests) : la
+carte s'affiche avec plusieurs régions dessinées et une pastille
+cliquable mène bien sur Ma ville ; un pays sans carte générée retombe
+sur la vignette, sans erreur console. Deux tests d'autres jalons
+(Jalon 9 et 11) adaptés : les nouvelles pastilles de la carte
+introduisent des `<a href="/ville">` et des `<title>` SVG (jamais
+visibles) qui entraient en collision avec des assertions `getByText`
+trop larges — corrigées en ciblant précisément la liste des villes
+principales / la note "Président actuel", pas n'importe quelle
+occurrence du nom de ville sur la page. Vérifié aussi à l'œil avec des
+comptes jetables : carte de France correcte visuellement (13 régions,
+bonnes formes, bonnes couleurs), pastille "ma ville" cliquable menant
+bien vers Ma ville. Poids du paquet **réduit** sur `/pays` (111 Ko contre
+113 Ko avant ce jalon — la carte SVG serveur est plus légère que
+`SincroniserScene`). Suite complète : 73 tests unitaires + 46 tests
+e2e, verte à `--workers=1`.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1810,3 +1936,16 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     Jalon 10). → **À trancher par Adrien** : bonus aux villes du pays ?
     condition ou ressource consommée par les décisions diplomatiques des
     Jalons 12/13 ? autre chose ?
+28. **Carte du pays (Jalon 9 ter) : détails laissés de côté faute de
+    temps ou de données.** Pas de scintillement nocturne des grandes
+    villes, pas de repères de jumelages en bord de carte (les deux
+    prévus par `docs/CARTE-DU-PAYS.md` §2), pas d'interaction au clic
+    sur une région (résumé population/ville n°1). 5 régions d'outre-mer
+    françaises et 2 États américains (Rhode Island, DC) absents de la
+    carte elle-même (données sources incomplètes/perdues à la
+    simplification — les classements/votes de ces régions restent
+    corrects). Le canvas 3D partagé continue de tourner, invisible,
+    derrière la carte plutôt que d'être mis en pause (petit gaspillage
+    CPU/GPU assumé). → **À trancher par Adrien** : lesquels de ces
+    points valent une seconde passe, et avec quelle priorité par
+    rapport aux autres jalons ?

@@ -1,17 +1,31 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { getLocale, traduire } from "@/lib/i18n";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
-import { SincroniserScene } from "@/components/SincroniserScene";
+import { CartePays, type CarteRegionDonnees, type MarqueurVille } from "./CartePays";
 import { SelecteurPays } from "./SelecteurPays";
 import { voterPays } from "./actions";
 
-const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 const TAILLE_TOP = 10;
+
+/** Carte pré-générée (scripts/generer-cartes-pays.mjs, Jalon 9 ter) —
+ * absente pour ~16 très petits territoires (hors couverture des
+ * données sources) : page.tsx retombe alors sur une simple vignette,
+ * comme prévu par docs/CARTE-DU-PAYS.md §2 pour "les petits pays". */
+async function chargerCarte(countryId: string): Promise<{ viewBox: string; regions: CarteRegionDonnees[] } | null> {
+  try {
+    const contenu = await readFile(path.join(process.cwd(), "src/data/cartes", `${countryId}.json`), "utf8");
+    return JSON.parse(contenu);
+  } catch {
+    return null;
+  }
+}
 
 type StatsPays = {
   nb_villes: number;
@@ -72,26 +86,11 @@ export default async function PaysPage({
   const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
   const { data: maVilleBrute } = await supabase
     .from("cities")
-    .select(
-      `id, population_max, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire)`
-    )
+    .select("id, nom, country_id, region_id")
     .eq("id", maVilleId)
     .maybeSingle();
-  type MaVille = {
-    id: string;
-    population_max: number;
-    country_id: string;
-    pays:
-      | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }
-      | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }[]
-      | null;
-  };
+  type MaVille = { id: string; nom: string; country_id: string; region_id: string | null };
   const maVille = maVilleBrute as MaVille;
-  const paysBrut = Array.isArray(maVille.pays) ? maVille.pays[0] : maVille.pays;
-  const pays3D =
-    paysBrut?.latitude != null && paysBrut?.longitude != null && paysBrut?.fuseau_horaire
-      ? { latitude: paysBrut.latitude, longitude: paysBrut.longitude, fuseauHoraire: paysBrut.fuseau_horaire }
-      : PAYS_PAR_DEFAUT;
 
   const { data: listePays } = await supabase
     .from("countries")
@@ -117,6 +116,65 @@ export default async function PaysPage({
     fin: m.fin,
   }));
   const mandatActuel = mandats.find((m) => m.fin === null) ?? null;
+
+  // Carte du pays (Jalon 9 ter) : population par région (couleur),
+  // ville la plus peuplée de chaque région ("couronne"), et régions de
+  // "ma ville" / de la présidente pour les pastilles.
+  const carte = await chargerCarte(countryId);
+  const { data: toutesLesVillesBrutes } = await supabase
+    .from("cities")
+    .select("id, nom, population, region_id")
+    .eq("country_id", countryId);
+  type VilleRegion = { id: string; nom: string; population: number; region_id: string | null };
+  const toutesLesVilles = (toutesLesVillesBrutes ?? []) as VilleRegion[];
+
+  const populationParRegion: Record<string, number> = {};
+  const meilleureVilleParRegion = new Map<string, VilleRegion>();
+  for (const v of toutesLesVilles) {
+    if (!v.region_id) continue;
+    populationParRegion[v.region_id] = (populationParRegion[v.region_id] ?? 0) + v.population;
+    const meilleure = meilleureVilleParRegion.get(v.region_id);
+    if (!meilleure || v.population > meilleure.population) meilleureVilleParRegion.set(v.region_id, v);
+  }
+  const populationMaxRegion = Math.max(0, ...Object.values(populationParRegion));
+
+  const marqueurParRegion = new Map<string, MarqueurVille>();
+  for (const [regionId, v] of meilleureVilleParRegion) {
+    marqueurParRegion.set(regionId, {
+      regionId,
+      villeId: v.id,
+      nom: v.nom,
+      estMoi: false,
+      estPresident: false,
+      estPremiereDeRegion: true,
+    });
+  }
+  if (mandatActuel) {
+    const villePresidente = toutesLesVilles.find((v) => v.id === mandatActuel.villeId);
+    if (villePresidente?.region_id) {
+      const existant = marqueurParRegion.get(villePresidente.region_id);
+      marqueurParRegion.set(villePresidente.region_id, {
+        regionId: villePresidente.region_id,
+        villeId: existant?.villeId ?? villePresidente.id,
+        nom: existant?.nom ?? villePresidente.nom,
+        estMoi: existant?.estMoi ?? false,
+        estPresident: true,
+        estPremiereDeRegion: true,
+      });
+    }
+  }
+  if (countryId === maVille.country_id && maVille.region_id) {
+    const existant = marqueurParRegion.get(maVille.region_id);
+    marqueurParRegion.set(maVille.region_id, {
+      regionId: maVille.region_id,
+      villeId: existant?.villeId ?? maVille.id,
+      nom: existant?.nom ?? maVille.nom,
+      estMoi: true,
+      estPresident: existant?.estPresident ?? false,
+      estPremiereDeRegion: existant?.estPremiereDeRegion ?? false,
+    });
+  }
+  const marqueurs = [...marqueurParRegion.values()];
 
   const { data: statsBrutes, error: erreurStats } = await supabase.rpc("stats_pays", {
     p_country_id: countryId,
@@ -157,7 +215,19 @@ export default async function PaysPage({
 
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
-      <SincroniserScene seed={maVilleId} populationMax={maVille.population_max} pays={pays3D} />
+      {carte ? (
+        <CartePays
+          viewBox={carte.viewBox}
+          regions={carte.regions}
+          populationParRegion={populationParRegion}
+          populationMaxRegion={populationMaxRegion}
+          marqueurs={marqueurs}
+        />
+      ) : (
+        <div className="carte-pays carte-pays-vignette" aria-hidden="true">
+          <span>{nomPaysAffiche}</span>
+        </div>
+      )}
       <div className="dock dock-float dock-left">
         <div className="head-row">
           <span className="eyebrow">{traduire(locale, "pays.eyebrow")}</span>

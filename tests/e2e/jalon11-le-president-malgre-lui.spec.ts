@@ -151,16 +151,25 @@ test.describe("Jalon 11 — le président malgré lui", () => {
   });
 
   test("la page /pays affiche le président actuel et l'historique", async ({ page }) => {
-    test.setTimeout(60_000);
+    // Premier test du fichier à toucher le navigateur (les deux
+    // précédents ne font que des appels RPC directs) : /connexion,
+    // /ville et /pays se compilent tous à froid sur un serveur qui
+    // vient de démarrer — plus que les 20 s habituels, même cause que
+    // Jalon 9 et 10 (voir DECISIONS.md §4).
+    test.setTimeout(90_000);
     const joueur = await creerCompteAvecVille("president-ui", "CA", "ca-on", 9_000_000);
     try {
       await connecter(page, joueur.email, joueur.motDePasse);
-      await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
+      await expect(page).toHaveURL(/\/ville$/, { timeout: 40_000 });
 
       await page.goto("/pays?pays=CA");
       await expect(page.getByRole("heading", { name: "Canada" })).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(joueur.villeNom).first()).toBeVisible();
-      await expect(page.getByText("depuis")).toBeVisible();
+      // Le nom de ville apparaît aussi dans un <title> SVG (pastille de
+      // la carte, Jalon 9 ter) — jamais visible par nature, on vise la
+      // note "Président actuel" précisément.
+      const notePresident = page.locator(".note", { hasText: "Président" });
+      await expect(notePresident).toContainText(joueur.villeNom);
+      await expect(notePresident).toContainText("depuis");
 
       await expect(page.getByRole("heading", { name: "Historique des présidents" })).toBeVisible();
       await expect(page.getByText("en cours")).toBeVisible();

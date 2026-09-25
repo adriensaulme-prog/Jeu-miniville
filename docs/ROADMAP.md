@@ -117,7 +117,7 @@ de vue du joueur — le titre dit ce qui change pour lui.
   voir `DECISIONS.md` §4, journal du Jalon 8bis). Détail dans
   `DECISIONS.md` §4 — recette dans `docs/recette-jalon-8bis.md`.
 
-## Phase 3 — Le pays prend forme
+## Phase 3 — Le pays prend forme *(terminée)*
 
 - [x] **Jalon 9 — Naissance d'un pays.** Page pays (`/pays`), agrégation
   des statistiques nationales (population, influence, activité) à
@@ -138,15 +138,15 @@ de vue du joueur — le titre dit ce qui change pour lui.
   quand", mandats précédents), tenu à jour par une réconciliation
   idempotente. Détail dans `DECISIONS.md` §4 — recette dans
   `docs/recette-jalon-11.md`.
-- [ ] **Jalon 9 ter — La carte du pays.** Remplace le fond 3D de la
-  page Pays (ville du joueur vue du ciel, comme les autres pages) par
-  une carte illustrée du pays, régions colorées par population,
-  pastilles pour la ville du joueur / la présidente / la n°1 de chaque
-  région, repères de jumelages internationaux en bord de carte. Style
-  et couleur validés par Adrien, détails d'implémentation laissés à
-  Claude Code (`docs/CARTE-DU-PAYS.md`, demande d'Adrien, 25/09/2026).
-  Scindé après coup des Jalons 9 et 10, même logique que 6/6bis et
-  7/7bis.
+- [x] **Jalon 9 ter — La carte du pays.** Remplace le fond 3D de la
+  page Pays par une carte SVG illustrée (régions colorées par
+  population, pastilles pour la ville du joueur / la présidente / la
+  n°1 de chaque région, cliquables). Scindé après coup des Jalons 9 et
+  10, même logique que 6/6bis et 7/7bis (`docs/CARTE-DU-PAYS.md`,
+  demande d'Adrien, 25/09/2026). Scintillement nocturne, repères de
+  jumelages en bord de carte et clic sur une région non faits (points
+  ouverts §10 point 28). Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-9ter.md`.
 
 ## Phase 4 — Le monde entre en scène
 
@@ -185,5 +185,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 11 terminé, avant le jalon
-9 ter "La carte du pays" ou le jalon 12 "Décider à l'international".*
+*Dernière mise à jour : 25/09/2026, jalon 9 ter terminé (fin de la
+Phase 3), avant le jalon 12 "Décider à l'international".*

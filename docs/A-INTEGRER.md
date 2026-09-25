@@ -21,10 +21,11 @@ journal existant, puis ce fichier peut être supprimé.*
 > **§10 (dépenses
 > sous contrôle) fait le 25/09/2026** — règle §1 point 1 réécrite,
 > nouveau tableau "dépenses en cours" en §7 ; **§11 (carte du pays)
-> consignée en ROADMAP.md le 25/09/2026** comme "Jalon 9 ter", pas
-> encore codée (`/pays` garde son fond 3D actuel jusqu'à ce jalon).
-> Ce fichier peut être supprimé quand Adrien aura répondu aux
-> questions restantes.
+> faite le 25/09/2026** comme "Jalon 9 ter" — `/pays` affiche
+> maintenant la carte plutôt que le fond 3D ; scintillement nocturne,
+> repères de jumelages et clic sur une région non faits (points
+> ouverts, `DECISIONS.md` §10 point 28). Ce fichier peut être supprimé
+> quand Adrien aura répondu aux questions restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette

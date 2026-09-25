@@ -213,6 +213,37 @@ body {
     margin-bottom: 0;
   }
 }
+
+/* ---------- carte du pays (Jalon 9 ter) : remplace le fond 3D sur la
+   page Pays uniquement. À l'intérieur de .screen (déjà au-dessus de
+   .scene), donc pas besoin de z-index propre — juste réactiver les
+   clics que .screen désactive par défaut. ---------- */
+.carte-pays {
+  position: fixed;
+  inset: 0;
+  top: var(--topbar);
+  pointer-events: auto;
+  background: #cfe0e8;
+}
+.carte-pays-svg {
+  width: 100%;
+  height: 100%;
+}
+.carte-pays-svg a {
+  cursor: pointer;
+}
+.carte-pays-svg a:focus-visible circle {
+  outline: 2px solid var(--focus);
+}
+.carte-pays-vignette {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sign);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--muted);
+}
 .dock {
   pointer-events: auto;
   box-sizing: border-box;
