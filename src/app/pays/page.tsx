@@ -61,7 +61,23 @@ type ResultatDecision = {
   pays_cible_id: string;
   categorie: CategorieDiplomatie;
   proposee_par_ville_id: string;
-  nb_soutiens: number;
+  nb_pour: number;
+  nb_contre: number;
+};
+
+type StatutConflit = "en_cours" | "termine";
+type ResultatConflit = "attaquant" | "defenseur" | "egalite";
+type ConflitPays = {
+  id: string;
+  pays_attaquant_id: string;
+  pays_defenseur_id: string;
+  debut: string;
+  fin: string;
+  statut: StatutConflit;
+  resultat: ResultatConflit | null;
+  effort_attaquant: number;
+  effort_defenseur: number;
+  cout_ressources: Partial<Record<Categorie, number>>;
 };
 
 type MandatBrut = {
@@ -246,16 +262,32 @@ export default async function PaysPage({
     ? ((listePays ?? []).find((p) => p.id === resultatDecision.pays_cible_id)?.nom ?? resultatDecision.pays_cible_id)
     : null;
 
-  let aiSoutenu = false;
+  let monVoteDiplomatieCetteSemaine: "pour" | "contre" | null = null;
   if (estMonPays && resultatDecision) {
-    const { data: monSoutien } = await supabase
+    const { data: monVoteDiplomatie } = await supabase
       .from("votes_diplomatie")
-      .select("id")
+      .select("position")
       .eq("joueur_id", user.id)
       .eq("semaine", debutSemaineIso())
       .maybeSingle();
-    aiSoutenu = !!monSoutien;
+    monVoteDiplomatieCetteSemaine = (monVoteDiplomatie?.position as "pour" | "contre" | undefined) ?? null;
   }
+
+  // Résolution du conflit (Jalon 13) : idempotentes comme verifier_president
+  // ci-dessus — clôt la proposition de la semaine passée du pays consulté
+  // (déclenche un conflit si "rivalité" adoptée à la majorité), puis clôt
+  // tout conflit arrivé à échéance (7 jours), tous pays confondus.
+  await supabaseAdmin.rpc("resoudre_decision_diplomatique", { p_country_id: countryId });
+  await supabaseAdmin.rpc("resoudre_conflits_en_cours");
+
+  const { data: conflitBrut } = await supabase.rpc("conflit_pays", { p_country_id: countryId });
+  const conflit = (Array.isArray(conflitBrut) ? conflitBrut[0] : conflitBrut) as ConflitPays | undefined;
+  const nomPaysAttaquant = conflit
+    ? ((listePays ?? []).find((p) => p.id === conflit.pays_attaquant_id)?.nom ?? conflit.pays_attaquant_id)
+    : null;
+  const nomPaysDefenseur = conflit
+    ? ((listePays ?? []).find((p) => p.id === conflit.pays_defenseur_id)?.nom ?? conflit.pays_defenseur_id)
+    : null;
 
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
@@ -373,20 +405,42 @@ export default async function PaysPage({
               <span className="h3">
                 {traduire(locale, LABEL_DIPLOMATIE[resultatDecision.categorie])} · {nomPaysCible}
               </span>
+            </div>
+            <div className="row">
               <span className="badge">
-                {new Intl.NumberFormat(locale).format(resultatDecision.nb_soutiens)}{" "}
-                {traduire(locale, "pays.diplomatie.soutiens")}
+                {new Intl.NumberFormat(locale).format(resultatDecision.nb_pour)} {traduire(locale, "pays.diplomatie.pour")}
+              </span>
+              <span className="badge">
+                {new Intl.NumberFormat(locale).format(resultatDecision.nb_contre)} {traduire(locale, "pays.diplomatie.contre")}
               </span>
             </div>
             {estMonPays ? (
-              aiSoutenu ? (
-                <p className="note">{traduire(locale, "pays.diplomatie.dejaSoutenu")}</p>
+              monVoteDiplomatieCetteSemaine ? (
+                <p className="note">
+                  {traduire(locale, "pays.diplomatie.dejaVote")}{" "}
+                  <b>
+                    {traduire(
+                      locale,
+                      monVoteDiplomatieCetteSemaine === "pour" ? "pays.diplomatie.pour" : "pays.diplomatie.contre",
+                    )}
+                  </b>
+                  .
+                </p>
               ) : (
-                <form action={soutenirDecisionDiplomatique}>
-                  <button className="btn small" type="submit">
-                    {traduire(locale, "pays.diplomatie.soutenir")}
-                  </button>
-                </form>
+                <div className="row">
+                  <form action={soutenirDecisionDiplomatique}>
+                    <input type="hidden" name="position" value="pour" />
+                    <button className="btn small" type="submit">
+                      {traduire(locale, "pays.diplomatie.pour")}
+                    </button>
+                  </form>
+                  <form action={soutenirDecisionDiplomatique}>
+                    <input type="hidden" name="position" value="contre" />
+                    <button className="btn small" type="submit">
+                      {traduire(locale, "pays.diplomatie.contre")}
+                    </button>
+                  </form>
+                </div>
               )
             ) : null}
           </div>
@@ -417,6 +471,64 @@ export default async function PaysPage({
               {traduire(locale, "pays.diplomatie.proposer")}
             </button>
           </form>
+        ) : null}
+
+        {conflit ? (
+          <>
+            <div className="head-row">
+              <h2 className="h3">{traduire(locale, "pays.conflit.titre")}</h2>
+            </div>
+            <div className="card">
+              <div className="spread">
+                <span className="h3">
+                  {nomPaysAttaquant} {traduire(locale, "pays.conflit.contre")} {nomPaysDefenseur}
+                </span>
+                <span className="badge">
+                  {traduire(locale, conflit.statut === "en_cours" ? "pays.conflit.enCours" : "pays.conflit.termine")}
+                </span>
+              </div>
+              <div className="tiles">
+                <div className="tile">
+                  <b>{new Intl.NumberFormat(locale).format(conflit.effort_attaquant)}</b>
+                  <span>{traduire(locale, "pays.conflit.effortAttaquant")}</span>
+                </div>
+                <div className="tile">
+                  <b>{new Intl.NumberFormat(locale).format(conflit.effort_defenseur)}</b>
+                  <span>{traduire(locale, "pays.conflit.effortDefenseur")}</span>
+                </div>
+              </div>
+              {conflit.statut === "termine" && conflit.resultat ? (
+                <p className="note">
+                  {traduire(locale, "pays.conflit.resultat")}{" "}
+                  <b>
+                    {conflit.resultat === "egalite"
+                      ? traduire(locale, "pays.conflit.egalite")
+                      : conflit.resultat === "attaquant"
+                        ? nomPaysAttaquant
+                        : nomPaysDefenseur}
+                  </b>
+                </p>
+              ) : (
+                <p className="note">
+                  {traduire(locale, "pays.conflit.finLe")}{" "}
+                  {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(conflit.fin))}
+                </p>
+              )}
+              {Object.keys(conflit.cout_ressources).length > 0 ? (
+                <>
+                  <p className="note">{traduire(locale, "pays.conflit.cout")}</p>
+                  <div className="tiles">
+                    {CATEGORIES.filter((c) => conflit.cout_ressources[c] !== undefined).map((c) => (
+                      <div key={c} className="tile">
+                        <b>{new Intl.NumberFormat(locale).format(conflit.cout_ressources[c] ?? 0)}</b>
+                        <span>{traduire(locale, LABEL_CATEGORIE[c])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </>
         ) : null}
 
         <div className="head-row">

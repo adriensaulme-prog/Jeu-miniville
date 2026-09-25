@@ -1654,6 +1654,130 @@ Suite complète : 73 tests unitaires + 49 tests e2e, verte à
 `--workers=1`, du premier coup sur un serveur de dev fraîchement
 démarré.
 
+### Jalon 13 — france contre allemagne — 25/09/2026
+
+**Contenu.** Complète le vote de décision diplomatique du Jalon 12 avec
+une notion de majorité et un premier effet de gameplay réel :
+
+- `votes_diplomatie` gagne une `position` (`pour`/`contre`) ;
+  `soutenir_decision_diplomatique()` prend désormais cette position en
+  paramètre (signature changée : `drop function` puis recréation, piège
+  du Jalon 8 réappliqué sans le redécouvrir).
+- `resoudre_decision_diplomatique(country_id)` : idempotente, appelée à
+  chaque affichage de `/pays` (même schéma que `verifier_president` au
+  Jalon 11) — clôt la proposition de la dernière semaine terminée à la
+  majorité des votes exprimés (égalité ou 0 vote = non adoptée), trace
+  le verdict dans `resultats_diplomatiques`.
+- Si adoptée et catégorie = "rivalité" : déclenche un `conflits` de 7
+  jours entre les deux pays (sauf conflit déjà en cours entre eux, index
+  unique `conflits_paire_active_unique`).
+- `effort_national(country_id)` : la force de mobilisation d'un pays à
+  l'instant T, dérivée automatiquement de ses stats déjà existantes —
+  somme de l'activité 7 jours (`activite_7j_de`, Jalon 9) des villes du
+  pays, plus `floor(sqrt(somme des ressources nationales))` (Jalon 10,
+  racine carrée pour que les ressources — un compteur cumulatif qui ne
+  fait que croître depuis le Jalon 10 — comptent comme un bonus
+  secondaire sans écraser l'activité pour un pays ancien).
+- `resoudre_conflits_en_cours()` : idempotente, appelée à chaque
+  affichage de `/pays` — clôt tout conflit dont les 7 jours sont
+  écoulés, compare `effort_national()` des deux camps avec un **bonus
+  défensif de 50 %** pour le défenseur (`effort_attaquant >
+  floor(effort_defenseur * 1.5)` pour que l'attaquant l'emporte).
+
+**Déclenchement et résolution tranchés avec Adrien avant de coder**
+(contrairement à "aucun effet de gameplay" laissé en l'état aux
+Jalons 10 et 12) : le cahier des charges donnait juste "coût en
+ressources, bonus défensif pour l'attaqué, mobilisation quotidienne,
+résultat en fin de période" sans dire *qui* déclenche le conflit ni
+*comment* il se résout. Deux questions posées, réponses d'Adrien :
+« c'est à la fin de la semaine le vote majoritaire des personnes de la
+nation déclenche le conflit » puis « À la fin de la semaine le vote
+majoritaire de la nation (par les personnes du [pays]) déclenche
+l'action choisit, le président emet une sugestion mais il ne décide pas
+seul ». Cela révélait que le Jalon 12 était incomplet : il manquait la
+notion pour/contre et la résolution majoritaire — ajoutées ici plutôt
+qu'en reprenant le Jalon 12 a posteriori (le comportement de soutien
+seul du Jalon 12 n'était pas faux, juste incomplet pour "France contre
+Allemagne").
+
+**Correction d'Adrien en cours de route sur la "mobilisation
+quotidienne"** (`docs/A-INTEGRER.md` §12, 25/09/2026) : la première
+implémentation (migration `0016`, déjà appliquée par Adrien avant qu'il
+ne se relise) ajoutait une action « Mobiliser » que chaque citoyen
+devait cliquer une fois par jour pendant un conflit, comptée dans une
+table `mobilisations`. Adrien s'est rendu compte que ce n'était pas ce
+qu'il voulait dire en répondant à ma question, et l'a signalé avant que
+je committe : l'effort quotidien d'un pays en guerre ne doit **pas**
+être un compteur de clics, mais dérivé automatiquement de ce que le
+pays *est déjà* — son activité (Jalon 9) et ses ressources (Jalon 10) —
+sans nouvelle action citoyenne. Migration corrective `0017` : retire
+`mobilisations`/`mobiliser()`/le bouton « Mobiliser », introduit
+`effort_national()`. Demandé à Adrien comment pondérer activité et
+ressources (le cahier des charges ne le précise pas) ; il a choisi ma
+proposition — voir écart ci-dessous. « Avantages nationaux » type
+Défense (cahier des charges §13) n'existe pas encore comme système dans
+ce projet : pas construit ici, signalé comme point ouvert (§10 point 31)
+plutôt qu'inventé pour combler le manque, comme demandé par la note.
+
+**Écarts assumés, pas tranchés avec Adrien :**
+
+- **Taux du bonus défensif** : le cahier des charges demande un "bonus
+  défensif pour l'attaqué" (le défenseur) sans donner de chiffre — 50 %
+  choisi par Claude Code (`floor(effort_defenseur * 1.5)` comparé à
+  l'effort de l'attaquant), pas tranché avec Adrien, à ajuster si le
+  balancing le demande.
+- **Durée du conflit** : 7 jours à partir de sa résolution (pas calée
+  sur la semaine ISO — la décision qui le déclenche vient d'une semaine
+  déjà terminée, plus simple de faire courir le conflit à partir de sa
+  résolution que de recaler sur un calendrier).
+- **"Coût en ressources"** : traité comme un instantané informatif des
+  ressources nationales de l'attaquant au moment du déclenchement
+  (`conflits.cout_ressources`), affiché mais jamais déduit — voir point
+  ouvert 30 (`DECISIONS.md` §10). Les ressources du Jalon 10 sont un
+  compteur cumulatif en lecture seule sans mécanisme de dépense ; en
+  faire une vraie monnaie dépensable aurait été un jalon à part entière,
+  disproportionné pour ce jalon.
+- **Alliance/Paix/Embargo** : toujours sans effet de gameplay au-delà du
+  vote pour/contre lui-même — le cahier des charges ne cite que la
+  rivalité ("France contre Allemagne") comme scénario de test explicite.
+  Point 29 (§10) marqué tranché sur cette base.
+- **Formule d'`effort_national`** : activité (somme brute de
+  `activite_7j_de` sur les villes du pays, pas de plafond) + `floor(sqrt(
+  somme des ressources))` en bonus secondaire — pondération choisie par
+  Claude Code, proposée à Adrien et retenue par lui plutôt que de
+  spécifier le calcul lui-même. À ajuster si le balancing le demande.
+
+**Code d'erreur `P0017`** (mobilisation sans conflit en cours) attribué
+puis retiré dans la même journée avec la fonction `mobiliser()` — pas
+réutilisé pour autre chose, le prochain code libre reste `P0018`.
+
+**Testé.** `tests/e2e/jalon13-france-contre-allemagne.spec.ts` (4
+tests) : le vote pour/contre compte séparément, refuse une position
+invalide (P0014), un doublon (23505) et un vote sans proposition
+(P0016) ; la résolution adopte à la majorité et déclenche un conflit de
+rivalité (idempotente — pas de doublon de résultat ni de conflit au
+deuxième appel), rejette à l'égalité sans déclencher de conflit ;
+`effort_national()` reflète exactement l'activité et les ressources
+insérées, la résolution de fin de conflit l'utilise pour les deux
+camps, applique le bonus défensif de 50 % et clôt le conflit
+(idempotente) ; la page `/pays` affiche le vote pour/contre et l'effort
+automatique d'un conflit en cours. Vérifié aussi à l'œil avec un compte
+jetable, à la fois avant la migration (dégrade proprement, fonctions
+absentes, pas de crash) et après (vote et affichage du conflit
+fonctionnent, effort mis à jour en direct sans action supplémentaire).
+Poids du paquet toujours dans le budget (112 Ko pour `/pays`). Les deux
+tests devenus obsolètes du Jalon 12 (l'ancien "soutenir" à sens unique,
+signature changée) sont retirés de `jalon12-decider-a-linternational.spec.ts`
+au profit de cette suite — un seul test y reste (`proposer_decision_diplomatique`,
+inchangé). Suite complète : 73 tests unitaires + 51 tests e2e, verte à
+`--workers=1` sur ce jalon. Croisé en route, sans rapport avec ce
+jalon : une connexion qui reste bloquée sur `/connexion` a fait
+échouer un test des Jalons 1 et 8 chacun une fois sur plusieurs runs
+(jamais les mêmes, jamais un test touchant `/pays`) — même famille de
+flakiness "serveur de dev" déjà rencontrée et documentée à plusieurs
+reprises dans ce journal (Jalons 9/10/11/9 ter/12), pas creusée
+davantage ici faute de lien avec ce jalon.
+
 ---
 
 ## §5. i18n
@@ -1988,9 +2112,12 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     visibles sur `/pays`, mais le cahier des charges ne dit nulle part
     ce que ces ressources *font* une fois accumulées — rien codé, décision
     volontairement pas prise seul (`DECISIONS.md` §4, journal du
-    Jalon 10). → **À trancher par Adrien** : bonus aux villes du pays ?
-    condition ou ressource consommée par les décisions diplomatiques des
-    Jalons 12/13 ? autre chose ?
+    Jalon 10). **Partiellement touché au Jalon 13** : le "coût en
+    ressources" d'un conflit est désormais un instantané informatif
+    (`conflits.cout_ressources`), affiché mais jamais déduit — voir point
+    30 ci-dessous. → **Toujours à trancher par Adrien** : une vraie
+    dépense/consommation de ces ressources (par les décisions
+    diplomatiques ou ailleurs) reste à faire si souhaitée.
 28. **Carte du pays (Jalon 9 ter) : détails laissés de côté faute de
     temps ou de données.** Pas de scintillement nocturne des grandes
     villes, pas de repères de jumelages en bord de carte (les deux
@@ -2004,10 +2131,31 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     CPU/GPU assumé). → **À trancher par Adrien** : lesquels de ces
     points valent une seconde passe, et avec quelle priorité par
     rapport aux autres jalons ?
-29. **Décisions diplomatiques (Jalon 12) : aucun effet de gameplay pour
-    l'instant.** Comme les ressources nationales du Jalon 10, une
-    alliance/paix/rivalité/embargo soutenu ne change encore rien dans
-    le jeu — construit pour être consommé par le Jalon 13 ("France
-    contre Allemagne"), volontairement pas anticipé ici.
-    → **Pas un vrai point ouvert** : c'est le Jalon 13 lui-même qui doit
-    trancher, pas une question isolée pour Adrien.
+29. ~~Décisions diplomatiques (Jalon 12) : aucun effet de gameplay pour
+    l'instant.~~ **Tranché au Jalon 13** : un vote pour/contre majoritaire
+    en fin de semaine adopte ou non la décision ; une "rivalité" adoptée
+    déclenche un conflit d'une semaine entre les deux pays. Alliance/
+    Paix/Embargo restent sans effet de gameplay au-delà du vote
+    lui-même — non demandés par le cahier des charges, qui ne cite que
+    la rivalité comme scénario de test. Détail dans `DECISIONS.md` §4,
+    journal du Jalon 13.
+30. **Coût en ressources d'un conflit (Jalon 13) : informatif seulement,
+    jamais déduit.** `conflits.cout_ressources` capture un instantané des
+    ressources nationales de l'attaquant (Jalon 10) au moment du
+    déclenchement, affiché sur `/pays`, mais rien n'est retiré nulle
+    part — les ressources du Jalon 10 sont un compteur cumulatif en
+    lecture seule, sans mécanisme de dépense (voir point 27). En faire
+    une vraie monnaie dépensable aurait été un jalon à part entière ;
+    décision prise sans attendre Adrien pour ne pas bloquer ce jalon.
+    → **À confirmer par Adrien** : simplification acceptée telle quelle,
+    ou faut-il un vrai coût déduit ?
+31. **"Avantages nationaux" (dont Défense, cahier des charges §13) :
+    système pas encore construit.** Signalé par Adrien lui-même comme un
+    ingrédient attendu de l'effort national en temps de guerre
+    (`docs/A-INTEGRER.md` §12, 25/09/2026) — `effort_national()` du
+    Jalon 13 s'appuie pour l'instant seulement sur l'activité (Jalon 9)
+    et les ressources nationales (Jalon 10), les deux seuls ingrédients
+    qui existent déjà, plutôt que d'inventer un substitut. → **À
+    trancher par Adrien** : vaut-il un jalon dédié (quels avantages,
+    quelles conditions pour les débloquer, quel effet chiffré), et à
+    quel moment par rapport aux autres priorités ?

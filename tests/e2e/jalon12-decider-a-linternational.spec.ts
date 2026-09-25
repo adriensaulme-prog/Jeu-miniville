@@ -4,10 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Jalon 12 : décision diplomatique hebdomadaire — la présidente en
  * exercice propose un pays cible + une catégorie (alliance/paix/
- * rivalité/embargo), les citoyens soutiennent — voir docs/ROADMAP.md
- * et docs/DECISIONS.md §4. Client service_role recréé ici pour la même
- * raison que les specs des jalons précédents ("server-only" hors du
- * pipeline Next.js).
+ * rivalité/embargo) — voir docs/ROADMAP.md et docs/DECISIONS.md §4.
+ * Client service_role recréé ici pour la même raison que les specs des
+ * jalons précédents ("server-only" hors du pipeline Next.js).
+ *
+ * Le soutien à sens unique de ce jalon a été remplacé par un vote
+ * pour/contre au Jalon 13 (voir tests/e2e/jalon13-france-contre-allemagne.spec.ts) ;
+ * seul le test de proposition (encore inchangé) reste ici.
  *
  * Comme pour les Jalons 8bis, 9, 10 et 11, pas de vérification rouge
  * par sabotage sur les fonctions SQL elles-mêmes (pas d'accès psql
@@ -57,13 +60,6 @@ async function creerCompteAvecVille(prefixe: string, paysId: string, regionId: s
 
 async function supprimerCompte(userId: string) {
   await supabaseAdmin.auth.admin.deleteUser(userId);
-}
-
-async function connecter(page: import("@playwright/test").Page, email: string, motDePasse: string) {
-  await page.goto("/connexion");
-  await page.getByLabel("Adresse e-mail").fill(email);
-  await page.getByLabel("Mot de passe").fill(motDePasse);
-  await page.getByRole("button", { name: "Se connecter" }).click();
 }
 
 test.describe.configure({ mode: "serial" });
@@ -122,76 +118,14 @@ test.describe("Jalon 12 — décider à l'international", () => {
     }
   });
 
-  test("soutenir_decision_diplomatique compte exactement les soutiens, refuse un doublon et sans proposition", async () => {
-    const presidente = await creerCompteAvecVille("diplo2-pres", "BE", "be-bru", 9_000_000);
-    const citoyenA = await creerCompteAvecVille("diplo2-a", "BE", "be-vlg", 1);
-    const citoyenB = await creerCompteAvecVille("diplo2-b", "BE", "be-wal", 1);
-    const paysSansProposition = await creerCompteAvecVille("diplo2-orphelin", "CA", "ca-on", 1);
-    try {
-      await supabaseAdmin.rpc("verifier_president", { p_country_id: "BE" });
-      const { error: erreurSansProposition } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", {
-        p_joueur_id: paysSansProposition.userId,
-      });
-      expect(erreurSansProposition?.code).toBe("P0016"); // le Canada n'a pas proposé cette semaine
-
-      await supabaseAdmin.rpc("proposer_decision_diplomatique", {
-        p_president_id: presidente.userId,
-        p_pays_cible_id: "NL",
-        p_categorie: "rivalite",
-      });
-
-      const { error: e1 } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", {
-        p_joueur_id: citoyenA.userId,
-      });
-      expect(e1).toBeNull();
-      const { error: e2 } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", {
-        p_joueur_id: citoyenB.userId,
-      });
-      expect(e2).toBeNull();
-      // Sabotage : A soutient une deuxième fois la même semaine.
-      const { error: erreurDoublon } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", {
-        p_joueur_id: citoyenA.userId,
-      });
-      expect(erreurDoublon?.code).toBe("23505");
-
-      const { data: resultat } = await supabaseAdmin.rpc("resultat_decision_semaine", {
-        p_country_id: "BE",
-        p_semaine: null,
-      });
-      const ligne = Array.isArray(resultat) ? resultat[0] : resultat;
-      expect(ligne.pays_cible_id).toBe("NL");
-      expect(ligne.categorie).toBe("rivalite");
-      expect(ligne.nb_soutiens).toBe(2); // A et B, pas le doublon de A
-    } finally {
-      await supprimerCompte(presidente.userId);
-      await supprimerCompte(citoyenA.userId);
-      await supprimerCompte(citoyenB.userId);
-      await supprimerCompte(paysSansProposition.userId);
-    }
-  });
-
-  test("la page /pays permet à la présidente de proposer et aux citoyens de soutenir", async ({ page }) => {
-    test.setTimeout(90_000);
-    const presidente = await creerCompteAvecVille("diplo-ui-pres", "US", "us-ca", 9_000_000);
-    try {
-      await supabaseAdmin.rpc("verifier_president", { p_country_id: "US" });
-
-      await connecter(page, presidente.email, presidente.motDePasse);
-      await expect(page).toHaveURL(/\/ville$/, { timeout: 40_000 });
-
-      await page.goto("/pays");
-      await expect(page.getByRole("heading", { name: "États-Unis d'Amérique" })).toBeVisible({ timeout: 20_000 });
-
-      await expect(page.getByLabel("Choisis un pays cible")).toBeVisible();
-      await page.getByLabel("Choisis un pays cible").selectOption({ label: "Mexique" });
-      await page.getByLabel("Choisis une catégorie").selectOption({ label: "Paix" });
-      await page.getByRole("button", { name: "Proposer", exact: true }).click();
-
-      await expect(page.getByText("Paix · Mexique")).toBeVisible({ timeout: 20_000 });
-      await page.getByRole("button", { name: "Soutenir" }).click();
-      await expect(page.getByText("Tu soutiens déjà cette proposition.")).toBeVisible();
-    } finally {
-      await supprimerCompte(presidente.userId);
-    }
-  });
+  // Les deux tests qui vivaient ici ("soutenir_decision_diplomatique
+  // compte exactement les soutiens...", "la page /pays permet ... aux
+  // citoyens de soutenir") testaient le soutien à sens unique de ce
+  // jalon. Le Jalon 13 a remplacé cette mécanique par un vote pour/contre
+  // majoritaire — signature de soutenir_decision_diplomatique() changée
+  // (position en paramètre), bouton "Soutenir" remplacé par "Pour"/
+  // "Contre" sur /pays. Couverture équivalente (et plus complète :
+  // pour/contre, résolution majoritaire, conflit) désormais dans
+  // tests/e2e/jalon13-france-contre-allemagne.spec.ts — voir
+  // docs/DECISIONS.md §4, journal du Jalon 13.
 });

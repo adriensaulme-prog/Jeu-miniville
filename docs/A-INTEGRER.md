@@ -24,8 +24,16 @@ journal existant, puis ce fichier peut être supprimé.*
 > faite le 25/09/2026** comme "Jalon 9 ter" — `/pays` affiche
 > maintenant la carte plutôt que le fond 3D ; scintillement nocturne,
 > repères de jumelages et clic sur une région non faits (points
-> ouverts, `DECISIONS.md` §10 point 28). Ce fichier peut être supprimé
-> quand Adrien aura répondu aux questions restantes.
+> ouverts, `DECISIONS.md` §10 point 28). **§12 (mobilisation
+> quotidienne) fait le 25/09/2026** — "mobiliser" cliquable retiré
+> (table, fonction, bouton), remplacé par `effort_national()` dérivé de
+> l'activité et des ressources nationales (migration corrective `0017`,
+> envoyée à Adrien, en attente de confirmation d'application) ; pondération
+> proposée par Claude Code et retenue par Adrien ; "avantages nationaux"
+> (Défense) pas construits, consignés en point ouvert (`DECISIONS.md`
+> §10 point 31). Détail dans `DECISIONS.md` §4, journal du Jalon 13. Ce
+> fichier peut être supprimé quand Adrien aura répondu aux questions
+> restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -334,3 +342,62 @@ colorées par population. Détail complet, source des tracés (Natural
 Earth, domaine public, gratuit) et découpage en jalon (proposé : "Jalon
 9 ter — La carte du pays") dans le document. Ne touche que la page
 Pays ; les autres pages gardent leur fond 3D actuel.
+
+## 12. Mobilisation quotidienne : correction d'une réponse d'Adrien (25/09/2026)
+
+**Contexte** : en travaillant le Jalon 13 (« France contre Allemagne »),
+tu as demandé à Adrien comment un citoyen contribue chaque jour à
+l'effort de guerre de son pays. Sa réponse a mené à ce qui est
+actuellement écrit dans
+`supabase/migrations/0016_jalon13_france_contre_allemagne.sql`
+(table `mobilisations`, fonction `mobiliser()`, effort compté par
+`resoudre_conflits_en_cours()` et `conflit_pays()`) et au bouton
+« Se mobiliser » (`pays.conflit.mobiliser`) de `src/app/pays/page.tsx` /
+`mobiliserAction()` dans `src/app/pays/actions.ts` — **une nouvelle
+action que chaque joueur doit cliquer une fois par jour pendant un
+conflit**, dont l'effort cumulé (nombre de clics) décide du résultat de
+la guerre. Adrien précise après coup qu'il a mal répondu à cette
+question : ce n'est **pas** ce qu'il voulait dire, et il s'en est rendu
+compte en la reformulant lui-même.
+
+**Correction** : la mobilisation quotidienne n'est **pas une action que
+le citoyen effectue en plus de ce qu'il fait déjà** — ce n'est pas un
+nouveau bouton à cliquer chaque jour du conflit. C'est le **pays** qui a
+des attributs et des ressources — ressources nationales (cahier des
+charges §10), avantages nationaux dont Défense (§13), activité
+quotidienne agrégée (§9) — et ce sont **ces valeurs déjà existantes ou
+déjà prévues** qui déterminent la force de mobilisation du pays chaque
+jour de conflit, pas un compteur de clics individuels.
+
+Concrètement, le citoyen continue de jouer normalement (se connecter,
+visiter, influencer, comme tous les autres jours) ; c'est **cette
+activité normale, agrégée au niveau du pays** (l'activité quotidienne
+suivie depuis les Jalons 8/8bis), combinée aux ressources et avantages
+nationaux du pays, qui *constitue* la mobilisation quotidienne du jour —
+pas une mécanique de guerre séparée avec sa propre table et son propre
+bouton.
+
+**À corriger dans le Jalon 13** :
+- retirer la table `mobilisations`, la fonction `mobiliser()`, l'action
+  serveur `mobiliserAction()` et le bouton « Se mobiliser »
+  (clé `pays.conflit.mobiliser`) ;
+- dans `resoudre_conflits_en_cours()` et `conflit_pays()`, calculer
+  l'effort quotidien de chaque camp à partir des statistiques
+  nationales déjà agrégées (activité quotidienne du pays, ressources
+  nationales, avantages nationaux type Défense/Industrie) plutôt que
+  d'un `count(*)` sur des clics individuels ;
+- le bonus défensif de 50 % pour le défenseur (déjà décidé, cahier des
+  charges) peut rester tel quel, appliqué cette fois sur le score national
+  plutôt que sur un total de mobilisations ;
+- si un ingrédient nécessaire n'existe pas encore (ex. avantages
+  nationaux, pas encore construits comme système), le signaler comme
+  point ouvert dans `DECISIONS.md` §10 plutôt que d'inventer une action
+  citoyenne de remplacement pour combler le manque.
+
+**Pourquoi ce n'était pas anodin** : une action « mobiliser » cliquable
+ajoute une nouvelle mécanique quotidienne au jeu, contraire à la boucle
+courte déjà fixée (`DECISIONS.md` §1 point 3), et n'est décrite nulle
+part dans le cahier des charges — le §29 (« en cas de guerre :
+mobilisation quotidienne... ») la liste comme un **ingrédient du
+calcul**, à côté de « activité quotidienne », pas comme une action
+séparée que le joueur doit accomplir volontairement.

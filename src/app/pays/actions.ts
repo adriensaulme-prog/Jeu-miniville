@@ -83,11 +83,16 @@ export async function proposerDecisionDiplomatique(formData: FormData) {
   revalidatePath("/pays");
 }
 
+const POSITIONS_VOTE_DIPLOMATIE = ["pour", "contre"] as const;
+
 /**
- * Soutient la proposition diplomatique en cours de son pays, une fois
- * par semaine — voir soutenir_decision_diplomatique() (Jalon 12).
+ * Vote pour ou contre la proposition diplomatique en cours de son pays,
+ * une fois par semaine — voir soutenir_decision_diplomatique() (Jalon
+ * 12, position pour/contre ajoutée au Jalon 13 : "le vote majoritaire
+ * des personnes de la nation déclenche l'action choisie", demande
+ * d'Adrien).
  */
-export async function soutenirDecisionDiplomatique() {
+export async function soutenirDecisionDiplomatique(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -97,10 +102,18 @@ export async function soutenirDecisionDiplomatique() {
     redirect("/connexion");
   }
 
-  const { error } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", { p_joueur_id: user.id });
+  const position = String(formData.get("position") ?? "");
+  if (!(POSITIONS_VOTE_DIPLOMATIE as readonly string[]).includes(position)) {
+    return;
+  }
 
-  // 23505 (déjà soutenu cette semaine), P0016 (aucune proposition) :
-  // pas de vraies erreurs, l'affichage se corrige au revalidate.
+  const { error } = await supabaseAdmin.rpc("soutenir_decision_diplomatique", {
+    p_joueur_id: user.id,
+    p_position: position,
+  });
+
+  // 23505 (déjà voté cette semaine), P0016 (aucune proposition) : pas
+  // de vraies erreurs, l'affichage se corrige au revalidate.
   if (error && !["23505", "P0016"].includes(error.code ?? "")) {
     console.error("soutenirDecisionDiplomatique a échoué :", error.message);
   }

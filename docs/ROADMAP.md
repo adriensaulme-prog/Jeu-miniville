@@ -148,7 +148,7 @@ de vue du joueur — le titre dit ce qui change pour lui.
   ouverts §10 point 28). Détail dans `DECISIONS.md` §4 — recette dans
   `docs/recette-jalon-9ter.md`.
 
-## Phase 4 — Le monde entre en scène
+## Phase 4 — Le monde entre en scène *(terminée)*
 
 - [x] **Jalon 12 — Décider à l'international.** Sur `/pays`, la
   présidente en exercice propose un pays cible + une catégorie
@@ -156,10 +156,14 @@ de vue du joueur — le titre dit ce qui change pour lui.
   soutiennent. Aucun effet de gameplay codé pour ces décisions (comme
   les ressources du Jalon 10) — laissé au Jalon 13. Détail dans
   `DECISIONS.md` §4 — recette dans `docs/recette-jalon-12.md`.
-- [ ] **Jalon 13 — France contre Allemagne.** Premier scénario de rivalité
-  internationale : coût en ressources, bonus défensif pour l'attaqué,
-  mobilisation quotidienne, résultat en fin de période. Scénario de test
-  explicitement prévu par le cahier des charges.
+- [x] **Jalon 13 — France contre Allemagne.** Premier scénario de rivalité
+  internationale : sur `/pays`, la décision diplomatique du Jalon 12 se
+  résout à la majorité pour/contre en fin de semaine ; une "rivalité"
+  adoptée déclenche un conflit de 7 jours (mobilisation quotidienne,
+  bonus défensif de 50 % pour le défenseur, résultat en fin de période).
+  Coût en ressources traité comme un instantané informatif, jamais
+  déduit (point ouvert §10 point 30). Détail dans `DECISIONS.md` §4 —
+  recette dans `docs/recette-jalon-13.md`.
 
 ## Phase 5 — Tenir la route
 
@@ -187,5 +191,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 12 terminé, avant le jalon 13
-"France contre Allemagne".*
+*Dernière mise à jour : 25/09/2026, jalon 13 terminé (fin de la Phase 4),
+avant le jalon 14 "Rester dans la légalité".*
