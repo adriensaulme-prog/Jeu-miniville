@@ -1326,6 +1326,106 @@ paquet toujours dans le budget (112 Ko pour `/pays`). Suite complète :
 
 ---
 
+### Correction hors-jalon : service worker actif en développement — 25/09/2026
+
+**Bug vécu et corrigé par Adrien lui-même** (`docs/A-INTEGRER.md` §9,
+intégré ici) : `localhost:3000` bloqué avec `ERR_FAILED` dans Chrome
+alors que le serveur `next dev` tournait bien. Cause :
+`RegisterServiceWorker` (`src/app/register-sw.tsx`) enregistrait
+`public/sw.js` même en développement ; les chunks et le HTML changent à
+chaque compilation/HMR, et le service worker servait une version
+périmée. Corrigé par Adrien : le service worker ne s'enregistre plus
+qu'en production (`process.env.NODE_ENV === "production"`) ; en
+développement, toute inscription ou cache résiduel d'une session
+antérieure est nettoyé automatiquement au chargement.
+
+**Ajouté par Claude Code à la demande d'Adrien** ("ajouter un test qui
+empêche la régression") : `tests/e2e/smoke.spec.ts` vérifie que
+`navigator.serviceWorker.getRegistrations()` reste vide après le
+chargement de `/` en développement. Geste de dépannage documenté dans
+`docs/GUIDE-METHODE.md` §9 pour un joueur qui aurait encore un service
+worker périmé enregistré depuis avant la correction.
+
+**Vérification rouge incomplète, notée honnêtement** : la sabotage
+manuel (retirer temporairement la garde `NODE_ENV`) n'a pas fait
+échouer le nouveau test dans ce sandbox — la registration du service
+worker par l'effet React ne se déclenchait pas de façon observable dans
+ce navigateur de test dans les quelques secondes disponibles, avec ou
+sans la garde (une registration manuelle directe depuis la page
+fonctionnait, elle). Le vrai bug d'Adrien impliquait un service worker
+*déjà* enregistré lors d'une session précédente, une condition qu'un
+navigateur Playwright fraîchement lancé ne reproduit pas naturellement.
+Le test reste une garde-fou raisonnable (il encode la règle attendue)
+mais n'a pas été confirmé rouge avant la correction, contrairement à la
+convention habituelle du projet — à revoir si l'occasion se présente.
+
+---
+
+### Jalon 10 — voter pour son pays — 25/09/2026
+
+**Contenu.** Sur `/pays`, section « Vote hebdomadaire » (visible
+uniquement pour son propre pays) : un vote par joueur et par semaine
+ISO parmi 4 catégories (Industrie / Technologie / Culture / Commerce,
+`docs/ROADMAP.md`), résultat affiché en pourcentages recalculés sur le
+total de la semaine — "proportionnel aux votes" au sens le plus
+littéral : chaque vote compte pour 1, la répartition entre catégories
+EST le résultat. « Ressources nationales » : stock cumulé par catégorie
+depuis le premier vote, jamais remis à zéro, visible pour n'importe
+quel pays consulté (pas seulement le sien).
+
+**Portée volontairement limitée, décidée sans attendre Adrien (point
+ouvert, §10) :** le cahier des charges dit "vote hebdomadaire de
+ressource, résultat proportionnel aux votes" et "ressources
+nationales", sans jamais préciser ce que ces ressources *font* une fois
+accumulées. Plutôt qu'inventer un effet de gameplay (bonus aux villes ?
+condition pour les décisions diplomatiques des Jalons 12/13 ?), ce
+jalon construit le vote et l'accumulation — utiles et testables seuls,
+comme l'a été l'"activité" du Jalon 9 avant d'avoir un usage. Voir le
+commentaire en tête de `supabase/migrations/0013_jalon10_voter_pour_son_pays.sql`.
+
+**Choix de conception notés au passage** :
+- Le pays n'est jamais reçu du client dans `voter_pays()` — résolu
+  depuis `users.country_id`, même principe que "ma ville" dans
+  `proposer_jumelage()` (Jalon 5) : on ne peut voter que pour son
+  propre pays, pas un pays choisi arbitrairement.
+- "Semaine" = lundi de la semaine ISO 8601 courante (UTC), via
+  `date_trunc('week', ...)` côté SQL et un équivalent JS testé
+  (`src/lib/game/semaineIso.ts`) côté page, pour que les deux
+  s'accordent sur "cette semaine" sans se passer la date calculée.
+- Nouveau code d'erreur `P0012` (catégorie de vote invalide) — premier
+  code libre après le `P0011` du Jalon 8.
+
+**Incident de vérification, sans lien avec le code applicatif** : même
+symptôme qu'au Jalon 9 (suite e2e rouge sur des jalons anciens et
+inchangés, bloqués à "se connecter"), cette fois avec un seul worker
+Playwright (donc pas la flakiness de concurrence déjà documentée) —
+cause identifiée : le serveur de dev tournait sans interruption depuis
+plusieurs heures à travers les Jalons 9 et 10, cache de compilation
+probablement corrompu par l'accumulation de recompilations (même classe
+de problème que documenté aux Jalons 6bis, 7bis, 8bis et 9). Redémarré,
+suite complète repassée au vert immédiatement, `--workers=1` y compris
+sur le test du Jalon 8 déjà identifié comme lourd (44.6s puis 41.8s,
+sous la limite).
+
+**Testé.** `tests/e2e/jalon10-voter-pour-son-pays.spec.ts` (nouveau,
+4 tests) : `resultats_vote_semaine` reflète exactement les votes de la
+semaine (delta connu, pourcentage recalculé vérifié) et
+`ressources_pays` les cumule ; un vote inséré directement sur une
+semaine passée compte dans `ressources_pays` mais pas dans
+`resultats_vote_semaine` de la semaine courante ; sabotage — un
+deuxième vote la même semaine est refusé (23505) et le premier vote
+n'est pas écrasé ; la page `/pays` permet de voter, affiche la
+confirmation et le résultat, masque la section de vote pour un pays
+qu'on ne représente pas. Un vrai bug de test trouvé et corrigé en
+route : `getByText("Culture", { exact: true })` visait n'importe quelle
+occurrence du mot sur la page (résultats et ressources l'affichent
+aussi), pas seulement le message de confirmation — corrigé en ciblant
+le message précis puis `toContainText`. Poids du paquet toujours dans
+le budget (113 Ko pour `/pays`). Suite complète : 69 tests unitaires +
+41 tests e2e, verte à `--workers=1`.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -1652,3 +1752,12 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     normalisée + index unique, vérification à la création, migration de
     dédoublonnage des données existantes, écran de rattrapage) ou
     intégré à un prochain jalon proche.
+27. **Ressources nationales : aucun effet de gameplay pour l'instant.**
+    Le Jalon 10 construit le vote hebdomadaire et l'accumulation des
+    ressources par catégorie (Industrie/Techno/Culture/Commerce),
+    visibles sur `/pays`, mais le cahier des charges ne dit nulle part
+    ce que ces ressources *font* une fois accumulées — rien codé, décision
+    volontairement pas prise seul (`DECISIONS.md` §4, journal du
+    Jalon 10). → **À trancher par Adrien** : bonus aux villes du pays ?
+    condition ou ressource consommée par les décisions diplomatiques des
+    Jalons 12/13 ? autre chose ?

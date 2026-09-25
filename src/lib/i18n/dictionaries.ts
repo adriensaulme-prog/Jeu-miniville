@@ -198,6 +198,15 @@ export const dictionaries = {
     "pays.voirToutesLesVilles": "Voir toutes les villes de ce pays →",
     "pays.aucuneVille": "Aucune ville dans ce pays pour l'instant.",
     "pays.voirMonPays": "Mon pays :",
+    "pays.categorie.industrie": "Industrie",
+    "pays.categorie.techno": "Technologie",
+    "pays.categorie.culture": "Culture",
+    "pays.categorie.commerce": "Commerce",
+    "pays.vote.titre": "Vote hebdomadaire",
+    "pays.vote.instruction": "Choisis la priorité de ton pays cette semaine :",
+    "pays.vote.dejaVote": "Tu as voté pour",
+    "pays.resultats.titre": "Résultats de cette semaine",
+    "pays.ressources.titre": "Ressources nationales",
 
     "region.titre": "Choisis ta région",
     "region.introduction":
@@ -399,6 +408,15 @@ export const dictionaries = {
     "pays.voirToutesLesVilles": "See all cities in this country →",
     "pays.aucuneVille": "No city in this country yet.",
     "pays.voirMonPays": "My country:",
+    "pays.categorie.industrie": "Industry",
+    "pays.categorie.techno": "Technology",
+    "pays.categorie.culture": "Culture",
+    "pays.categorie.commerce": "Commerce",
+    "pays.vote.titre": "Weekly vote",
+    "pays.vote.instruction": "Choose your country's priority this week:",
+    "pays.vote.dejaVote": "You voted for",
+    "pays.resultats.titre": "This week's results",
+    "pays.ressources.titre": "National resources",
 
     "region.titre": "Pick your region",
     "region.introduction":

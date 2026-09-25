@@ -242,6 +242,14 @@ Règles :
   référence — jamais de destruction permanente d'une ville par un seul
   joueur, l'activité compte plus que le nombre de comptes, les petits pays
   doivent pouvoir gagner par l'alliance et la stratégie.
+- **`localhost:3000` bloqué avec `ERR_FAILED` dans Chrome** (pas
+  `ERR_CONNECTION_REFUSED` : le serveur `next dev` tourne bien) : signe
+  d'un service worker resté enregistré depuis une session antérieure au
+  25/09/2026 (avant que `RegisterServiceWorker` évite de s'enregistrer
+  en développement, voir `DECISIONS.md` §4). Il met en cache une version
+  périmée des chunks. Dépannage dans Chrome : DevTools > Application >
+  Service Workers > **Unregister**, puis Application > Storage >
+  **Clear site data**, puis recharger.
 
 ---
 

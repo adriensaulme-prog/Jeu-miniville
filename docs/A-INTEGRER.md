@@ -14,7 +14,11 @@ journal existant, puis ce fichier peut être supprimé.*
 > ouvertes) ;
 > **§8 (noms uniques) pas fait** malgré la demande "à faire dans le
 > Jalon 8" — le contenu réel du jalon a suivi `docs/CLASSEMENTS.md`
-> plutôt que ce §8, voir `DECISIONS.md` §10 point 26 ; **§10 (dépenses
+> plutôt que ce §8, voir `DECISIONS.md` §10 point 26 ; **§9 (service
+> worker) fait le 25/09/2026** — correctif d'Adrien conservé, test de
+> non-régression ajouté, geste de dépannage documenté dans
+> `GUIDE-METHODE.md` §9 (voir `DECISIONS.md` §4, "Correction hors-jalon") ;
+> **§10 (dépenses
 > sous contrôle) fait le 25/09/2026** — règle §1 point 1 réécrite,
 > nouveau tableau "dépenses en cours" en §7. Ce fichier peut être
 > supprimé quand Adrien aura répondu aux questions restantes.

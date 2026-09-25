@@ -126,9 +126,12 @@ de vue du joueur — le titre dit ce qui change pour lui.
   volée) — corrige au passage la tuile Activité de Ma ville, bloquée à
   0 depuis le Jalon 1. Détail dans `DECISIONS.md` §4 — recette dans
   `docs/recette-jalon-9.md`.
-- [ ] **Jalon 10 — Voter pour son pays.** Vote hebdomadaire de ressource
-  (Industrie / Techno / Culture / Commerce), résultat proportionnel aux
-  votes, attribution des ressources nationales.
+- [x] **Jalon 10 — Voter pour son pays.** Vote hebdomadaire de ressource
+  (Industrie / Techno / Culture / Commerce) sur `/pays`, résultat
+  proportionnel aux votes, ressources nationales accumulées. Aucun
+  effet de gameplay codé pour ces ressources (point ouvert §10 point 27
+  — le cahier des charges ne le précise pas). Détail dans
+  `DECISIONS.md` §4 — recette dans `docs/recette-jalon-10.md`.
 - [ ] **Jalon 11 — Le président malgré lui.** La ville #1 du pays devient
   automatiquement présidente, apparition dans un historique des
   présidents.
@@ -170,5 +173,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 9 terminé, avant le jalon 10
-"Voter pour son pays".*
+*Dernière mise à jour : 25/09/2026, jalon 10 terminé, avant le jalon 11
+"Le président malgré lui".*

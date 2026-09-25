@@ -256,7 +256,7 @@ quartiers :
 - 🌳 bloc loisirs : parc, terrains de sport, puis stade / salle de
   spectacle ;
 - 🏥 bloc services : école, caserne de pompiers, puis hôpital ;
-- 🔬 bloc recherche : campus, laboratoires ;
+- 🔬 bloc recherche : école puis université, campus, laboratoires ;
 - ⚡ énergie : **hors de la ville**, dans la campagne autour (panneaux
   solaires, éoliennes, puis centrale), en nombre proportionnel aux
   points ;

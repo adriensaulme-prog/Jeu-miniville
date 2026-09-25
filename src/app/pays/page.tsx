@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
+import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
+import { debutSemaineIso } from "@/lib/game/semaineIso";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { SelecteurPays } from "./SelecteurPays";
+import { voterPays } from "./actions";
 
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 const TAILLE_TOP = 10;
@@ -17,6 +20,18 @@ type StatsPays = {
 };
 
 type VillePrincipale = { id: string; nom: string; population: number };
+
+type Categorie = "industrie" | "techno" | "culture" | "commerce";
+const CATEGORIES: Categorie[] = ["industrie", "techno", "culture", "commerce"];
+const LABEL_CATEGORIE: Record<Categorie, DictionaryKey> = {
+  industrie: "pays.categorie.industrie",
+  techno: "pays.categorie.techno",
+  culture: "pays.categorie.culture",
+  commerce: "pays.categorie.commerce",
+};
+
+type ResultatVote = { categorie: Categorie; nb_votes: number; pourcentage: number };
+type RessourcePays = { categorie: Categorie; total: number };
 
 export default async function PaysPage({
   searchParams,
@@ -91,6 +106,29 @@ export default async function PaysPage({
     .limit(TAILLE_TOP);
   const villesPrincipales = (villesPrincipalesBrutes ?? []) as VillePrincipale[];
 
+  const { data: resultatsBrutes } = await supabase.rpc("resultats_vote_semaine", {
+    p_country_id: countryId,
+    p_semaine: null,
+  });
+  const resultats = (resultatsBrutes ?? []) as ResultatVote[];
+
+  const { data: ressourcesBrutes } = await supabase.rpc("ressources_pays", { p_country_id: countryId });
+  const ressources = (ressourcesBrutes ?? []) as RessourcePays[];
+
+  // Le vote n'est proposé que pour son propre pays — voter pour un pays
+  // qu'on ne représente pas n'aurait pas de sens.
+  const estMonPays = countryId === maVille.country_id;
+  let monVoteCetteSemaine: Categorie | null = null;
+  if (estMonPays) {
+    const { data: monVote } = await supabase
+      .from("votes_pays")
+      .select("categorie")
+      .eq("joueur_id", user.id)
+      .eq("semaine", debutSemaineIso())
+      .maybeSingle();
+    monVoteCetteSemaine = (monVote?.categorie as Categorie | undefined) ?? null;
+  }
+
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
       <SincroniserScene seed={maVilleId} populationMax={maVille.population_max} pays={pays3D} />
@@ -150,6 +188,62 @@ export default async function PaysPage({
         <p className="note">
           <Link href={`/villes?pays=${countryId}`}>{traduire(locale, "pays.voirToutesLesVilles")}</Link>
         </p>
+
+        {estMonPays ? (
+          <>
+            <div className="head-row">
+              <h2 className="h3">{traduire(locale, "pays.vote.titre")}</h2>
+            </div>
+            {monVoteCetteSemaine ? (
+              <p className="note">
+                {traduire(locale, "pays.vote.dejaVote")} <b>{traduire(locale, LABEL_CATEGORIE[monVoteCetteSemaine])}</b>.
+              </p>
+            ) : (
+              <>
+                <p className="note">{traduire(locale, "pays.vote.instruction")}</p>
+                <div className="row">
+                  {CATEGORIES.map((c) => (
+                    <form key={c} action={voterPays}>
+                      <input type="hidden" name="categorie" value={c} />
+                      <button className="btn small" type="submit">
+                        {traduire(locale, LABEL_CATEGORIE[c])}
+                      </button>
+                    </form>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : null}
+
+        <div className="head-row">
+          <h2 className="h3">{traduire(locale, "pays.resultats.titre")}</h2>
+        </div>
+        <ol className="list">
+          {resultats.map((r) => (
+            <li key={r.categorie}>
+              <span className="rowbtn">
+                <span className="nm">{traduire(locale, LABEL_CATEGORIE[r.categorie])}</span>
+                <span className="pp">{r.pourcentage}%</span>
+                <span className="meta">
+                  {new Intl.NumberFormat(locale).format(r.nb_votes)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="head-row">
+          <h2 className="h3">{traduire(locale, "pays.ressources.titre")}</h2>
+        </div>
+        <div className="tiles">
+          {ressources.map((r) => (
+            <div key={r.categorie} className="tile">
+              <b>{new Intl.NumberFormat(locale).format(r.total)}</b>
+              <span>{traduire(locale, LABEL_CATEGORIE[r.categorie])}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
