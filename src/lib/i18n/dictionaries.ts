@@ -207,6 +207,10 @@ export const dictionaries = {
     "pays.vote.dejaVote": "Tu as voté pour",
     "pays.resultats.titre": "Résultats de cette semaine",
     "pays.ressources.titre": "Ressources nationales",
+    "pays.president.depuis": "depuis",
+    "pays.president.historique": "Historique des présidents",
+    "pays.president.aucunHistorique": "Pas encore de président élu.",
+    "pays.president.enCours": "en cours",
 
     "region.titre": "Choisis ta région",
     "region.introduction":
@@ -417,6 +421,10 @@ export const dictionaries = {
     "pays.vote.dejaVote": "You voted for",
     "pays.resultats.titre": "This week's results",
     "pays.ressources.titre": "National resources",
+    "pays.president.depuis": "since",
+    "pays.president.historique": "Presidential history",
+    "pays.president.aucunHistorique": "No president yet.",
+    "pays.president.enCours": "ongoing",
 
     "region.titre": "Pick your region",
     "region.introduction":

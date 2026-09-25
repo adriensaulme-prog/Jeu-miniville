@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
 import { SincroniserScene } from "@/components/SincroniserScene";
@@ -32,6 +33,14 @@ const LABEL_CATEGORIE: Record<Categorie, DictionaryKey> = {
 
 type ResultatVote = { categorie: Categorie; nb_votes: number; pourcentage: number };
 type RessourcePays = { categorie: Categorie; total: number };
+
+type MandatBrut = {
+  ville_id: string;
+  debut: string;
+  fin: string | null;
+  ville: { nom: string } | { nom: string }[] | null;
+};
+type Mandat = { villeId: string; nom: string; debut: string; fin: string | null };
 
 export default async function PaysPage({
   searchParams,
@@ -92,6 +101,23 @@ export default async function PaysPage({
   const countryId = paysDemande && idsValides.has(paysDemande) ? paysDemande : maVille.country_id;
   const nomPaysAffiche = (listePays ?? []).find((p) => p.id === countryId)?.nom ?? countryId;
 
+  // Tient à jour l'historique des présidences pour le pays consulté
+  // (Jalon 11) — idempotente, voir le commentaire dans /ville/page.tsx.
+  await supabaseAdmin.rpc("verifier_president", { p_country_id: countryId });
+
+  const { data: mandatsBrutes } = await supabase
+    .from("presidents")
+    .select("ville_id, debut, fin, ville:cities(nom)")
+    .eq("country_id", countryId)
+    .order("debut", { ascending: false });
+  const mandats: Mandat[] = ((mandatsBrutes ?? []) as MandatBrut[]).map((m) => ({
+    villeId: m.ville_id,
+    nom: (Array.isArray(m.ville) ? m.ville[0] : m.ville)?.nom ?? "",
+    debut: m.debut,
+    fin: m.fin,
+  }));
+  const mandatActuel = mandats.find((m) => m.fin === null) ?? null;
+
   const { data: statsBrutes, error: erreurStats } = await supabase.rpc("stats_pays", {
     p_country_id: countryId,
   });
@@ -143,6 +169,14 @@ export default async function PaysPage({
         <div className="row">
           <SelecteurPays locale={locale} paysActuel={countryId} pays={(listePays ?? []) as { id: string; nom: string }[]} />
         </div>
+
+        {mandatActuel ? (
+          <p className="note">
+            <span className="badge pres">{traduire(locale, "classement.president")}</span>{" "}
+            <b>{mandatActuel.nom}</b> · {traduire(locale, "pays.president.depuis")}{" "}
+            {new Intl.DateTimeFormat(locale).format(new Date(mandatActuel.debut))}
+          </p>
+        ) : null}
 
         <div className="tiles">
           <div className="tile">
@@ -220,14 +254,13 @@ export default async function PaysPage({
           <h2 className="h3">{traduire(locale, "pays.resultats.titre")}</h2>
         </div>
         <ol className="list">
-          {resultats.map((r) => (
+          {resultats.map((r, i) => (
             <li key={r.categorie}>
               <span className="rowbtn">
+                <span className="rk">{i + 1}</span>
                 <span className="nm">{traduire(locale, LABEL_CATEGORIE[r.categorie])}</span>
                 <span className="pp">{r.pourcentage}%</span>
-                <span className="meta">
-                  {new Intl.NumberFormat(locale).format(r.nb_votes)}
-                </span>
+                <span className="meta">{new Intl.NumberFormat(locale).format(r.nb_votes)}</span>
               </span>
             </li>
           ))}
@@ -244,6 +277,31 @@ export default async function PaysPage({
             </div>
           ))}
         </div>
+
+        <div className="head-row">
+          <h2 className="h3">{traduire(locale, "pays.president.historique")}</h2>
+        </div>
+        {mandats.length === 0 ? (
+          <p className="empty">{traduire(locale, "pays.president.aucunHistorique")}</p>
+        ) : (
+          <ol className="list">
+            {mandats.map((m, i) => (
+              <li key={`${m.villeId}-${m.debut}`}>
+                <span className="rowbtn">
+                  <span className="rk">{mandats.length - i}</span>
+                  <span className="nm">{m.nom}</span>
+                  <span className="meta">
+                    {new Intl.DateTimeFormat(locale).format(new Date(m.debut))}
+                    {m.fin ? ` – ${new Intl.DateTimeFormat(locale).format(new Date(m.fin))}` : null}
+                    {m.fin === null ? (
+                      <span className="badge pres">{traduire(locale, "pays.president.enCours")}</span>
+                    ) : null}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </main>
   );

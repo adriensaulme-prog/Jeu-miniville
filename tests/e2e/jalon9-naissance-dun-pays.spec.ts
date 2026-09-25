@@ -151,7 +151,10 @@ test.describe("Jalon 9 — naissance d'un pays", () => {
       await page.getByRole("link", { name: /Mon pays/ }).click();
       await expect(page).toHaveURL(/\/pays$/, { timeout: 20_000 });
       await expect(page.getByRole("heading", { name: "France" })).toBeVisible();
-      await expect(page.getByText(joueur.villeNom)).toBeVisible(); // dans les villes principales
+      // Le nom de ville apparaît aussi dans "Président actuel" (Jalon 11,
+      // cette ville a la plus haute population) : on vise le lien de la
+      // liste "villes principales" précisément.
+      await expect(page.getByRole("link", { name: new RegExp(joueur.villeNom) })).toBeVisible();
 
       // Changer de pays via le sélecteur.
       await page.getByLabel("Voir un autre pays").selectOption({ label: "Allemagne" });

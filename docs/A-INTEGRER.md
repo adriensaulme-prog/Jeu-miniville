@@ -20,8 +20,11 @@ journal existant, puis ce fichier peut être supprimé.*
 > `GUIDE-METHODE.md` §9 (voir `DECISIONS.md` §4, "Correction hors-jalon") ;
 > **§10 (dépenses
 > sous contrôle) fait le 25/09/2026** — règle §1 point 1 réécrite,
-> nouveau tableau "dépenses en cours" en §7. Ce fichier peut être
-> supprimé quand Adrien aura répondu aux questions restantes.
+> nouveau tableau "dépenses en cours" en §7 ; **§11 (carte du pays)
+> consignée en ROADMAP.md le 25/09/2026** comme "Jalon 9 ter", pas
+> encore codée (`/pays` garde son fond 3D actuel jusqu'à ce jalon).
+> Ce fichier peut être supprimé quand Adrien aura répondu aux
+> questions restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -315,3 +318,18 @@ que Supabase (nécessite un nom de domaine, ~10-15 €/an, + un service
 d'envoi avec palier gratuit). Proposition détaillée à venir dans
 `docs/AUTHENTIFICATION.md` une fois qu'Adrien aura choisi un nom de jeu
 (le domaine en dépend) et un service d'e-mails.
+
+## 11. La carte du pays, pas la ville en 3D (demande d'Adrien, 25/09/2026)
+
+Proposition complète dans `docs/CARTE-DU-PAYS.md`. **Corrige un choix
+déjà fait aux Jalons 9 et 10** : la page Pays affiche aujourd'hui la
+ville du joueur en 3D en fond (`SincroniserScene` dans
+`src/app/pays/page.tsx`), comme toutes les autres pages. Adrien ne veut
+pas de ville vue du ciel pour cette page, mais une **carte du pays**.
+
+**Style et couleur déjà validés par Adrien**, pas de question bloquante :
+carte illustrée façon jeu (pas une carte réaliste/satellite), régions
+colorées par population. Détail complet, source des tracés (Natural
+Earth, domaine public, gratuit) et découpage en jalon (proposé : "Jalon
+9 ter — La carte du pays") dans le document. Ne touche que la page
+Pays ; les autres pages gardent leur fond 3D actuel.

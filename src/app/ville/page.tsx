@@ -80,6 +80,14 @@ export default async function VillePage() {
   const rang = (nbVillesDevant ?? 0) + 1;
   const president = rang === 1;
 
+  // Tient à jour l'historique des présidences (Jalon 11) — idempotente,
+  // sans effet si la ville n°1 du pays n'a pas changé depuis le dernier
+  // appel. Le badge "Président" ci-dessus reste calculé en direct sur
+  // le rang (toujours exact) ; cette table ne sert qu'à retenir
+  // "depuis quand" et les mandats précédents (voir DECISIONS.md §4,
+  // Jalon 11).
+  await supabaseAdmin.rpc("verifier_president", { p_country_id: ville.country_id });
+
   // Activité (7j) calculée à la volée (Jalon 9) : la colonne
   // cities.activite n'a jamais eu de vraie définition (toujours 0 pour
   // une ville réelle, voir DECISIONS.md §4, journal du Jalon 9).

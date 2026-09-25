@@ -1426,6 +1426,55 @@ le budget (113 Ko pour `/pays`). Suite complète : 69 tests unitaires +
 
 ---
 
+### Jalon 11 — le président malgré lui — 25/09/2026
+
+**Contenu.** Sur `/pays` : « Présidente actuelle : [ville] · depuis
+[date] » et une section « Historique des présidents » (mandats passés
+et en cours, plus récent en premier). Le badge "Président" existant
+depuis le Jalon 7 (rang #1 du pays, calculé en direct sur `/ville` et
+`/villes`) ne change pas — il reste la source de vérité pour "qui est
+président *maintenant*", toujours exact. Ce jalon ajoute seulement la
+mémoire de *depuis quand* et des mandats précédents
+(`presidents`/`verifier_president()`), tenue à jour par une
+réconciliation idempotente appelée à chaque affichage de `/ville` (son
+propre pays) ou `/pays` (le pays consulté) — même principe que
+`reclamer_bonus_jumelages()` au Jalon 5 : pas de cron, pas de trigger
+sur chaque action qui change la population.
+
+**Départage à population égale** : la ville la plus ancienne
+(`created_at`) reste présidente — comportement stable, jamais
+d'oscillation entre deux villes strictement à égalité.
+
+**Bug trouvé en testant à l'œil, pas dans ce jalon mais dans le
+Jalon 10** : la section "Résultats de cette semaine" écrasait les noms
+de catégorie ("I...", "T..." au lieu de "Industrie", "Technologie") —
+`list .rowbtn` (CSS) attend une grille à 3 colonnes fixes (`rk` 26px,
+`nm` flexible, `pp` auto) ; cette section n'avait pas de `span.rk`, donc
+`nm` se retrouvait placé dans la première colonne (26px) par le
+placement automatique de la grille. Corrigé en ajoutant le `rk` manquant
+(numéro d'ordre 1-4). Repéré uniquement parce que ce jalon-ci a rouvert
+`/pays` pour vérifier visuellement l'ajout du président — jamais
+remarqué avant.
+
+**Testé.** `tests/e2e/jalon11-le-president-malgre-lui.spec.ts` (nouveau,
+3 tests) : `verifier_president` élit la ville n°1 (populations très
+hautes pour dominer sans ambiguïté toute donnée déjà présente),
+idempotent sur un appel répété sans changement de rang (même mandat,
+même date de début), puis bascule correctement (ancien mandat fermé,
+nouveau ouvert) quand une autre ville dépasse la présidente ; à
+population strictement égale, la ville la plus ancienne reste
+présidente ; la page `/pays` affiche le président actuel et
+l'historique. Un vrai bug trouvé dans un test **du Jalon 9** en
+relançant la suite complète : l'ajout de "Présidente actuelle" fait
+apparaître le nom de la ville une fois de plus sur `/pays`, cassant une
+assertion `getByText` non assez précise (3 correspondances au lieu de
+2) — corrigée en ciblant le lien de la liste des villes principales.
+Poids du paquet toujours dans le budget (`/pays` inchangé, pas de JS
+client ajouté). Suite complète : 69 tests unitaires + 44 tests e2e,
+verte à `--workers=1`, serveur de dev fraîchement démarré.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

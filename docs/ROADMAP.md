@@ -132,9 +132,21 @@ de vue du joueur — le titre dit ce qui change pour lui.
   effet de gameplay codé pour ces ressources (point ouvert §10 point 27
   — le cahier des charges ne le précise pas). Détail dans
   `DECISIONS.md` §4 — recette dans `docs/recette-jalon-10.md`.
-- [ ] **Jalon 11 — Le président malgré lui.** La ville #1 du pays devient
-  automatiquement présidente, apparition dans un historique des
-  présidents.
+- [x] **Jalon 11 — Le président malgré lui.** La ville n°1 du pays reste
+  présidente (badge déjà en place depuis le Jalon 7, calculé en
+  direct) ; nouveauté : historique des mandats sur `/pays` ("depuis
+  quand", mandats précédents), tenu à jour par une réconciliation
+  idempotente. Détail dans `DECISIONS.md` §4 — recette dans
+  `docs/recette-jalon-11.md`.
+- [ ] **Jalon 9 ter — La carte du pays.** Remplace le fond 3D de la
+  page Pays (ville du joueur vue du ciel, comme les autres pages) par
+  une carte illustrée du pays, régions colorées par population,
+  pastilles pour la ville du joueur / la présidente / la n°1 de chaque
+  région, repères de jumelages internationaux en bord de carte. Style
+  et couleur validés par Adrien, détails d'implémentation laissés à
+  Claude Code (`docs/CARTE-DU-PAYS.md`, demande d'Adrien, 25/09/2026).
+  Scindé après coup des Jalons 9 et 10, même logique que 6/6bis et
+  7/7bis.
 
 ## Phase 4 — Le monde entre en scène
 
@@ -173,5 +185,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 10 terminé, avant le jalon 11
-"Le président malgré lui".*
+*Dernière mise à jour : 25/09/2026, jalon 11 terminé, avant le jalon
+9 ter "La carte du pays" ou le jalon 12 "Décider à l'international".*
