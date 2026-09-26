@@ -47,6 +47,17 @@ async function supprimerCompte(userId: string) {
   await supabaseAdmin.auth.admin.deleteUser(userId);
 }
 
+/** Recule le timestamp des actions AntiVille de l'attaquant pour simuler
+ * que le délai anti-rafale d'une seconde (Jalon 14) est écoulé — sans
+ * quoi enchaîner plusieurs actions dans une même boucle de test serait
+ * refusé (P0020) avant d'atteindre la protection/le quota testés ici. */
+async function debloquerDelaiAntiVille(attaquantId: string) {
+  await supabaseAdmin
+    .from("actions_antiville")
+    .update({ created_at: new Date(Date.now() - 2000).toISOString() })
+    .eq("attaquant_id", attaquantId);
+}
+
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 4 — rivalités de quartier", () => {
@@ -162,6 +173,7 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
       expect(premiere.error).toBeNull();
       expect(premiere.data?.effet_reduit).toBe(false);
 
+      await debloquerDelaiAntiVille(attaquant.userId);
       const deuxieme = await supabaseAdmin.rpc("lancer_action_antiville", {
         p_attaquant_id: attaquant.userId,
         p_ville_id: cible.villeId,
@@ -170,6 +182,7 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
       expect(deuxieme.error).toBeNull();
       expect(deuxieme.data?.effet_reduit).toBe(true);
 
+      await debloquerDelaiAntiVille(attaquant.userId);
       const troisieme = await supabaseAdmin.rpc("lancer_action_antiville", {
         p_attaquant_id: attaquant.userId,
         p_ville_id: cible.villeId,
@@ -201,6 +214,7 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
       for (let i = 0; i < 3; i++) {
         const cible = await creerCompteAvecVille(`cible-quota4-${i}`);
         cibles.push({ userId: cible.userId, villeId: cible.villeId });
+        await debloquerDelaiAntiVille(attaquant.userId);
         const { error } = await supabaseAdmin.rpc("lancer_action_antiville", {
           p_attaquant_id: attaquant.userId,
           p_ville_id: cible.villeId,
@@ -211,6 +225,7 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
 
       const quatrieme = await creerCompteAvecVille("cible-quota4-4e");
       cibles.push({ userId: quatrieme.userId, villeId: quatrieme.villeId });
+      await debloquerDelaiAntiVille(attaquant.userId);
       const { error: erreurQuota } = await supabaseAdmin.rpc("lancer_action_antiville", {
         p_attaquant_id: attaquant.userId,
         p_ville_id: quatrieme.villeId,

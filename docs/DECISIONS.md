@@ -1884,6 +1884,87 @@ navigation trop lente a fait échouer un test différent à chaque fois
 à plusieurs reprises dans ce journal (Jalons 9/10/11/9 ter/12/13), pas
 creusée davantage ici faute de lien avec ce jalon.
 
+### Jalon 14 — rester dans la légalité — 26/09/2026
+
+**Contenu.** Cahier des charges §26 (anti-triche), quatre volets :
+« toutes les actions importantes validées côté serveur », « une seule
+connexion par joueur et par ville sur la période quotidienne prévue »,
+« détection des comportements automatisés et répétitifs », « protection
+contre les créations massives de comptes » et « limitation du
+multi-compte abusif ». Portée volontairement cadrée avec Adrien avant
+de coder (deux questions posées, même démarche qu'au Jalon 13) plutôt
+que d'inventer une réponse à un chapitre aussi vaste et sensible (vie
+privée, faux positifs) :
+
+- **Validation serveur systématique** : **audit complet** de toutes les
+  fonctions SQL `security definer` des 20 migrations (délégué à un
+  agent d'exploration, rapport intégral conservé dans l'historique de
+  session) — chaque fonction ayant un paramètre "qui agit"
+  (`p_joueur_id`, `p_visiteur_id`, `p_attaquant_id`...) vérifie bien
+  `auth.uid() is not null and auth.uid() <> p_xxx_id` (code `P0007`
+  depuis le correctif du Jalon 4) ; aucune fonction n'accepte une
+  valeur numérique de jeu (population, influence, perte, effort) du
+  client sans la recalculer serveur ; tous les paramètres texte
+  (catégorie, type d'action, position de vote) sont validés contre une
+  whitelist avant usage ; aucune table de jeu n'a de policy RLS
+  INSERT/UPDATE/DELETE ouverte à `anon`/`authenticated` — 15 policies
+  trouvées, toutes en lecture seule. **Aucune anomalie trouvée.**
+  Seule vraie trouvaille : la fonction/table `mobiliser`/`mobilisations`
+  du Jalon 13, déjà retirée par le correctif du même jalon (rien à
+  refaire ici, juste confirmé absente).
+- **Une seule connexion par jour** : couvert depuis le Jalon 2, nuancé
+  sciemment par le Jalon 13 bis (jusqu'à 3/jour avec délai d'une heure,
+  déviation assumée et documentée — voir son propre journal). Rien de
+  nouveau ici.
+- **Détection de comportements automatisés/répétitifs** : **délai
+  anti-rafale d'une seconde** entre deux actions du même type par le
+  même joueur, sur `influencer_ville()` et `lancer_action_antiville()`
+  (migration `0020`, nouveau code `P0020`, partagé entre les deux
+  fonctions — même principe que `P0001`, déjà réutilisé pour plusieurs
+  quotas distincts dans ce projet). Ce sont les deux seules actions
+  répétables plusieurs fois par jour sans délai propre : Visiter a déjà
+  son délai d'une heure (Jalon 13 bis), les actions hebdomadaires (vote,
+  décision diplomatique) n'ont pas ce risque avec une seule occurrence
+  par semaine. **Explicitement pas une heuristique comportementale** —
+  juste de quoi bloquer un script qui enchaîne des appels en boucle sans
+  délai, jamais perceptible par un humain qui navigue normalement entre
+  deux villes. Décision d'Adrien après question posée : pas d'ambition
+  plus poussée pour ce jalon.
+- **Créations massives de comptes / multi-compte abusif** : **aucun
+  signal technique ajouté**, décision explicite d'Adrien après question
+  posée — la règle "un compte = un email vérifié (Supabase Auth) = une
+  ville" suffit pour ce projet à cette échelle. Pas de tracking IP ni
+  d'empreinte navigateur : coût de complexité et de vie privée jugé
+  disproportionné, et le rate-limiting natif de Supabase Auth sur les
+  inscriptions existe déjà côté plateforme sans code supplémentaire.
+
+**Écart assumé** : le "délai d'une seconde" a cassé plusieurs tests
+existants qui enchaînaient des actions en rafale via l'API service_role
+pour construire leurs scénarios (Jalons 3 et 4 — boucles de 3 à 6
+appels du même joueur) ; corrigé en reculant explicitement le
+`created_at` des actions précédentes entre chaque appel de boucle
+(même pattern que le déblocage de délai du Jalon 13 bis), pas en
+affaiblissant le garde-fou.
+
+**Testé.** `tests/e2e/jalon14-rester-dans-la-legalite.spec.ts` (nouveau,
+3 tests) : deux actions d'influence trop rapprochées refusées (P0020),
+débloquées après recul du délai, sans effet de la tentative refusée ;
+même vérification pour AntiVille ; le délai est propre à chaque joueur
+(deux joueurs distincts agissent sans se gêner). `jalon3-peser-socialement.spec.ts`
+et `jalon4-rivalites-de-quartier.spec.ts` mis à jour pour débloquer le
+délai entre leurs appels de boucle existants (7 tests au total sur ces
+deux fichiers, tous verts) — au passage, le premier test de
+`jalon3-peser-socialement.spec.ts` a reçu le même bump de délai de
+connexion que tous les autres fichiers e2e du projet (oublié à
+l'origine, comme pour `jalon2` au Jalon 13 bis). Suite complète : 73
+tests unitaires + 56 tests e2e. Poids du paquet inchangé (aucun
+changement de composant client). Croisé en route, sans rapport avec ce
+jalon : sur la suite complète, une connexion lente ou une session
+navigateur fermée en cours de route a fait échouer un test des Jalons 8
+et 9 (jamais `/villes`, Influence ou AntiVille) — même famille de
+flakiness "serveur de dev" déjà documentée à plusieurs reprises dans ce
+journal (Jalons 9/10/11/9 ter/12/13/13 bis), pas creusée davantage ici.
+
 ---
 
 ## §5. i18n

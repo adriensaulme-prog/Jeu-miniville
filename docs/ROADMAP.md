@@ -174,9 +174,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## Phase 5 — Tenir la route
 
-- [ ] **Jalon 14 — Rester dans la légalité.** Anti-triche côté serveur
-  systématique : validation serveur de toutes les actions sensibles,
-  limitation multi-compte, détection de comportements automatisés/répétitifs.
+- [x] **Jalon 14 — Rester dans la légalité.** Anti-triche côté serveur
+  (cahier des charges §26) : audit complet des fonctions SQL sensibles
+  (aucune anomalie trouvée), délai anti-rafale d'une seconde entre deux
+  actions du même type (Influencer, AntiVille), pas de nouveau signal
+  technique pour le multi-compte (décision d'Adrien — un compte = un
+  email vérifié = une ville suffit à cette échelle). Détail dans
+  `DECISIONS.md` §4.
 - [ ] **Jalon 15 — Jouable partout.** Passage en PWA installable (manifest,
   service worker, mode hors-ligne minimal), vérification manuelle sur
   mobile (Android + iOS via navigateur) et PC.
@@ -198,5 +202,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 26/09/2026, jalon 13 bis terminé (fin de la Phase 4),
-avant le jalon 14 "Rester dans la légalité".*
+*Dernière mise à jour : 26/09/2026, jalon 14 terminé, avant le jalon 15
+"Jouable partout".*

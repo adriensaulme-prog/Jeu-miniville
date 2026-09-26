@@ -44,12 +44,28 @@ async function supprimerCompte(userId: string) {
   await supabaseAdmin.auth.admin.deleteUser(userId);
 }
 
+/** Recule le timestamp des actions d'influence du joueur pour simuler
+ * que le délai anti-rafale d'une seconde (Jalon 14) est écoulé, sans
+ * quoi enchaîner plusieurs actions dans une même boucle de test serait
+ * refusé (P0020) avant même d'atteindre le quota testé ici. */
+async function debloquerDelaiInfluence(joueurId: string) {
+  await supabaseAdmin
+    .from("actions_influence")
+    .update({ created_at: new Date(Date.now() - 2000).toISOString() })
+    .eq("joueur_id", joueurId);
+}
+
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 3 — peser socialement", () => {
   test("influencer une autre ville lui donne +1 influence, une fois par jour", async ({
     page,
   }) => {
+    // Premier test de ce fichier à toucher le navigateur : le serveur de
+    // dev compile /connexion et /ville à la volée, ce qui peut dépasser
+    // le timeout par défaut de 5 s sur un premier essai — même pattern
+    // que tous les autres fichiers e2e de ce projet (jalon1, 2, 8, 9...).
+    test.setTimeout(60_000);
     const joueur = await creerCompteAvecVille("joueur-influence");
     const cible = await creerCompteAvecVille("cible-influence");
 
@@ -58,7 +74,7 @@ test.describe("Jalon 3 — peser socialement", () => {
       await page.getByLabel("Adresse e-mail").fill(joueur.email);
       await page.getByLabel("Mot de passe").fill(joueur.motDePasse);
       await page.getByRole("button", { name: "Se connecter" }).click();
-      await expect(page).toHaveURL(/\/ville$/);
+      await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
 
       await page.goto("/villes");
       await expect(page.getByText("Actions d'influence restantes aujourd'hui : 5/5")).toBeVisible();
@@ -108,6 +124,7 @@ test.describe("Jalon 3 — peser socialement", () => {
       for (let i = 0; i < 5; i++) {
         const cible = await creerCompteAvecVille(`cible-quota-${i}`);
         cibles.push({ userId: cible.userId, villeId: cible.villeId });
+        await debloquerDelaiInfluence(joueur.userId);
         const { error } = await supabaseAdmin.rpc("influencer_ville", {
           p_joueur_id: joueur.userId,
           p_ville_id: cible.villeId,
@@ -117,6 +134,7 @@ test.describe("Jalon 3 — peser socialement", () => {
 
       const sixiemeCible = await creerCompteAvecVille("cible-quota-6e");
       cibles.push({ userId: sixiemeCible.userId, villeId: sixiemeCible.villeId });
+      await debloquerDelaiInfluence(joueur.userId);
       const { error: erreurQuota } = await supabaseAdmin.rpc("influencer_ville", {
         p_joueur_id: joueur.userId,
         p_ville_id: sixiemeCible.villeId,

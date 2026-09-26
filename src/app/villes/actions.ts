@@ -71,10 +71,12 @@ export async function influencerVille(formData: FormData) {
     p_ville_id: villeId,
   });
 
-  // 23505 (déjà influencée aujourd'hui), P0001 (quota de 5 atteint) et
-  // P0002 (ville en grève, Jalon 4) : pas de vraies erreurs, l'affichage
-  // se corrige au revalidate.
-  if (error && !["23505", "P0001", "P0002"].includes(error.code ?? "")) {
+  // 23505 (déjà influencée aujourd'hui), P0001 (quota de 5 atteint),
+  // P0002 (ville en grève, Jalon 4) et P0020 (deux actions trop
+  // rapprochées, Jalon 14 — normalement jamais atteint par un humain,
+  // seulement par un double-submit ou un script) : pas de vraies
+  // erreurs, l'affichage se corrige au revalidate.
+  if (error && !["23505", "P0001", "P0002", "P0020"].includes(error.code ?? "")) {
     console.error("influencerVille a échoué :", error.message);
   }
 
