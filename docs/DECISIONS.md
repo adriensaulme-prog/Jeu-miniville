@@ -61,8 +61,10 @@ un jalon" :
 
 ## §2. Périmètre (MVP)
 
-Repris du cahier des charges §30, c'est la version volontairement plus
-petite que le jeu final :
+**Intégralement livré au 26/09/2026** (Jalon 15, sous réserve de la
+vérification manuelle mobile/PC encore en attente d'Adrien — voir §4,
+journal du Jalon 15). Repris du cahier des charges §30, c'est la
+version volontairement plus petite que le jeu final :
 
 - Ville + population + influence.
 - 1 connexion par joueur et par ville par jour → +1 population.
@@ -1964,6 +1966,74 @@ navigateur fermée en cours de route a fait échouer un test des Jalons 8
 et 9 (jamais `/villes`, Influence ou AntiVille) — même famille de
 flakiness "serveur de dev" déjà documentée à plusieurs reprises dans ce
 journal (Jalons 9/10/11/9 ter/12/13/13 bis), pas creusée davantage ici.
+
+### Jalon 15 — jouable partout — 26/09/2026
+
+**Contenu.** Passage en PWA installable, manifest, service worker, mode
+hors-ligne minimal, vérification manuelle sur mobile et PC. La
+découverte principale de ce jalon : le squelette technique (Jalon 0,
+23/09/2026) avait déjà posé `public/manifest.json`, `public/sw.js`,
+`src/app/register-sw.tsx` et les icônes — la partie "manifest +
+installable" était donc déjà faite. Le vrai travail restant :
+
+- **Service worker réécrit** (`public/sw.js`, cache `v1` → `v2`) : la
+  version d'origine faisait du cache-first pour tout, y compris les
+  pages, ce qui aurait pu un jour servir des données de jeu périmées
+  même quand le réseau fonctionne (risque réel pour un jeu multijoueur
+  où la fraîcheur compte — voir cahier des charges §9). Nouvelle
+  stratégie : les pages (navigation) passent par le réseau en premier
+  et sont mises en cache au passage, secours sur la dernière version en
+  cache seulement si le réseau échoue, secours ultime sur la page
+  d'accueil si la page n'a jamais été visitée ; les assets statiques
+  restent cache-first (rafraîchis en arrière-plan) ; tout ce qui n'est
+  pas une requête GET same-origin (Supabase, Server Actions) n'est
+  jamais intercepté, toujours le réseau — ce sont les données de jeu
+  elles-mêmes.
+- **Vérifié avec un vrai navigateur** (Chromium piloté par Playwright,
+  contre `npm run build && npm start`, script ponctuel non conservé
+  comme test automatisé — voir plus bas pourquoi) : le service worker
+  s'enregistre bien en production ; une page déjà visitée en ligne
+  reste consultable une fois hors-ligne (testé sur `/classement`) ; une
+  page jamais visitée, hors-ligne, retombe proprement sur le shell de
+  l'accueil en cache plutôt qu'une erreur de navigateur brute (testé
+  sur `/jumelages`). Le smoke test existant (`tests/e2e/smoke.spec.ts`,
+  Jalon 0) continue de garantir qu'aucun service worker ne s'enregistre
+  en développement (`npm run dev`) — bug déjà vécu par Adrien
+  (`docs/A-INTEGRER.md` §9), non-régression déjà en place, inchangée.
+- **Pas de test automatisé permanent en mode production** : la suite
+  e2e de ce projet tourne entièrement contre `npm run dev` (choix
+  déjà établi, le service worker y est justement désactivé exprès).
+  Ajouter un deuxième serveur Playwright rien que pour ce test aurait
+  demandé une vraie infrastructure de test supplémentaire (projet
+  Playwright séparé, `npm run build` à chaque run) pour vérifier un
+  comportement simple et stable — jugé disproportionné vu le poids/la
+  simplicité visés par ce projet. Vérification ponctuelle jugée
+  suffisante, comme déjà fait ailleurs dans ce journal ("vérifié aussi
+  à l'œil avec un compte jetable").
+- **Détection d'un `.next` corrompu en cours de route** : `npm start`
+  échouait avec `Cannot find module './vendor-chunks/@supabase.js'`
+  après plusieurs démarrages concurrents de serveurs sur le port 3000
+  pendant la vérification — résolu par un `rm -rf .next` suivi d'un
+  rebuild propre. Pas un bug du projet, un aléa de cette session de
+  vérification, noté pour mémoire seulement.
+
+**Vérification manuelle sur mobile et PC : pas faisable par Claude
+Code**, cette session n'a pas d'accès à un vrai téléphone Android/iOS
+ni à l'installation réelle d'une PWA (ajout à l'écran d'accueil,
+lancement en mode standalone). **Demandé à Adrien** : lancer
+`npm run build && npm start`, ouvrir `http://<IP locale du PC>:3000`
+depuis son téléphone (même Wi-Fi, même méthode qu'au Jalon 6bis),
+tenter "Ajouter à l'écran d'accueil" (Android/Chrome et iOS/Safari),
+vérifier le lancement en plein écran sans barre d'adresse, et un
+rechargement en mode avion pour confirmer le hors-ligne dégradé.
+
+**Testé.** Vérification ponctuelle par script Playwright (voir
+ci-dessus, non conservée comme test automatisé) ; suite complète
+inchangée : 73 tests unitaires + 56 tests e2e, verte à `--workers=1` —
+aucun changement de composant client, `sw.js` n'entre jamais dans le
+bundle JS (fichier statique servi tel quel), poids du paquet inchangé.
+Vérification manuelle mobile/PC en attente du retour d'Adrien — MVP
+(cahier des charges §30) complet une fois confirmée.
 
 ---
 

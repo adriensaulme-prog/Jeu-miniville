@@ -172,7 +172,7 @@ de vue du joueur — le titre dit ce qui change pour lui.
   cahier des charges §3/§26, demandée par Adrien pour la rétention
   (`docs/A-INTEGRER.md` §13). Détail dans `DECISIONS.md` §4.
 
-## Phase 5 — Tenir la route
+## Phase 5 — Tenir la route *(terminée, sous réserve de la vérification mobile)*
 
 - [x] **Jalon 14 — Rester dans la légalité.** Anti-triche côté serveur
   (cahier des charges §26) : audit complet des fonctions SQL sensibles
@@ -181,9 +181,15 @@ de vue du joueur — le titre dit ce qui change pour lui.
   technique pour le multi-compte (décision d'Adrien — un compte = un
   email vérifié = une ville suffit à cette échelle). Détail dans
   `DECISIONS.md` §4.
-- [ ] **Jalon 15 — Jouable partout.** Passage en PWA installable (manifest,
-  service worker, mode hors-ligne minimal), vérification manuelle sur
-  mobile (Android + iOS via navigateur) et PC.
+- [x] **Jalon 15 — Jouable partout.** Passage en PWA installable (manifest,
+  service worker, mode hors-ligne minimal) — le squelette (manifest,
+  icônes, enregistrement) datait déjà du Jalon 0 ; ce jalon réécrit le
+  service worker pour ne jamais servir de données périmées quand le
+  réseau fonctionne, avec un vrai hors-ligne dégradé (pages déjà
+  visitées, secours sur l'accueil sinon). Détail dans `DECISIONS.md`
+  §4. Point encore ouvert : vérification manuelle sur mobile
+  (Android + iOS) et PC, pas faisable par Claude Code — en attente
+  d'Adrien.
 
 ---
 
@@ -202,5 +208,7 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 26/09/2026, jalon 14 terminé, avant le jalon 15
-"Jouable partout".*
+*Dernière mise à jour : 26/09/2026, jalon 15 terminé côté code (MVP du
+cahier des charges §30 intégralement livré) — en attente de la
+vérification manuelle mobile/PC d'Adrien avant de considérer le MVP
+définitivement clos.*
