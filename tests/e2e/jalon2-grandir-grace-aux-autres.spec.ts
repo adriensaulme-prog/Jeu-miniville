@@ -2,12 +2,19 @@ import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Jalon 2 : visiter une autre ville lui donne +1 population, une fois
- * par (visiteur, ville, jour) — et le niveau visuel évolue tout seul
- * en franchissant les seuils de population_vers_niveau() (migration
- * 0003). Client service_role recréé ici pour la même raison que dans
- * jalon1-naitre-quelque-part.spec.ts (voir son commentaire) : "server-only"
- * lève une erreur hors du pipeline de build Next.js.
+ * Jalon 2 : visiter une autre ville lui donne +1 population — et le
+ * niveau visuel évolue tout seul en franchissant les seuils de
+ * population_vers_niveau() (migration 0003). Client service_role
+ * recréé ici pour la même raison que dans jalon1-naitre-quelque-part.spec.ts
+ * (voir son commentaire) : "server-only" lève une erreur hors du
+ * pipeline de build Next.js.
+ *
+ * Le plafond "une visite par (visiteur, ville) et par jour" de ce
+ * jalon a été remplacé au Jalon 13 bis par un délai d'une heure entre
+ * deux visites plus un plafond de 3 par jour — voir
+ * tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts pour cette
+ * mécanique ; seul le test "sabotage" ci-dessous qui vérifiait
+ * l'ancienne limite quotidienne est adapté en conséquence.
  */
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,9 +55,14 @@ async function supprimerCompte(userId: string) {
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 2 — grandir grâce aux autres", () => {
-  test("visiter une autre ville lui donne +1 population, une fois par jour", async ({
+  test("visiter une autre ville lui donne +1 population", async ({
     page,
   }) => {
+    // Premier test de ce fichier à toucher le navigateur : le serveur de
+    // dev compile /connexion et /ville à la volée, ce qui peut dépasser
+    // le timeout par défaut de 5 s sur un premier essai — même pattern
+    // que tous les autres fichiers e2e de ce projet (jalon1, 8, 9...).
+    test.setTimeout(60_000);
     const visiteur = await creerCompteAvecVille("visiteur");
     const cible = await creerCompteAvecVille("cible");
 
@@ -59,7 +71,7 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       await page.getByLabel("Adresse e-mail").fill(visiteur.email);
       await page.getByLabel("Mot de passe").fill(visiteur.motDePasse);
       await page.getByRole("button", { name: "Se connecter" }).click();
-      await expect(page).toHaveURL(/\/ville$/);
+      await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
 
       await page.goto("/villes");
 
@@ -73,10 +85,14 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       await expect(ligneCible.getByText("1")).toBeVisible(); // population de départ
 
       await ligneCible.click();
-      await page.getByRole("button", { name: "Visiter" }).click();
+      await page.getByRole("button", { name: "Visiter", exact: true }).click();
 
-      await expect(ligneCible.getByText("Déjà visitée aujourd'hui")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Visiter" })).toHaveCount(0);
+      // Après une visite, le délai d'une heure (Jalon 13 bis) bloque la
+      // suivante : le bouton "Visiter" disparaît (remplacé par "Revisiter
+      // dans X min", qui contient "visiter" en sous-chaîne — d'où l'exact
+      // ci-dessous), le badge "indisponible" apparaît dans la liste.
+      await expect(ligneCible.getByText("Indisponible pour l'instant")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Visiter", exact: true })).toHaveCount(0);
 
       const { data: villeApresVisite } = await supabaseAdmin
         .from("cities")
@@ -86,11 +102,11 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       expect(villeApresVisite?.population).toBe(2);
       expect(villeApresVisite?.niveau).toBe(0); // sous le seuil du niveau 1 (5)
 
-      // Recharger la page : l'état "déjà visitée" doit tenir, pas
+      // Recharger la page : l'état "indisponible" doit tenir, pas
       // seulement dans le DOM issu du premier submit.
       await page.reload();
       await expect(
-        page.getByRole("link", { name: new RegExp(cible.villeNom) }).getByText("Déjà visitée aujourd'hui")
+        page.getByRole("link", { name: new RegExp(cible.villeNom) }).getByText("Indisponible pour l'instant")
       ).toBeVisible();
     } finally {
       await supprimerCompte(visiteur.userId);
@@ -98,7 +114,7 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
     }
   });
 
-  test("sabotage : se visiter soi-même et visiter deux fois la même ville le même jour sont refusés côté serveur", async () => {
+  test("sabotage : se visiter soi-même est refusé, revisiter avant le délai d'une heure aussi (Jalon 13 bis)", async () => {
     const cible = await creerCompteAvecVille("cible-sabotage");
 
     try {
@@ -116,11 +132,14 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
         });
         expect(premiereVisite).toBeNull();
 
+        // Immédiatement après : délai d'une heure pas écoulé (Jalon 13 bis
+        // — voir tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts pour le
+        // reste de cette mécanique, plafond quotidien inclus).
         const { error: deuxiemeVisite } = await supabaseAdmin.rpc("visiter_ville", {
           p_visiteur_id: visiteur.userId,
           p_ville_id: cible.villeId,
         });
-        expect(deuxiemeVisite?.code).toBe("23505");
+        expect(deuxiemeVisite?.code).toBe("P0018");
 
         const { data: ville } = await supabaseAdmin
           .from("cities")

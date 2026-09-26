@@ -10,6 +10,8 @@ import { ActionsAntiVille } from "./ActionsAntiVille";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { influencerVille, proposerJumelage, visiterVille } from "./actions";
 
+const QUOTA_VISITE_QUOTIDIEN = 3;
+const DELAI_VISITE_MINUTES = 60;
 const QUOTA_INFLUENCE_QUOTIDIEN = 5;
 const QUOTA_ANTIVILLE_QUOTIDIEN = 3;
 const SEUIL_PROTECTION_ANTIVILLE = 2;
@@ -98,13 +100,40 @@ export default async function VillesPage({
   const maintenant = new Date();
   const aujourdhui = maintenant.toISOString().slice(0, 10);
   const il24hEnArriere = new Date(maintenant.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
+
+  // Jalon 13 bis : jusqu'à QUOTA_VISITE_QUOTIDIEN visites par jour et par
+  // (visiteur, ville), avec un délai minimum entre deux visites de la
+  // même ville — deux requêtes séparées, comme pour les actions AntiVille
+  // ci-dessous (compteur du jour + fenêtre récente pour la protection).
+  const { data: visitesRecentes } = await supabase
+    .from("visites")
+    .select("ville_id, created_at")
+    .eq("visiteur_id", user.id)
+    .gte("created_at", ilUneHeureEnArriere);
+  const derniereVisiteParVille = new Map<string, string>();
+  for (const v of visitesRecentes ?? []) {
+    const existante = derniereVisiteParVille.get(v.ville_id);
+    if (!existante || v.created_at > existante) derniereVisiteParVille.set(v.ville_id, v.created_at);
+  }
 
   const { data: visitesDuJour } = await supabase
     .from("visites")
     .select("ville_id")
     .eq("visiteur_id", user.id)
     .eq("jour", aujourdhui);
-  const villesDejaVisitees = new Set((visitesDuJour ?? []).map((v) => v.ville_id));
+  const nbVisitesAujourdhuiParVille = new Map<string, number>();
+  for (const v of visitesDuJour ?? []) {
+    nbVisitesAujourdhuiParVille.set(v.ville_id, (nbVisitesAujourdhuiParVille.get(v.ville_id) ?? 0) + 1);
+  }
+  const villesIndisponibles = new Set(
+    toutesLesVilles
+      .map((v) => v.id)
+      .filter(
+        (id) =>
+          derniereVisiteParVille.has(id) || (nbVisitesAujourdhuiParVille.get(id) ?? 0) >= QUOTA_VISITE_QUOTIDIEN
+      )
+  );
 
   const { data: actionsInfluenceDuJour } = await supabase
     .from("actions_influence")
@@ -217,7 +246,7 @@ export default async function VillesPage({
                       {statutJum === "actif" ? (
                         <span className="badge good">{traduire(locale, "villes.jumelee")}</span>
                       ) : null}
-                      {villesDejaVisitees.has(v.id) ? (
+                      {villesIndisponibles.has(v.id) ? (
                         <span className="badge good">{traduire(locale, "villes.dejaVisitee")}</span>
                       ) : null}
                       {v.greve_jusqua && new Date(v.greve_jusqua) > maintenant ? (
@@ -237,7 +266,18 @@ export default async function VillesPage({
           {(() => {
             const c = villeSelectionnee;
             const pseudo = unwrap(c.owner)?.pseudo ?? "";
-            const dejaVisitee = villesDejaVisitees.has(c.id);
+            const nbVisitesAujourdhui = nbVisitesAujourdhuiParVille.get(c.id) ?? 0;
+            const plafondVisiteAtteint = nbVisitesAujourdhui >= QUOTA_VISITE_QUOTIDIEN;
+            const derniereVisite = derniereVisiteParVille.get(c.id);
+            const minutesAvantRevisite = derniereVisite
+              ? Math.max(
+                  1,
+                  Math.ceil(
+                    (new Date(derniereVisite).getTime() + DELAI_VISITE_MINUTES * 60 * 1000 - maintenant.getTime()) /
+                      60_000
+                  )
+                )
+              : null;
             const dejaInfluencee = villesDejaInfluencees.has(c.id);
             const estEnGreve = !!c.greve_jusqua && new Date(c.greve_jusqua) > maintenant;
             const protectionActive = (nbActionsRecentesParVille.get(c.id) ?? 0) >= SEUIL_PROTECTION_ANTIVILLE;
@@ -287,19 +327,42 @@ export default async function VillesPage({
                 </div>
 
                 <div className="actions">
-                  {dejaVisitee ? (
+                  {plafondVisiteAtteint ? (
                     <div className="act">
-                      <span className="h3">{traduire(locale, "villes.visiteeAujourdhui")}</span>
-                      <p>{traduire(locale, "villes.revenirDemain")}</p>
+                      <span className="h3">{traduire(locale, "villes.visiter")}</span>
+                      <p>
+                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+                        <span className="counter">
+                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
+                        </span>
+                      </p>
                       <button className="btn" type="button" disabled>
-                        {traduire(locale, "villes.dejaVisitee")}
+                        {traduire(locale, "villes.quotaAtteint")}
+                      </button>
+                    </div>
+                  ) : minutesAvantRevisite !== null ? (
+                    <div className="act">
+                      <span className="h3">{traduire(locale, "villes.visiter")}</span>
+                      <p>
+                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+                        <span className="counter">
+                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
+                        </span>
+                      </p>
+                      <button className="btn" type="button" disabled>
+                        {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
                       </button>
                     </div>
                   ) : (
                     <form action={visiterVille} className="act">
                       <input type="hidden" name="villeId" value={c.id} />
                       <span className="h3">{traduire(locale, "villes.visiter")}</span>
-                      <p>+1 {traduire(locale, "ville.population").toLowerCase()}</p>
+                      <p>
+                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+                        <span className="counter">
+                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
+                        </span>
+                      </p>
                       <button className="btn primary" type="submit">
                         {traduire(locale, "villes.visiter")}
                       </button>

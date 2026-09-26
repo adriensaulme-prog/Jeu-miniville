@@ -6,11 +6,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
- * Visite une autre ville : +1 population, une fois par (visiteur,
- * ville, jour). Toute la logique — y compris l'interdiction de se
- * visiter soi-même et l'anti-abus quotidien — vit dans la fonction SQL
- * visiter_ville() (anti-triche, docs/DECISIONS.md §1 point 2), jamais
- * ici : cette action ne fait que l'appeler et rafraîchir la page.
+ * Visite une autre ville : +1 population, jusqu'à 3 fois par jour et
+ * par (visiteur, ville), avec un délai minimum d'une heure entre deux
+ * visites de la même ville. Toute la logique — y compris l'interdiction
+ * de se visiter soi-même, le délai et le plafond quotidien — vit dans
+ * la fonction SQL visiter_ville() (Jalon 13 bis, docs/DECISIONS.md §4 ;
+ * déviation assumée du cahier des charges §3/§26, demandée par Adrien).
+ * Cette action ne fait que l'appeler et rafraîchir la page.
  */
 export async function visiterVille(formData: FormData) {
   const supabase = await createSupabaseServerClient();
@@ -32,10 +34,10 @@ export async function visiterVille(formData: FormData) {
     p_ville_id: villeId,
   });
 
-  // 23505 (unique_violation) = déjà visitée aujourd'hui : pas une
-  // vraie erreur, l'affichage se corrige tout seul au revalidate
-  // ci-dessous (le bouton "Visiter" disparaît pour cette ville).
-  if (error && error.code !== "23505") {
+  // P0018 (délai d'une heure non écoulé) et P0019 (plafond quotidien de
+  // 3 visites atteint) : pas de vraies erreurs, l'affichage se corrige
+  // tout seul au revalidate ci-dessous (compte à rebours ou compteur).
+  if (error && !["P0018", "P0019"].includes(error.code ?? "")) {
     console.error("visiterVille a échoué :", error.message);
   }
 

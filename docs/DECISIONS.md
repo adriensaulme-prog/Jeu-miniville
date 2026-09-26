@@ -27,7 +27,11 @@ un jalon" :
    serveur. Le client ne fait que demander et afficher.
 3. **Boucle courte.** Le jeu doit rester jouable en 2 à 5 minutes par jour ;
    toute mécanique qui allonge ce temps sans raison de design explicite est
-   un point ouvert, pas un fait acquis.
+   un point ouvert, pas un fait acquis. **Nuancé le 26/09/2026** (Jalon
+   13 bis, `docs/A-INTEGRER.md` §13) : revisiter une ville plusieurs fois
+   par jour (jusqu'à 3, délai d'une heure entre deux) est une exception
+   volontaire pour la rétention, décidée par Adrien en connaissance de
+   cause — voir §4, journal du Jalon 13 bis.
 4. **Pas de destruction permanente.** Une défaite ou une attaque ne doit
    jamais détruire durablement une ville ni effacer des mois de
    progression (cahier des charges §19).
@@ -1749,7 +1753,8 @@ plutôt qu'inventé pour combler le manque, comme demandé par la note.
 
 **Code d'erreur `P0017`** (mobilisation sans conflit en cours) attribué
 puis retiré dans la même journée avec la fonction `mobiliser()` — pas
-réutilisé pour autre chose, le prochain code libre reste `P0018`.
+réutilisé pour autre chose (`P0018` et `P0019` pris le lendemain par le
+Jalon 13 bis, voir plus bas).
 
 **Testé.** `tests/e2e/jalon13-france-contre-allemagne.spec.ts` (4
 tests) : le vote pour/contre compte séparément, refuse une position
@@ -1777,6 +1782,107 @@ jalon : une connexion qui reste bloquée sur `/connexion` a fait
 flakiness "serveur de dev" déjà rencontrée et documentée à plusieurs
 reprises dans ce journal (Jalons 9/10/11/9 ter/12), pas creusée
 davantage ici faute de lien avec ce jalon.
+
+### Jalon 13 bis — revenir plus souvent — 26/09/2026
+
+**Contenu.** Sur `/villes`, une même personne peut désormais revisiter
+une ville plusieurs fois par jour (jusqu'à 3 fois, plafond choisi par
+Claude Code — voir plus bas), avec un délai minimum d'une heure entre
+deux visites de la même ville. Remplace l'ancienne règle "une visite par
+(visiteur, ville) et par jour" du Jalon 2. `visiter_ville()` (migration
+0018) : la contrainte unique `(visiteur_id, ville_id, jour)` sur
+`visites` est retirée, remplacée par deux contrôles explicites — délai
+d'une heure (`max(created_at)` du couple, nouveau code `P0018`) puis
+plafond quotidien de 3 (nouveau code `P0019`). Interface : compteur
+« n/3 » toujours visible à côté du bouton Visiter, bouton désactivé
+avec compte à rebours (« Revisiter dans 42 min ») pendant le délai, puis
+« Quota atteint » une fois le plafond touché ; badge de liste
+« Indisponible pour l'instant » dans les deux cas (remplace l'ancien
+« Déjà visitée aujourd'hui », devenu inexact puisqu'une ville visitée le
+matin peut redevenir visitable l'après-midi).
+
+**Déviation assumée du cahier des charges**, pas un oubli : les §3 et
+§26 du cahier des charges posent explicitement « une même personne ne
+peut contribuer qu'une seule fois par jour à une même ville » comme
+règle anti-abus. C'est Adrien, auteur du cahier des charges, qui demande
+cette évolution après avoir été informé de la contradiction (question
+posée en retour côté Claude chat, `docs/A-INTEGRER.md` §13) — objectif
+assumé : « garder les gens connectés plus souvent, ce qui est mieux pour
+les fidéliser », pas seulement accélérer la croissance. Même précédent
+que l'assouplissement de la règle "zéro coût" (§1 point 1) : un
+amendement volontaire du cahier des charges par son auteur, pas une
+extension prise seule par Claude Code.
+
+**Plafond quotidien de 3, choisi par Claude Code** ("chiffre à
+déterminer", Adrien délègue explicitement, même schéma que les quotas
+des Jalons 3 et 4) : sans plafond, un joueur très motivé pourrait
+visiter la même ville jusqu'à ~24 fois/jour avec seulement le délai
+d'une heure, ce qui dépasserait largement la "boucle courte" (§1 point
+3) et déséquilibrerait la croissance (un visiteur acharné ferait grandir
+une ville bien plus vite qu'une ville qui recrute large, à l'inverse de
+l'esprit du §3 du cahier des charges). 3 par jour laisse une vraie
+marge par rapport à l'ancien plafond implicite de 1 (retenir les gens
+plus souvent) sans l'ouvrir en grand — à ajuster avec les villes de test
+si Adrien le juge trop bas ou trop haut à l'usage.
+
+**Périmètre** : seule l'action Visiter (population) est concernée.
+Les quotas d'Influence (5/jour, tous ciblés confondus) et d'AntiVille
+(3/jour) restent inchangés, comme demandé — Adrien n'a pas étendu
+l'objectif de rétention à ces deux actions ; point ouvert si l'envie
+vient plus tard (§10 point 32).
+
+**Nouveaux codes d'erreur** `P0018` (délai d'une heure non écoulé) et
+`P0019` (plafond quotidien de 3 atteint) — premiers codes réellement
+utilisés après `P0017`, qui avait été attribué puis retiré le même jour
+avec `mobiliser()` (Jalon 13).
+
+**Testé.** `tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts` (nouveau,
+2 tests) : sabotage — délai d'une heure refusé (P0018) tant qu'il n'est
+pas écoulé, 3 visites acceptées une fois le délai simulé écoulé entre
+chacune, une 4e refusée par le plafond (P0019) même délai écoulé,
+population exacte (+3, pas +4) ; la page `/villes` affiche le compteur
+n/3, le compte à rebours puis "Quota atteint" une fois les 3 visites
+faites. `tests/e2e/jalon2-grandir-grace-aux-autres.spec.ts` mis à jour :
+le test UI vérifie désormais le badge "Indisponible pour l'instant" (au
+lieu de "Déjà visitée aujourd'hui"), le test de sabotage attend `P0018`
+(au lieu de `23505`, la contrainte unique retirée) pour une revisite
+immédiate. Vérifié aussi à l'œil avec des comptes jetables, à la fois
+avant la migration (dégrade proprement : la page utilise déjà la table
+`visites` existante pour son compteur et son délai, seule la fonction
+SQL n'a pas encore les nouveaux codes) et après. Poids du paquet
+inchangé (114 Ko pour `/villes`).
+
+**Bug trouvé après application de la migration 0018** (en lançant la
+suite e2e, pas à l'œil — le contrôle visuel avant migration n'exerçait
+qu'un seul appel, insuffisant pour le révéler) : la nouvelle
+`visiter_ville()` avait été réécrite à partir de la version d'origine
+du Jalon 2 (migration 0003) au lieu de la version réellement en place,
+déjà redéfinie par le Jalon 4 (codes d'erreur `P0004`/`P0005`/`P0007`)
+puis le Jalon 6 (maintien de `population_max`/`niveau` via
+`greatest(population_max, population + 1)`, nécessaire depuis la
+contrainte `check (population_max >= population)` ajoutée ce même
+jalon). Conséquence : toute visite échouait avec la contrainte
+`cities_check` violée (`population_max` plus jamais mis à jour) et les
+codes d'erreur historiques avaient disparu. Corrigé par la migration
+`0019` (redéfinit `visiter_ville()` avec le corps complet du Jalon 6 +
+le délai/plafond de ce jalon) — leçon retenue : pour redéfinir une
+fonction SQL, relire sa version **actuelle** dans le dépôt (chercher
+toutes les migrations qui la redéfinissent, prendre la plus récente),
+jamais la première trouvée par nom de jalon d'origine.
+
+**Vérification finale** (après la migration `0019`) : ce jalon est
+verte et reproductible — `tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts`
+(2 tests) et `tests/e2e/jalon2-grandir-grace-aux-autres.spec.ts` (3
+tests, dont son premier test navigateur a dû recevoir le même bump de
+délai que les autres fichiers e2e du projet, oublié à l'origine) passés
+3 fois de suite sans exception. Suite complète : 73 tests unitaires +
+53 tests e2e. Croisé en route, sans rapport avec ce jalon : sur 3 runs
+complets, une connexion restée bloquée sur `/connexion` ou une
+navigation trop lente a fait échouer un test différent à chaque fois
+(Jalon 1, 6bis, 8, 9 — jamais deux fois le même, jamais un test touchant
+`/villes`) — même famille de flakiness "serveur de dev" déjà documentée
+à plusieurs reprises dans ce journal (Jalons 9/10/11/9 ter/12/13), pas
+creusée davantage ici faute de lien avec ce jalon.
 
 ---
 
@@ -2159,3 +2265,12 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     trancher par Adrien** : vaut-il un jalon dédié (quels avantages,
     quelles conditions pour les débloquer, quel effet chiffré), et à
     quel moment par rapport aux autres priorités ?
+32. **Visites multiples par jour (Jalon 13 bis) : Influence et AntiVille
+    pas étendus au même système.** Seule l'action Visiter permet
+    désormais plusieurs fois par jour (délai d'une heure, plafond de 3) ;
+    Influence (5/jour) et AntiVille (3/jour) gardent leur ancienne limite
+    d'une fois par (joueur, ville, jour). Adrien n'a demandé l'extension
+    que pour Visiter. → **À trancher par Adrien** : l'objectif de
+    rétention justifie-t-il d'étendre le même principe à Influence et/ou
+    AntiVille, ou ces deux actions restent-elles volontairement à une
+    fois par jour ?

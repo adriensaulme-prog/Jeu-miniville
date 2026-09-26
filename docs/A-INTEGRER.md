@@ -31,7 +31,14 @@ journal existant, puis ce fichier peut être supprimé.*
 > envoyée à Adrien, en attente de confirmation d'application) ; pondération
 > proposée par Claude Code et retenue par Adrien ; "avantages nationaux"
 > (Défense) pas construits, consignés en point ouvert (`DECISIONS.md`
-> §10 point 31). Détail dans `DECISIONS.md` §4, journal du Jalon 13. Ce
+> §10 point 31). Détail dans `DECISIONS.md` §4, journal du Jalon 13.
+> **§13 (visites plusieurs fois par jour) fait le 26/09/2026** comme
+> "Jalon 13 bis" — délai d'une heure + plafond de 3 par jour et par
+> (visiteur, ville), plafond choisi par Claude Code comme demandé
+> (migration `0018`, envoyée à Adrien, en attente de confirmation
+> d'application). Point ouvert : extension du même principe à
+> Influence/AntiVille, pas demandée pour l'instant (`DECISIONS.md` §10
+> point 32). Détail dans `DECISIONS.md` §4, journal du Jalon 13 bis. Ce
 > fichier peut être supprimé quand Adrien aura répondu aux questions
 > restantes.
 
@@ -401,3 +408,61 @@ part dans le cahier des charges — le §29 (« en cas de guerre :
 mobilisation quotidienne... ») la liste comme un **ingrédient du
 calcul**, à côté de « activité quotidienne », pas comme une action
 séparée que le joueur doit accomplir volontairement.
+
+## 13. Visiter plusieurs fois par jour, avec un délai minimum (décision d'Adrien, 26/09/2026)
+
+**Demande d'Adrien** : au lieu d'une seule visite par (joueur, ville) et
+par jour, une même personne doit pouvoir revisiter une ville (la sienne
+ou celle d'un autre) plusieurs fois dans la journée, avec un **délai
+minimum d'une heure entre deux visites** sur la même ville. Objectif
+assumé, ce n'est pas seulement accélérer la croissance : « garder les
+gens connectés plus souvent, ce qui est mieux pour les fidéliser ».
+
+**Attention, déviation assumée du cahier des charges** : le §3 et le
+§26 posent explicitement « une même personne ne peut contribuer qu'une
+seule fois par jour à une même ville » comme règle anti-abus. Adrien,
+auteur du cahier des charges, a été informé de cette contradiction
+(question posée en retour côté Claude chat) et confirme vouloir cette
+évolution malgré tout, en connaissance de cause. À documenter dans
+`DECISIONS.md` comme un **amendement volontaire**, pas un oubli — même
+précédent que l'assouplissement de la règle "zéro coût" (§10 plus haut
+dans ce fichier).
+
+**Ce qui doit changer techniquement** (`supabase/migrations/0003...sql`
+et suivantes, table `visites`, fonction `visiter_ville()`) :
+- retirer la contrainte `unique (visiteur_id, ville_id, jour)` — elle
+  empêchait justement plusieurs visites le même jour ;
+- dans `visiter_ville()`, remplacer le contrôle "déjà visité
+  aujourd'hui" par : refuser si la dernière visite de ce couple
+  (visiteur, ville) date de **moins d'une heure** (nouveau code
+  d'erreur dédié, cf. le registre des codes de la migration `0006`) ;
+- ajouter un **plafond quotidien** par (visiteur, ville) en plus du
+  délai d'une heure — sans lui, un joueur très motivé pourrait visiter
+  la même ville jusqu'à ~24 fois/jour, ce qui dépasserait largement la
+  contrainte « boucle courte » (`DECISIONS.md` §1 point 3) et
+  déséquilibrerait la croissance (une ville avec un visiteur acharné
+  grandirait bien plus vite qu'une ville qui recrute large, à l'inverse
+  de l'esprit du §3 du cahier des charges). **Nombre exact laissé à
+  Claude Code** ("chiffre à déterminer", Adrien délègue) — recommandation
+  de départ : **3 visites par jour et par (visiteur, ville)**, à ajuster
+  avec les villes de test, dans le même esprit que les quotas déjà
+  tranchés par Claude Code aux Jalons 3 et 4 ("tranche selon tes reco") ;
+- l'auto-visite reste refusée (code existant) : cette règle-là n'est
+  pas remise en cause par cette décision.
+
+**Interface** : remplacer "Déjà visitée aujourd'hui" par un compte à
+rebours (« Revisiter dans 42 min ») quand le délai n'est pas écoulé, et
+un compteur du plafond quotidien une fois atteint (« 3/3 visites
+aujourd'hui »), dans le même style que les autres quotas déjà affichés
+(« 4 / 5 aujourd'hui » pour l'influence).
+
+**Périmètre de cette décision** : seule l'action **Visiter**
+(population) est concernée pour l'instant. Les quotas d'Influence
+(5/jour) et d'AntiVille (3/jour) restent inchangés — Adrien n'a pas
+demandé à les étendre au même système ; question ouverte à lui reposer
+avant d'y toucher, si l'objectif de rétention s'y prête aussi.
+
+**Complément naturel, pas pour ce jalon** : puisque le but est la
+rétention, une notification de rappel (« ta ville peut être revisitée »)
+serait un bon complément — déjà listé comme ambition long terme dans
+`DECISIONS.md` §9 ("Notifications push"), à ne pas construire maintenant.

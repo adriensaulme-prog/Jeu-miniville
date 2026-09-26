@@ -159,11 +159,18 @@ de vue du joueur — le titre dit ce qui change pour lui.
 - [x] **Jalon 13 — France contre Allemagne.** Premier scénario de rivalité
   internationale : sur `/pays`, la décision diplomatique du Jalon 12 se
   résout à la majorité pour/contre en fin de semaine ; une "rivalité"
-  adoptée déclenche un conflit de 7 jours (mobilisation quotidienne,
-  bonus défensif de 50 % pour le défenseur, résultat en fin de période).
-  Coût en ressources traité comme un instantané informatif, jamais
-  déduit (point ouvert §10 point 30). Détail dans `DECISIONS.md` §4 —
-  recette dans `docs/recette-jalon-13.md`.
+  adoptée déclenche un conflit de 7 jours, effort de chaque camp dérivé
+  automatiquement de l'activité et des ressources nationales
+  (`effort_national()`, pas une action à cliquer — correction en cours
+  de route, `docs/A-INTEGRER.md` §12), bonus défensif de 50 % pour le
+  défenseur, résultat en fin de période. Coût en ressources traité comme
+  un instantané informatif, jamais déduit (point ouvert §10 point 30).
+  Détail dans `DECISIONS.md` §4 — recette dans `docs/recette-jalon-13.md`.
+- [x] **Jalon 13 bis — Revenir plus souvent.** Sur `/villes`, une ville
+  peut être revisitée plusieurs fois par jour (jusqu'à 3, délai d'une
+  heure entre deux) au lieu d'une seule fois — déviation assumée du
+  cahier des charges §3/§26, demandée par Adrien pour la rétention
+  (`docs/A-INTEGRER.md` §13). Détail dans `DECISIONS.md` §4.
 
 ## Phase 5 — Tenir la route
 
@@ -191,5 +198,5 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 25/09/2026, jalon 13 terminé (fin de la Phase 4),
+*Dernière mise à jour : 26/09/2026, jalon 13 bis terminé (fin de la Phase 4),
 avant le jalon 14 "Rester dans la légalité".*
