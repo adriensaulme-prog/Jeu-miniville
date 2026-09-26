@@ -84,15 +84,16 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       await expect(ligneCible).toBeVisible();
       await expect(ligneCible.getByText("1")).toBeVisible(); // population de départ
 
+      // Depuis le Jalon 13 ter (docs/A-INTEGRER.md §15), plus de bouton
+      // "Visiter" à cliquer : ouvrir le panneau détail suffit, la visite
+      // se déclenche automatiquement ~2,5 s après (voir
+      // src/components/VisiteAutomatique.tsx).
       await ligneCible.click();
-      await page.getByRole("button", { name: "Visiter", exact: true }).click();
+      await expect(page.getByText("Visite comptée, +1 habitant.")).toBeVisible({ timeout: 8_000 });
 
-      // Après une visite, le délai d'une heure (Jalon 13 bis) bloque la
-      // suivante : le bouton "Visiter" disparaît (remplacé par "Revisiter
-      // dans X min", qui contient "visiter" en sous-chaîne — d'où l'exact
-      // ci-dessous), le badge "indisponible" apparaît dans la liste.
-      await expect(ligneCible.getByText("Indisponible pour l'instant")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Visiter", exact: true })).toHaveCount(0);
+      // Le délai d'une heure (Jalon 13 bis) bloque toute visite
+      // suivante : le badge "indisponible" apparaît dans la liste.
+      await expect(ligneCible.getByText("Indisponible pour l'instant")).toBeVisible({ timeout: 8_000 });
 
       const { data: villeApresVisite } = await supabaseAdmin
         .from("cities")
@@ -114,46 +115,14 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
     }
   });
 
-  test("sabotage : se visiter soi-même est refusé, revisiter avant le délai d'une heure aussi (Jalon 13 bis)", async () => {
-    const cible = await creerCompteAvecVille("cible-sabotage");
-
-    try {
-      const { error: erreurAutoVisite } = await supabaseAdmin.rpc("visiter_ville", {
-        p_visiteur_id: cible.userId,
-        p_ville_id: cible.villeId,
-      });
-      expect(erreurAutoVisite).not.toBeNull();
-
-      const visiteur = await creerCompteAvecVille("visiteur-sabotage");
-      try {
-        const { error: premiereVisite } = await supabaseAdmin.rpc("visiter_ville", {
-          p_visiteur_id: visiteur.userId,
-          p_ville_id: cible.villeId,
-        });
-        expect(premiereVisite).toBeNull();
-
-        // Immédiatement après : délai d'une heure pas écoulé (Jalon 13 bis
-        // — voir tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts pour le
-        // reste de cette mécanique, plafond quotidien inclus).
-        const { error: deuxiemeVisite } = await supabaseAdmin.rpc("visiter_ville", {
-          p_visiteur_id: visiteur.userId,
-          p_ville_id: cible.villeId,
-        });
-        expect(deuxiemeVisite?.code).toBe("P0018");
-
-        const { data: ville } = await supabaseAdmin
-          .from("cities")
-          .select("population")
-          .eq("id", cible.villeId)
-          .single();
-        expect(ville?.population).toBe(2); // +1 seulement, pas +2
-      } finally {
-        await supprimerCompte(visiteur.userId);
-      }
-    } finally {
-      await supprimerCompte(cible.userId);
-    }
-  });
+  // Le test qui vivait ici ("sabotage : se visiter soi-même est
+  // refusé...") vérifiait un blocage retiré au Jalon 13 ter — se
+  // visiter soi-même est désormais autorisé, comme une vraie règle du
+  // jeu (docs/A-INTEGRER.md §16, déviation assumée du cahier des
+  // charges §3). Voir tests/e2e/jalon13ter-visite-automatique.spec.ts
+  // pour la couverture de l'auto-visite ; le délai d'une heure entre
+  // deux visites (peu importe qui visite) reste couvert par
+  // tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts.
 
   test("sabotage : plusieurs visiteurs distincts font bien monter la population sans plafond artificiel", async () => {
     const cible = await creerCompteAvecVille("cible-evolution");

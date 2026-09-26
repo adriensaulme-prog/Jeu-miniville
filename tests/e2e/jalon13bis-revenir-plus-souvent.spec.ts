@@ -131,7 +131,14 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
     }
   });
 
-  test("la page /villes affiche le compte à rebours puis le plafond quotidien atteint", async ({ page }) => {
+  test("la page /villes compte la visite automatiquement puis affiche le compte à rebours et le plafond quotidien", async ({
+    page,
+  }) => {
+    // Jalon 13 ter (docs/A-INTEGRER.md §15) : la visite n'est plus un
+    // clic sur un bouton "Visiter" (qui n'existe plus), elle se
+    // déclenche toute seule ~2,5 s après l'affichage du panneau détail
+    // (voir src/components/VisiteAutomatique.tsx) — chaque étape
+    // ci-dessous attend donc ce délai plutôt que de cliquer.
     test.setTimeout(60_000);
     const cible = await creerCompteAvecVille("j13bis-ui-cible");
     const visiteur = await creerCompteAvecVille("j13bis-ui-visiteur");
@@ -140,26 +147,24 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
       await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
 
       await page.goto(`/villes?ville=${cible.villeId}`);
-      await expect(page.getByRole("button", { name: "Visiter" })).toBeVisible({ timeout: 20_000 });
-      await page.getByRole("button", { name: "Visiter" }).click();
-
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("0/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 8_000 });
       await expect(page.getByText(/Revisiter dans \d+ min/)).toBeVisible();
 
       await debloquerDelai(visiteur.userId, cible.villeId);
       await page.reload();
-      await expect(page.getByRole("button", { name: "Visiter" })).toBeVisible({ timeout: 20_000 });
-      await page.getByRole("button", { name: "Visiter" }).click();
-      await expect(page.getByText("2/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("2/3")).toBeVisible({ timeout: 8_000 });
 
       await debloquerDelai(visiteur.userId, cible.villeId);
       await page.reload();
-      await page.getByRole("button", { name: "Visiter" }).click();
-      await expect(page.getByText("3/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("2/3")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("3/3")).toBeVisible({ timeout: 8_000 });
 
-      // Plafond atteint : "Quota atteint" prime sur le compte à rebours,
-      // même si le délai est aussi encore actif juste après cette 3e visite.
-      await expect(page.getByRole("button", { name: "Quota atteint" })).toBeVisible();
+      // Plafond atteint : "Quota atteint" s'affiche, plus de visite
+      // automatique possible même si le délai est aussi encore actif
+      // juste après cette 3e visite.
+      await expect(page.getByText("Quota atteint")).toBeVisible();
       await expect(page.getByRole("link", { name: new RegExp(cible.villeNom) })).toContainText(
         "Indisponible pour l'instant"
       );

@@ -171,6 +171,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
   heure entre deux) au lieu d'une seule fois — déviation assumée du
   cahier des charges §3/§26, demandée par Adrien pour la rétention
   (`docs/A-INTEGRER.md` §13). Détail dans `DECISIONS.md` §4.
+- [x] **Jalon 13 ter — Visite automatique.** Trois retours de test
+  regroupés : le panneau flottant du bas se réduit sur mobile pour
+  laisser voir la ville (`docs/A-INTEGRER.md` §14) ; visiter une ville
+  ne demande plus de cliquer un bouton, ça se compte automatiquement en
+  ouvrant sa page (§15) ; visiter sa propre ville est désormais permis,
+  même délai/plafond que pour les autres (§16, nouvelle déviation
+  assumée du cahier des charges §3). Détail dans `DECISIONS.md` §4.
 
 ## Phase 5 — Tenir la route *(terminée, sous réserve de la vérification mobile)*
 
@@ -208,7 +215,8 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 26/09/2026, jalon 15 terminé côté code (MVP du
-cahier des charges §30 intégralement livré) — en attente de la
-vérification manuelle mobile/PC d'Adrien avant de considérer le MVP
+*Dernière mise à jour : 26/09/2026, jalon 13 ter terminé (retours de la
+vérification mobile du Jalon 15, regroupés dans A-INTEGRER.md §14-16) —
+MVP du cahier des charges §30 livré depuis le Jalon 15, vérification
+manuelle mobile/PC d'Adrien toujours en attente pour le considérer
 définitivement clos.*

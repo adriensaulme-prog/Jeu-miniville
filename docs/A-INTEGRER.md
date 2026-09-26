@@ -38,9 +38,18 @@ journal existant, puis ce fichier peut être supprimé.*
 > (migration `0018`, envoyée à Adrien, en attente de confirmation
 > d'application). Point ouvert : extension du même principe à
 > Influence/AntiVille, pas demandée pour l'instant (`DECISIONS.md` §10
-> point 32). Détail dans `DECISIONS.md` §4, journal du Jalon 13 bis. Ce
-> fichier peut être supprimé quand Adrien aura répondu aux questions
-> restantes.
+> point 32). Détail dans `DECISIONS.md` §4, journal du Jalon 13 bis.
+> **§14/§15/§16 faits le 26/09/2026** comme "Jalon 13 ter" — panneau
+> flottant réductible sur mobile (`PanneauFlottant.tsx`) ; bouton
+> "Visiter" retiré, visite comptée automatiquement ~2,5 s après
+> ouverture de la page (`VisiteAutomatique.tsx`, délai choisi par
+> Claude Code comme demandé) ; auto-visite autorisée, contrôle `P0005`
+> retiré de `visiter_ville()`, même délai/plafond qu'une autre ville
+> (migration `0021`, envoyée à Adrien, en attente de confirmation
+> d'application). §15 partie B (choix du thème) toujours bloquée
+> derrière `SYSTEME-DEVELOPPEMENT.md`, pas encore validé. Détail dans
+> `DECISIONS.md` §4, journal du Jalon 13 ter. Ce fichier peut être
+> supprimé quand Adrien aura répondu aux questions restantes.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -466,3 +475,148 @@ avant d'y toucher, si l'objectif de rétention s'y prête aussi.
 rétention, une notification de rappel (« ta ville peut être revisitée »)
 serait un bon complément — déjà listé comme ambition long terme dans
 `DECISIONS.md` §9 ("Notifications push"), à ne pas construire maintenant.
+
+## 14. Mobile : le panneau du bas cache la ville (retour de test d'Adrien, 26/09/2026)
+
+**Constat d'Adrien**, en testant sur téléphone : « je ne vois pas la
+ville bien, car les différents onglets se mettent devant, il faudrait
+avoir la possibilité de réduire les onglets pour voir les villes ».
+
+**Vérifié côté code** (`src/app/globals.css`, règles `.dock-float` et
+`.screen` sous `@media (max-width: 640px)`) : sur mobile, le panneau
+flottant du bas (`.dock-float`) peut occuper jusqu'à **55 % de la
+hauteur de l'écran** (`max-height: 55dvh`), posé par-dessus la scène 3D,
+sans aucun moyen de le réduire ou de le masquer. La barre d'onglets du
+bas (58px) reste toujours visible, mais le panneau au-dessus d'elle
+prend toute la place qu'il veut. Le principe d'origine (`A-INTEGRER.md`
+§1 : « sur mobile, un seul panneau en bas de l'écran et une barre
+d'onglets en bas ») ne prévoyait pas de bouton pour le réduire — l'écran
+de test grandeur réelle d'Adrien montre que c'en est un vrai manque, pas
+un détail.
+
+**À corriger** :
+- ajouter une **poignée / bouton "réduire"** sur le panneau (`.dock-float`
+  en mode mobile) : un tiret ou une flèche en haut du panneau, qui le
+  fait passer d'un état "ouvert" (jusqu'à 55dvh, comme aujourd'hui) à un
+  état "réduit" (juste le titre/l'essentiel, quelques dizaines de pixels)
+  et inversement ;
+- l'état réduit doit laisser voir la majorité de la scène 3D en dessous ;
+- mémoriser l'état choisi le temps de la session (pas besoin de le
+  garder après fermeture de l'appli) ;
+- un simple **glisser vers le bas** sur le panneau (drag/swipe) peut
+  faire la même chose que le bouton, si c'est simple à ajouter avec le
+  reste — sinon le bouton seul suffit pour cette itération.
+
+**Précision, pas un bug** : le tableau de bord `dock-right` est déjà
+masqué sur mobile (`display: none` sous 640px) et remplacé par le mode
+détail plein écran quand on ouvre une ville — ce comportement-là reste
+inchangé, seul `.dock-float` (le panneau principal du bas, onglets
+compris) a besoin du réducteur.
+
+## 15. Visite automatique, sans bouton à cliquer (décision d'Adrien, 26/09/2026)
+
+**Demande d'Adrien**, en continuité du §13 : « il ne faudrait pas avoir à
+cliquer, ça devrait être automatique sur chaque ville, et ensuite
+choisir le thème que l'on souhaite développer ». Précisé en réponse à
+une question directe de Claude chat : **ouvrir la page d'une ville doit
+suffire à compter comme une visite** (plus de bouton « Visiter » à
+cliquer) ; le seul clic qui reste sert à choisir quelle activité/thème
+développer.
+
+**Cette demande se coupe en deux, à traiter séparément :**
+
+**A. La visite automatique — buildable maintenant, extension directe du
+§13/Jalon 13 bis.**
+- Quand un joueur ouvre la page de détail d'**une ville qui n'est pas la
+  sienne**, appeler automatiquement l'équivalent de `visiter_ville()`
+  (celui du Jalon 13 bis, avec délai d'1h et plafond de 3/jour déjà en
+  place) — plus besoin du bouton ni du `<form action={visiterVille}>`
+  dans `src/app/villes/page.tsx` ;
+- l'auto-visite reste bien sûr impossible (code `P0005` inchangé) ;
+- interface : remplacer le bouton par un message de confirmation discret
+  (« Visite comptée, +1 habitant » ou le compte à rebours/plafond du
+  §13 si la ville vient d'être visitée) — pas de nouveau clic requis ;
+- **point d'attention pour Claude Code, à trancher selon ta recommandation**
+  comme d'habitude : une visite automatique au chargement de la page
+  peut se déclencher par simple curiosité (ouvrir une ville dans la
+  liste sans intention de la soutenir), alors qu'un bouton signalait une
+  action volontaire. Si ça te semble un risque pour l'équilibre, une
+  option intermédiaire : ne compter la visite qu'après un court délai
+  sur la page (ex. 2-3 secondes), ou seulement en mode détail plein
+  écran (pas depuis un simple survol/aperçu dans la liste). Décision
+  laissée à Claude Code, comme le plafond du §13.
+
+**B. Le choix du thème/activité à développer — reste bloqué derrière
+`docs/SYSTEME-DEVELOPPEMENT.md`, pas encore validé.**
+- C'est exactement ce que propose déjà ce document (grille de 7
+  activités à choisir à chaque visite, jauges d'équilibre, etc.), en
+  attente des réponses d'Adrien listées en fin de document ;
+- **ne pas construire de version provisoire** du choix de thème pour
+  combler ce point tant que le système n'est pas validé — la partie A
+  (visite automatique) peut avancer seule sans ça, la ville continue de
+  grandir en `population` comme aujourd'hui ;
+- quand `SYSTEME-DEVELOPPEMENT.md` sera validé, le clic supprimé en
+  partie A sera remplacé par l'écran de choix d'activité de ce
+  document-là, pas par un nouveau bouton "Visiter" séparé.
+
+**Ce qui ne change pas** : le délai d'1h et le plafond de 3 visites par
+jour et par (visiteur, ville) du §13/Jalon 13 bis s'appliquent à l'identique,
+seul le geste pour déclencher une visite change (plus de clic).
+
+## 16. Autoriser l'auto-visite : nouvel amendement volontaire au cahier des charges (décision d'Adrien, 26/09/2026)
+
+**Demande d'Adrien**, confirmée après question de clarification : il
+souhaite qu'un joueur puisse **visiter sa propre ville**, comme une
+vraie règle du jeu pour tout le monde — pas seulement un outil de test.
+Une ville pourrait donc grandir sans qu'aucun autre joueur ne la
+visite jamais.
+
+**Attention, deuxième déviation assumée du cahier des charges dans ce
+fichier** (après le §13) : le §3 pose l'attraction d'autres joueurs
+comme **le** principe fondateur de la croissance d'une ville — c'est ce
+qui donne au jeu son caractère social/viral (inviter des amis, partager
+sa ville pour la faire grandir). Autoriser l'auto-visite retire
+l'obligation d'avoir ne serait-ce qu'un seul autre joueur pour grandir.
+Adrien, auteur du cahier des charges, a été informé de cette
+contradiction et confirme vouloir cette évolution en connaissance de
+cause. **À documenter dans `DECISIONS.md` comme amendement volontaire**,
+même précédent que le §13 et que le renommage « zéro coût » →
+« dépenses sous contrôle ».
+
+**Ce qui doit changer techniquement** :
+- dans `visiter_ville()` (version actuelle : Jalon 13 bis, migration
+  `0018`), **retirer le contrôle qui bloque l'auto-visite**
+  (`if v_owner_id = p_visiteur_id then raise exception ... errcode = 'P0005'`) ;
+- le code d'erreur `P0005` devient inutilisé — le laisser dans le
+  registre des codes (migration `0006`) mais noter qu'il ne sert plus,
+  plutôt que le réutiliser pour autre chose ;
+- **le délai d'1h et le plafond de 3 visites/jour du §13 s'appliquent
+  exactement pareil à soi-même qu'à une autre ville** — pas de règle
+  spéciale à ajouter, c'est le même compteur (visiteur_id, ville_id)
+  qui compte déjà les visites, qu'elles soient de soi ou d'un autre ;
+- combiné au §15 (visite automatique sans clic) : ouvrir sa propre page
+  « Ma ville » comptera donc aussi automatiquement comme une visite,
+  avec le même délai/plafond — une ville isolée sans aucun visiteur
+  extérieur pourra quand même avancer, mais **au maximum 3 fois par
+  jour par elle-même**, très lentement comparé à une ville qui recrute
+  plusieurs vrais visiteurs. Ça garde un intérêt réel à attirer
+  d'autres joueurs, sans plus jamais bloquer totalement une ville
+  isolée.
+
+**Interface** : sur `src/app/ville/page.tsx` (page « Ma ville »), ce qui
+était un simple affichage devient une page qui peut aussi déclencher une
+visite automatique (comme les autres villes en §15), avec le même
+message de confirmation / compte à rebours / plafond que partout
+ailleurs.
+
+**Portée** : cette décision ne concerne que **Visiter** (population),
+comme le §13. Influence et AntiVille restent interdits sur sa propre
+ville — l'auto-influence n'a pas de sens (pas de tiers à convaincre) et
+l'AntiVille est une action hostile envers un adversaire, pas envers
+soi-même ; aucune raison de les ouvrir à l'auto-usage.
+
+**Correction d'une note précédente** : les §13 et §15 de ce document
+disaient encore « l'auto-visite reste refusée / interdite » — c'était
+vrai au moment où ils ont été écrits, ce §16 vient changer cette règle
+juste après. En cas de lecture dans l'ordre, c'est ce §16 qui fait foi
+sur l'auto-visite.

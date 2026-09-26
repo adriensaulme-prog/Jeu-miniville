@@ -274,6 +274,12 @@ body {
   right: 16px;
   width: min(340px, calc(100% - 32px));
 }
+.dock-poignee {
+  display: none;
+}
+.dock-contenu {
+  display: contents;
+}
 @media (max-width: 640px) {
   .dock-float {
     top: auto;
@@ -284,6 +290,7 @@ body {
     max-height: 55dvh;
     padding: 12px;
     gap: 10px;
+    transition: max-height 0.2s ease;
   }
   .dock-right {
     display: none;
@@ -293,6 +300,34 @@ body {
   }
   .detail .dock-right {
     display: grid;
+  }
+  .dock-poignee {
+    display: block;
+    width: 100%;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .dock-poignee span {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 6px auto 0;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  .dock-contenu {
+    display: grid;
+    gap: 14px;
+  }
+  .dock-float.reduit {
+    max-height: 42px;
+    overflow: hidden;
+  }
+  .dock-float.reduit .dock-contenu {
+    display: none;
   }
 }
 .center-card {

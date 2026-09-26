@@ -7,11 +7,15 @@ import { ordinal } from "@/lib/game/ordinal";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SincroniserScene } from "@/components/SincroniserScene";
+import { PanneauFlottant } from "@/components/PanneauFlottant";
+import { VisiteAutomatique } from "@/components/VisiteAutomatique";
 
 // Repli si le pays de la ville n'a pas encore de géo/fuseau renseignés
 // (quelques territoires ISO 3166-1 sur 250 — voir DECISIONS.md §4,
 // Jalon 6). Mêmes valeurs que le prototype par défaut (France).
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
+const QUOTA_VISITE_QUOTIDIEN = 3;
+const DELAI_VISITE_MINUTES = 60;
 
 export default async function VillePage() {
   const locale = await getLocale();
@@ -98,6 +102,39 @@ export default async function VillePage() {
   const nomNiveauSuivant =
     progression.seuilSuivant != null ? libelleNiveau(progression.niveau + 1, locale) : null;
 
+  // Auto-visite de sa propre ville (Jalon 13 ter, docs/A-INTEGRER.md
+  // §16) : même délai d'une heure et plafond de 3/jour que pour visiter
+  // une autre ville (Jalon 13 bis), même compteur (visiteur_id,
+  // ville_id) — ici les deux valent l'id du joueur et de sa ville.
+  const maintenant = new Date();
+  const aujourdhui = maintenant.toISOString().slice(0, 10);
+  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
+
+  const { data: mesVisitesRecentes } = await supabase
+    .from("visites")
+    .select("created_at")
+    .eq("visiteur_id", user.id)
+    .eq("ville_id", ville.id)
+    .gte("created_at", ilUneHeureEnArriere);
+  const derniereVisite = (mesVisitesRecentes ?? []).reduce<string | null>(
+    (max, v) => (!max || v.created_at > max ? v.created_at : max),
+    null
+  );
+  const minutesAvantRevisite = derniereVisite
+    ? Math.max(
+        1,
+        Math.ceil((new Date(derniereVisite).getTime() + DELAI_VISITE_MINUTES * 60 * 1000 - maintenant.getTime()) / 60_000)
+      )
+    : null;
+
+  const { count: nbVisitesAujourdhui } = await supabase
+    .from("visites")
+    .select("id", { count: "exact", head: true })
+    .eq("visiteur_id", user.id)
+    .eq("ville_id", ville.id)
+    .eq("jour", aujourdhui);
+  const plafondVisiteAtteint = (nbVisitesAujourdhui ?? 0) >= QUOTA_VISITE_QUOTIDIEN;
+
   const stats: Array<{ cle: "ville.population" | "ville.influence" | "ville.activite"; valeur: number }> = [
     { cle: "ville.population", valeur: ville.population },
     { cle: "ville.influence", valeur: ville.influence },
@@ -107,7 +144,7 @@ export default async function VillePage() {
   return (
     <main className="screen" aria-label={traduire(locale, "villes.maVille")}>
       <SincroniserScene seed={ville.id} populationMax={ville.population_max} pays={pays} />
-      <div className="dock dock-float dock-left">
+      <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <span className="eyebrow">{traduire(locale, "villes.maVille")}</span>
           {president ? (
@@ -162,7 +199,25 @@ export default async function VillePage() {
             </div>
           ))}
         </div>
-      </div>
+        <div className="act">
+          <span className="h3">{traduire(locale, "villes.visiter")}</span>
+          <p>
+            +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+            <span className="counter">
+              {nbVisitesAujourdhui ?? 0}/{QUOTA_VISITE_QUOTIDIEN}
+            </span>
+          </p>
+          {plafondVisiteAtteint ? (
+            <p className="note">{traduire(locale, "villes.quotaAtteint")}</p>
+          ) : minutesAvantRevisite !== null ? (
+            <p className="note">
+              {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
+            </p>
+          ) : (
+            <VisiteAutomatique locale={locale} villeId={ville.id} peutVisiter />
+          )}
+        </div>
+      </PanneauFlottant>
     </main>
   );
 }

@@ -6,15 +6,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
- * Visite une autre ville : +1 population, jusqu'à 3 fois par jour et
- * par (visiteur, ville), avec un délai minimum d'une heure entre deux
- * visites de la même ville. Toute la logique — y compris l'interdiction
- * de se visiter soi-même, le délai et le plafond quotidien — vit dans
- * la fonction SQL visiter_ville() (Jalon 13 bis, docs/DECISIONS.md §4 ;
- * déviation assumée du cahier des charges §3/§26, demandée par Adrien).
- * Cette action ne fait que l'appeler et rafraîchir la page.
+ * Visite une ville (la sienne comprise depuis le Jalon 13 ter) : +1
+ * population, jusqu'à 3 fois par jour et par (visiteur, ville), avec un
+ * délai minimum d'une heure entre deux visites de la même ville. Toute
+ * la logique — délai, plafond quotidien — vit dans la fonction SQL
+ * visiter_ville() (Jalon 13 ter, docs/DECISIONS.md §4 ; déviations
+ * assumées du cahier des charges §3/§26, demandées par Adrien).
+ *
+ * Appelée directement (pas via `<form action={...}>`) par
+ * `VisiteAutomatique` (docs/A-INTEGRER.md §15) : ouvrir la page d'une
+ * ville déclenche la visite toute seule après un court délai, plus
+ * besoin de cliquer un bouton "Visiter".
  */
-export async function visiterVille(formData: FormData) {
+export async function visiterVille(villeId: string): Promise<{ succes: boolean }> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -24,11 +28,6 @@ export async function visiterVille(formData: FormData) {
     redirect("/connexion");
   }
 
-  const villeId = String(formData.get("villeId") ?? "");
-  if (!villeId) {
-    return;
-  }
-
   const { error } = await supabaseAdmin.rpc("visiter_ville", {
     p_visiteur_id: user.id,
     p_ville_id: villeId,
@@ -36,12 +35,18 @@ export async function visiterVille(formData: FormData) {
 
   // P0018 (délai d'une heure non écoulé) et P0019 (plafond quotidien de
   // 3 visites atteint) : pas de vraies erreurs, l'affichage se corrige
-  // tout seul au revalidate ci-dessous (compte à rebours ou compteur).
+  // tout seul au revalidate ci-dessous (compte à rebours ou compteur) —
+  // en pratique jamais atteints ici puisque VisiteAutomatique ne
+  // déclenche l'appel que lorsque la page a déjà déterminé que la
+  // visite est possible, mais la fonction SQL reste la seule autorité.
   if (error && !["P0018", "P0019"].includes(error.code ?? "")) {
     console.error("visiterVille a échoué :", error.message);
   }
 
   revalidatePath("/villes");
+  revalidatePath("/ville");
+
+  return { succes: !error };
 }
 
 /**

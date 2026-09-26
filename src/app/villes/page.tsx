@@ -8,7 +8,9 @@ import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { FiltreVilles } from "./FiltreVilles";
 import { ActionsAntiVille } from "./ActionsAntiVille";
 import { SincroniserScene } from "@/components/SincroniserScene";
-import { influencerVille, proposerJumelage, visiterVille } from "./actions";
+import { PanneauFlottant } from "@/components/PanneauFlottant";
+import { VisiteAutomatique } from "@/components/VisiteAutomatique";
+import { influencerVille, proposerJumelage } from "./actions";
 
 const QUOTA_VISITE_QUOTIDIEN = 3;
 const DELAI_VISITE_MINUTES = 60;
@@ -210,7 +212,7 @@ export default async function VillesPage({
         <SincroniserScene seed={villeAffichee3D.id} populationMax={villeAffichee3D.population_max} pays={pays3D} />
       ) : null}
 
-      <div className="dock dock-float dock-left">
+      <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <h2 className="h2">{traduire(locale, "villes.titre")}</h2>
         </div>
@@ -259,10 +261,10 @@ export default async function VillesPage({
             })
           )}
         </ol>
-      </div>
+      </PanneauFlottant>
 
       {villeSelectionnee ? (
-        <div className="dock dock-float dock-right" aria-label={traduire(locale, "villes.enVisite")}>
+        <PanneauFlottant locale={locale} className="dock dock-float dock-right" ariaLabel={traduire(locale, "villes.enVisite")}>
           {(() => {
             const c = villeSelectionnee;
             const pseudo = unwrap(c.owner)?.pseudo ?? "";
@@ -327,47 +329,24 @@ export default async function VillesPage({
                 </div>
 
                 <div className="actions">
-                  {plafondVisiteAtteint ? (
-                    <div className="act">
-                      <span className="h3">{traduire(locale, "villes.visiter")}</span>
-                      <p>
-                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
-                        <span className="counter">
-                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
-                        </span>
-                      </p>
-                      <button className="btn" type="button" disabled>
-                        {traduire(locale, "villes.quotaAtteint")}
-                      </button>
-                    </div>
-                  ) : minutesAvantRevisite !== null ? (
-                    <div className="act">
-                      <span className="h3">{traduire(locale, "villes.visiter")}</span>
-                      <p>
-                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
-                        <span className="counter">
-                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
-                        </span>
-                      </p>
-                      <button className="btn" type="button" disabled>
+                  <div className="act">
+                    <span className="h3">{traduire(locale, "villes.visiter")}</span>
+                    <p>
+                      +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+                      <span className="counter">
+                        {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
+                      </span>
+                    </p>
+                    {plafondVisiteAtteint ? (
+                      <p className="note">{traduire(locale, "villes.quotaAtteint")}</p>
+                    ) : minutesAvantRevisite !== null ? (
+                      <p className="note">
                         {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
-                      </button>
-                    </div>
-                  ) : (
-                    <form action={visiterVille} className="act">
-                      <input type="hidden" name="villeId" value={c.id} />
-                      <span className="h3">{traduire(locale, "villes.visiter")}</span>
-                      <p>
-                        +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
-                        <span className="counter">
-                          {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
-                        </span>
                       </p>
-                      <button className="btn primary" type="submit">
-                        {traduire(locale, "villes.visiter")}
-                      </button>
-                    </form>
-                  )}
+                    ) : (
+                      <VisiteAutomatique locale={locale} villeId={c.id} peutVisiter />
+                    )}
+                  </div>
 
                   <div className="act">
                     <span className="h3">{traduire(locale, "villes.influencer")}</span>
@@ -433,7 +412,7 @@ export default async function VillesPage({
               </>
             );
           })()}
-        </div>
+        </PanneauFlottant>
       ) : null}
     </main>
   );

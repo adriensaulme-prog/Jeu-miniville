@@ -75,6 +75,13 @@ test.describe("Jalon 5 — villes jumelles", () => {
       await page.goto("/villes");
       const ligneB = page.getByRole("link", { name: new RegExp(b.villeNom) });
       await ligneB.click();
+      // Ouvrir la page de B déclenche aussi une visite automatique
+      // (Jalon 13 ter, ~2,5 s puis confirmation) : on attend que le
+      // compteur "1/3" soit affiché (signe que le cycle complet,
+      // confirmation + router.refresh(), est terminé) avant de
+      // continuer, sinon la population finale de B dépendrait d'une
+      // course entre ce délai et le reste du scénario.
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 8_000 });
       await page.getByRole("button", { name: "Proposer un jumelage" }).click();
       await expect(page.getByText("Demande envoyée")).toBeVisible();
 
@@ -116,10 +123,13 @@ test.describe("Jalon 5 — villes jumelles", () => {
         .select("population")
         .eq("id", b.villeId)
         .single();
-      // 1 (naissance) + éventuellement 1 (visite tierce ne touche pas
-      // sa propre ville) + 1 (bonus de jumelage) = 2.
+      // A : 1 (naissance) + 1 (bonus de jumelage) = 2.
       expect(villeAApres?.population).toBe(2);
-      expect(villeBApres?.population).toBe(2);
+      // B : 1 (naissance) + 1 (visite automatique de A en ouvrant sa
+      // page pour proposer le jumelage, Jalon 13 ter — ouvrir une page
+      // de ville compte désormais toujours comme une visite) + 1
+      // (bonus de jumelage) = 3.
+      expect(villeBApres?.population).toBe(3);
 
       // Rappeler le bonus le même jour ne doit rien redonner (idempotent).
       const { data: rappel } = await supabaseAdmin.rpc("reclamer_bonus_jumelages", {

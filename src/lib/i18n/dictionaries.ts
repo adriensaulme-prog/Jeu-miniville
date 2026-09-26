@@ -13,6 +13,8 @@ export const defaultLocale: Locale = "fr";
 
 export const dictionaries = {
   fr: {
+    "panneau.reduire": "Réduire le panneau",
+    "panneau.agrandir": "Agrandir le panneau",
     "accueil.titre": "jeu_miniville",
     "accueil.nomProvisoire": "(nom provisoire)",
     "accueil.description":
@@ -78,6 +80,7 @@ export const dictionaries = {
     "villes.visiter": "Visiter",
     "villes.dejaVisitee": "Indisponible pour l'instant",
     "villes.revisiterDans": "Revisiter dans",
+    "villes.visiteComptee": "Visite comptée, +1 habitant.",
     "villes.aucuneAutreVille": "Il n'y a pas encore d'autre ville à visiter.",
     "villes.influencer": "Influencer",
     "villes.dejaInfluencee": "Déjà influencée aujourd'hui",
@@ -248,6 +251,8 @@ export const dictionaries = {
     "erreurs.connexionRequise": "Connecte-toi pour accéder à cette page.",
   },
   en: {
+    "panneau.reduire": "Collapse panel",
+    "panneau.agrandir": "Expand panel",
     "accueil.titre": "jeu_miniville",
     "accueil.nomProvisoire": "(working title)",
     "accueil.description":
@@ -313,6 +318,7 @@ export const dictionaries = {
     "villes.visiter": "Visit",
     "villes.dejaVisitee": "Not available right now",
     "villes.revisiterDans": "Revisit in",
+    "villes.visiteComptee": "Visit counted, +1 resident.",
     "villes.aucuneAutreVille": "There's no other city to visit yet.",
     "villes.influencer": "Influence",
     "villes.dejaInfluencee": "Already influenced today",

@@ -10,6 +10,7 @@ import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
 import { CartePays, type CarteRegionDonnees, type MarqueurVille } from "./CartePays";
 import { SelecteurPays } from "./SelecteurPays";
+import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { voterPays, proposerDecisionDiplomatique, soutenirDecisionDiplomatique } from "./actions";
 
 const TAILLE_TOP = 10;
@@ -304,7 +305,7 @@ export default async function PaysPage({
           <span>{nomPaysAffiche}</span>
         </div>
       )}
-      <div className="dock dock-float dock-left">
+      <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <span className="eyebrow">{traduire(locale, "pays.eyebrow")}</span>
         </div>
@@ -583,7 +584,7 @@ export default async function PaysPage({
             ))}
           </ol>
         )}
-      </div>
+      </PanneauFlottant>
     </main>
   );
 }

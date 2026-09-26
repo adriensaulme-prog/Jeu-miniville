@@ -79,7 +79,9 @@ test.describe("Jalon 1 — naître quelque part", () => {
     // Île-de-France ·", Jalon 8) contient aussi "France ·" en sous-chaîne.
     await expect(page.getByText(/^France · \d{2}:\d{2}/)).toBeVisible();
     await expect(page.getByText("Hameau")).toBeVisible();
-    await expect(page.getByText("Population")).toBeVisible();
+    // exact: true — depuis le Jalon 13 ter, le bloc "Visiter" affiche
+    // aussi "+1 population" en sous-texte (visite automatique).
+    await expect(page.getByText("Population", { exact: true })).toBeVisible();
     await expect(page.getByRole("main").getByText("1", { exact: true })).toBeVisible();
   });
 

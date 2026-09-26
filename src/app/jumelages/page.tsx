@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { SincroniserScene } from "@/components/SincroniserScene";
+import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { annulerJumelage, repondreJumelage } from "./actions";
 
 const QUOTA_JUMELAGES_ACTIFS = 3;
@@ -118,7 +119,7 @@ export default async function JumelagesPage() {
         populationMax={maVille?.population_max ?? 1}
         pays={PAYS_PAR_DEFAUT}
       />
-      <div className="dock dock-float dock-left">
+      <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <h2 className="h2">{traduire(locale, "jumelages.titre")}</h2>
         <p className="note">{traduire(locale, "jumelages.introduction")}</p>
         {bonusAccordes > 0 ? (
@@ -201,7 +202,7 @@ export default async function JumelagesPage() {
             />
           ))
         )}
-      </div>
+      </PanneauFlottant>
     </main>
   );
 }

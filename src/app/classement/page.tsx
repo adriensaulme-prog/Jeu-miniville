@@ -5,6 +5,7 @@ import { ordinal } from "@/lib/game/ordinal";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { SincroniserScene } from "@/components/SincroniserScene";
+import { PanneauFlottant } from "@/components/PanneauFlottant";
 
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 const TAILLE_TOP = 100;
@@ -98,7 +99,7 @@ export default async function ClassementPage({
   return (
     <main className="screen" aria-label={traduire(locale, "classement.titre")}>
       <SincroniserScene seed={maVilleId} populationMax={maVille.population_max} pays={pays} />
-      <div className="dock dock-float dock-left">
+      <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <h2 className="h2">{traduire(locale, "classement.titre")}</h2>
         </div>
@@ -156,7 +157,7 @@ export default async function ClassementPage({
             })}
           </ol>
         )}
-      </div>
+      </PanneauFlottant>
     </main>
   );
 }

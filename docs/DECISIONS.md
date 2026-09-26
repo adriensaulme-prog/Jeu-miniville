@@ -2035,6 +2035,90 @@ bundle JS (fichier statique servi tel quel), poids du paquet inchangé.
 Vérification manuelle mobile/PC en attente du retour d'Adrien — MVP
 (cahier des charges §30) complet une fois confirmée.
 
+### Jalon 13 ter — visite automatique — 26/09/2026
+
+**Contenu.** Trois retours de test d'Adrien reçus le même jour
+(`docs/A-INTEGRER.md` §14/§15/§16), tous liés au mécanisme de visite du
+Jalon 13 bis, traités ensemble :
+
+- **§14 — panneau flottant réductible sur mobile.** Constat d'Adrien en
+  testant sur téléphone : le panneau du bas (`.dock-float`) pouvait
+  occuper jusqu'à 55 % de la hauteur d'écran, posé par-dessus la scène
+  3D, sans aucun moyen de le réduire pour voir sa ville. Nouveau
+  composant `src/components/PanneauFlottant.tsx` : une poignée (visible
+  seulement en mobile) bascule le panneau entre "ouvert" et "réduit"
+  (42px, juste la poignée) ; état mémorisé en `sessionStorage`, partagé
+  entre les 6 pages qui utilisaient `.dock-float` directement
+  (`/classement`, `/jumelages`, `/palmares`, `/pays`, `/ville`,
+  `/villes`), toutes basculées sur ce composant. CSS : `.dock-contenu`
+  vaut `display: contents` par défaut (desktop), pour que le nouveau
+  wrapper n'altère strictement rien à la mise en page existante quand
+  la poignée n'est pas affichée — bascule en `display: grid` seulement
+  sous 640px.
+- **§15 (partie A) — visite automatique, plus de bouton.** Demande
+  d'Adrien : « il ne faudrait pas avoir à cliquer, ça devrait être
+  automatique ». Le bouton "Visiter" est retiré ; `visiterVille()`
+  (`src/app/villes/actions.ts`) change de signature (`villeId: string`
+  direct plutôt que `FormData`, appelée par du JS, plus par un
+  `<form>`) et un nouveau composant `src/components/VisiteAutomatique.tsx`
+  déclenche l'appel automatiquement ~2,5 s après l'affichage du panneau
+  détail d'une ville (autre ville, ou la sienne depuis le §16
+  ci-dessous). **Délai laissé à l'appréciation de Claude Code** par
+  Adrien (« risque qu'une visite se déclenche par simple curiosité ») :
+  2,5 s choisies pour absorber un aller-retour accidentel (le minuteur
+  est annulé si le panneau se ferme avant, via le nettoyage du
+  `useEffect`) sans ajouter de geste supplémentaire — le clic qui ouvre
+  déjà le panneau (depuis la liste, ou "Ma ville" dans la nav) reste le
+  geste volontaire. Un message discret ("Visite comptée, +1 habitant.")
+  s'affiche ~1,2 s avant que `router.refresh()` ne fasse basculer
+  l'affichage sur le compte à rebours/plafond du Jalon 13 bis (options
+  explicitement interchangeables selon la note d'Adrien). **Partie B
+  (choix du thème à développer) volontairement pas construite** :
+  bloquée derrière `docs/SYSTEME-DEVELOPPEMENT.md`, pas encore validé
+  par Adrien — la ville continue de grandir en `population` comme
+  aujourd'hui, sans écran de choix.
+- **§16 — autoriser l'auto-visite.** Troisième déviation assumée du
+  cahier des charges dans ce projet (après le §13/Jalon 13 bis et
+  l'assouplissement "zéro coût") : le §3 pose l'attraction d'autres
+  joueurs comme LE principe fondateur de la croissance d'une ville.
+  Adrien, informé de la contradiction, confirme vouloir qu'un joueur
+  puisse visiter sa propre ville, en connaissance de cause — une ville
+  isolée sans aucun visiteur extérieur peut désormais progresser, mais
+  au mieux 3 fois par jour par elle-même (même délai/plafond que pour
+  une autre ville, aucune règle spéciale), très lentement comparé à une
+  ville qui recrute de vrais visiteurs. `visiter_ville()` (migration
+  `0021`) : retire le contrôle qui levait `P0005` sur l'auto-visite ;
+  le code `P0005` devient inutilisé pour cette fonction (toujours actif
+  pour Influencer/AntiVille/Jumelage, qui n'ont pas cette évolution —
+  auto-influence et auto-attaque n'ont pas de sens, aucune raison de
+  les ouvrir). `src/app/ville/page.tsx` ("Ma ville") gagne les mêmes
+  requêtes de délai/plafond que `/villes` et le même `VisiteAutomatique`.
+
+**Testé.** `tests/e2e/jalon13ter-visite-automatique.spec.ts` (nouveau,
+3 tests) : l'auto-visite est acceptée puis re-bloquée par le délai
+(P0018, comme pour une autre ville) ; la page `/ville` compte une
+auto-visite automatiquement, sans bouton "Visiter" (absent, count 0) ;
+le panneau flottant se réduit et s'agrandit sur mobile (375×812), le
+nom de la ville disparaît/réapparaît avec. `tests/e2e/jalon2-grandir-grace-aux-autres.spec.ts`
+et `tests/e2e/jalon13bis-revenir-plus-souvent.spec.ts` mis à jour pour
+la visite automatique (attendent le délai au lieu de cliquer) ; le test
+"auto-visite refusée" de `jalon2` retiré (devenu faux). Vérifié aussi à
+l'œil avant la migration `0021` (dégrade proprement : page affichée
+normalement, `console.error` côté serveur pour `P0005` absorbé
+silencieusement côté UI, population inchangée) et après (auto-visite
+comptée, population +1, confirmé en base). Poids du paquet : léger
+supplément lié à `PanneauFlottant` sur les 6 pages concernées (max
++6 Ko sur `/classement`/`/jumelages`/`/palmares`, +2 Ko sur `/villes`,
+inchangé sur `/pays`), toujours largement dans le budget de 500 Ko.
+Suite complète : 73 tests unitaires + 58 tests e2e, verte à
+`--workers=1` (migration `0021` appliquée par Adrien avant ce dernier
+run). Croisé en route, sans rapport avec ce jalon : le test fragile déjà
+documenté de `jalon8-se-classer.spec.ts` (rang national dynamique) a
+échoué une fois, le serveur de dev étant partagé avec Adrien pendant sa
+propre vérification manuelle au même moment — même famille de
+flakiness "serveur de dev"/données partagées déjà rencontrée à
+plusieurs reprises dans ce journal.
+
 ---
 
 ## §5. i18n
