@@ -138,7 +138,11 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
     // clic sur un bouton "Visiter" (qui n'existe plus), elle se
     // déclenche toute seule ~2,5 s après l'affichage du panneau détail
     // (voir src/components/VisiteAutomatique.tsx) — chaque étape
-    // ci-dessous attend donc ce délai plutôt que de cliquer.
+    // ci-dessous attend donc ce délai plutôt que de cliquer. Timeouts
+    // généreux (15 s, pas 8 s) : la scène 3D en arrière-plan peut
+    // ralentir le thread principal (GPU stall observé en environnement
+    // de test headless) et repousser le déclenchement du minuteur bien
+    // au-delà des 2,5 s nominales.
     test.setTimeout(60_000);
     const cible = await creerCompteAvecVille("j13bis-ui-cible");
     const visiteur = await creerCompteAvecVille("j13bis-ui-visiteur");
@@ -148,25 +152,26 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
 
       await page.goto(`/villes?ville=${cible.villeId}`);
       await expect(page.getByText("0/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 8_000 });
-      await expect(page.getByText(/Revisiter dans \d+ min/)).toBeVisible();
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/Revisiter dans \d+ min/)).toBeVisible({ timeout: 15_000 });
 
       await debloquerDelai(visiteur.userId, cible.villeId);
       await page.reload();
       await expect(page.getByText("1/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("2/3")).toBeVisible({ timeout: 8_000 });
+      await expect(page.getByText("2/3")).toBeVisible({ timeout: 15_000 });
 
       await debloquerDelai(visiteur.userId, cible.villeId);
       await page.reload();
       await expect(page.getByText("2/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("3/3")).toBeVisible({ timeout: 8_000 });
+      await expect(page.getByText("3/3")).toBeVisible({ timeout: 15_000 });
 
       // Plafond atteint : "Quota atteint" s'affiche, plus de visite
       // automatique possible même si le délai est aussi encore actif
       // juste après cette 3e visite.
-      await expect(page.getByText("Quota atteint")).toBeVisible();
+      await expect(page.getByText("Quota atteint")).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole("link", { name: new RegExp(cible.villeNom) })).toContainText(
-        "Indisponible pour l'instant"
+        "Indisponible pour l'instant",
+        { timeout: 15_000 }
       );
     } finally {
       await supprimerCompte(cible.userId);

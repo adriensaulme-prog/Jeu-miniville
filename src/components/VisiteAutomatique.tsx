@@ -29,10 +29,15 @@ export function VisiteAutomatique({
   locale,
   villeId,
   peutVisiter,
+  gain,
 }: {
   locale: Locale;
   villeId: string;
   peutVisiter: boolean;
+  /** Gain de population de cette visite — affiché dans le message de
+   * confirmation, jamais recalculé ici : juste ce que le serveur a
+   * déjà déterminé pour l'affichage du bouton avant la visite. */
+  gain: number;
 }) {
   const router = useRouter();
   const [comptee, setComptee] = useState(false);
@@ -59,5 +64,9 @@ export function VisiteAutomatique({
   if (!comptee) {
     return null;
   }
-  return <p className="note">{traduire(locale, "villes.visiteComptee")}</p>;
+  return (
+    <p className="note">
+      {traduire(locale, "villes.visiteComptee")} +{gain} {traduire(locale, "ville.population").toLowerCase()}.
+    </p>
+  );
 }

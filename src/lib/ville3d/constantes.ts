@@ -31,6 +31,22 @@ export const APART_FLOOR_EVERY = 6000; // +1 étage d'immeuble tous les 6 000 ha
 export const TOWER_FROM = 15000; // premier gratte-ciel à partir de Ville, bloc du centre
 export const TOWER_STAGGER = 4500; // puis un nouveau chantier de tour tous les 4 500 habitants
 export const PER_FLOOR = 500; // +1 étage de gratte-ciel tous les 500 habitants
+// "Combien d'habitants par habitation" (annulation du Jalon 16,
+// docs/DECISIONS.md §4 et §10 point 33) : une maison individuelle est
+// UN logement, occupé toutes les HABITANTS_PAR_LOGEMENT_MAISON
+// habitants supplémentaires de la ville — même constante du Hameau à
+// la Métropole (un bloc qui vient de s'ouvrir montre ses 4 maisons en
+// quelques habitants, pas en attendant ~15 % de l'écart jusqu'au bloc
+// suivant comme avant). Chiffre donné par Adrien lui-même pour un
+// Hameau, repris tel quel partout pour rester cohérent. Les immeubles
+// et tours ne suivent volontairement pas la même règle : un seul étage
+// y loge d'emblée plusieurs foyers, et le rythme actuel (APART_FLOOR_EVERY,
+// PER_FLOOR) est calé sur les repères de densité du cahier des charges
+// (~28 blocs à 100 000 hab., ~58 à 250 000, voir DECISIONS.md §4,
+// Jalon 7bis) — les changer risquerait de casser cet équilibre déjà
+// vérifié, pour un problème (la lenteur ressentie) qui ne concerne que
+// le tout début de partie.
+export const HABITANTS_PAR_LOGEMENT_MAISON = 4;
 // Au-delà des 16 premiers blocs, la ville ne s'arrête plus : un bloc de
 // plus tous les 5 000 habitants (Jalon 7bis, docs/A-INTEGRER.md §2).
 export const BLOC_SUPPLEMENTAIRE_TOUS = 5000;

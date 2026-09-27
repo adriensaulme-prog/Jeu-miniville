@@ -99,15 +99,19 @@ test.describe("Jalon 13 ter — visite automatique", () => {
 
       await expect(page.getByRole("button", { name: "Visiter" })).toHaveCount(0);
       await expect(page.getByText("0/3")).toBeVisible();
-      await expect(page.getByText("Visite comptée, +1 habitant.")).toBeVisible({ timeout: 8_000 });
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 8_000 });
+      // Timeouts généreux (15 s, pas 8 s) : la scène 3D en arrière-plan
+      // peut ralentir le thread principal (GPU stall observé en
+      // environnement de test headless) et repousser le déclenchement du
+      // minuteur de ~2,5 s bien au-delà de sa valeur nominale.
+      await expect(page.getByText("Visite comptée, +1 population.")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 15_000 });
 
       const { data: ville } = await supabaseAdmin
         .from("cities")
         .select("population")
         .eq("id", joueur.villeId)
         .single();
-      expect(ville?.population).toBe(2);
+      expect(ville?.population).toBe(2); // 1 (départ) + 1 auto-visite
     } finally {
       await supprimerCompte(joueur.userId);
     }

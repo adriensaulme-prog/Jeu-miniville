@@ -89,11 +89,15 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
       // se déclenche automatiquement ~2,5 s après (voir
       // src/components/VisiteAutomatique.tsx).
       await ligneCible.click();
-      await expect(page.getByText("Visite comptée, +1 habitant.")).toBeVisible({ timeout: 8_000 });
+      // Timeout généreux (15 s, pas 8 s) : la scène 3D en arrière-plan
+      // peut ralentir le thread principal (GPU stall observé en
+      // environnement de test headless) et repousser le déclenchement
+      // du minuteur de ~2,5 s bien au-delà de sa valeur nominale.
+      await expect(page.getByText("Visite comptée, +1 population.")).toBeVisible({ timeout: 15_000 });
 
       // Le délai d'une heure (Jalon 13 bis) bloque toute visite
       // suivante : le badge "indisponible" apparaît dans la liste.
-      await expect(ligneCible.getByText("Indisponible pour l'instant")).toBeVisible({ timeout: 8_000 });
+      await expect(ligneCible.getByText("Indisponible pour l'instant")).toBeVisible({ timeout: 15_000 });
 
       const { data: villeApresVisite } = await supabaseAdmin
         .from("cities")
@@ -101,7 +105,7 @@ test.describe("Jalon 2 — grandir grâce aux autres", () => {
         .eq("id", cible.villeId)
         .single();
       expect(villeApresVisite?.population).toBe(2);
-      expect(villeApresVisite?.niveau).toBe(0); // sous le seuil du niveau 1 (5)
+      expect(villeApresVisite?.niveau).toBe(0); // sous le seuil du niveau 1 (1 000)
 
       // Recharger la page : l'état "indisponible" doit tenir, pas
       // seulement dans le DOM issu du premier submit.

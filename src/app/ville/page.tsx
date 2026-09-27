@@ -16,6 +16,7 @@ import { VisiteAutomatique } from "@/components/VisiteAutomatique";
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 const QUOTA_VISITE_QUOTIDIEN = 3;
 const DELAI_VISITE_MINUTES = 60;
+const GAIN_VISITE = 1;
 
 export default async function VillePage() {
   const locale = await getLocale();
@@ -202,7 +203,7 @@ export default async function VillePage() {
         <div className="act">
           <span className="h3">{traduire(locale, "villes.visiter")}</span>
           <p>
-            +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+            +{GAIN_VISITE} {traduire(locale, "ville.population").toLowerCase()} ·{" "}
             <span className="counter">
               {nbVisitesAujourdhui ?? 0}/{QUOTA_VISITE_QUOTIDIEN}
             </span>
@@ -214,7 +215,7 @@ export default async function VillePage() {
               {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
             </p>
           ) : (
-            <VisiteAutomatique locale={locale} villeId={ville.id} peutVisiter />
+            <VisiteAutomatique locale={locale} villeId={ville.id} peutVisiter gain={GAIN_VISITE} />
           )}
         </div>
       </PanneauFlottant>

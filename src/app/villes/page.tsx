@@ -14,6 +14,7 @@ import { influencerVille, proposerJumelage } from "./actions";
 
 const QUOTA_VISITE_QUOTIDIEN = 3;
 const DELAI_VISITE_MINUTES = 60;
+const GAIN_VISITE = 1;
 const QUOTA_INFLUENCE_QUOTIDIEN = 5;
 const QUOTA_ANTIVILLE_QUOTIDIEN = 3;
 const SEUIL_PROTECTION_ANTIVILLE = 2;
@@ -332,7 +333,7 @@ export default async function VillesPage({
                   <div className="act">
                     <span className="h3">{traduire(locale, "villes.visiter")}</span>
                     <p>
-                      +1 {traduire(locale, "ville.population").toLowerCase()} ·{" "}
+                      +{GAIN_VISITE} {traduire(locale, "ville.population").toLowerCase()} ·{" "}
                       <span className="counter">
                         {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
                       </span>
@@ -344,7 +345,7 @@ export default async function VillesPage({
                         {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
                       </p>
                     ) : (
-                      <VisiteAutomatique locale={locale} villeId={c.id} peutVisiter />
+                      <VisiteAutomatique locale={locale} villeId={c.id} peutVisiter gain={GAIN_VISITE} />
                     )}
                   </div>
 

@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { generate, planifierBlocs } from "@/lib/ville3d/generer";
 import { dimensionsAO } from "@/lib/ville3d/ao";
-import { BLOCK_OPEN, CITY_R_MIN, TOWER_AFTER_OPEN, openAtK, towerAtK } from "@/lib/ville3d/constantes";
+import {
+  BLOCK_OPEN,
+  CITY_R_MIN,
+  HABITANTS_PAR_LOGEMENT_MAISON,
+  TOWER_AFTER_OPEN,
+  openAtK,
+  towerAtK,
+} from "@/lib/ville3d/constantes";
 
 /**
  * Jalon 7bis : la ville ne s'arrête jamais de grandir (docs/A-INTEGRER.md
@@ -65,6 +72,19 @@ describe("stabilité : une ville qui grandit ne déplace jamais ce qui est déj�
     const dist = (b: { bi: number; bj: number }) => Math.hypot(b.bi + 0.5, b.bj + 0.5);
     const moyenne = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
     expect(moyenne(actifs.slice(-10).map(dist))).toBeGreaterThan(moyenne(actifs.slice(0, 10).map(dist)));
+  });
+});
+
+describe("« habitants par habitation » : les maisons d'un bloc apparaissent vite, pas au rythme du bloc entier", () => {
+  it("chaque maison du tout premier bloc apparaît exactement tous les HABITANTS_PAR_LOGEMENT_MAISON habitants, sans rien de plus vite", () => {
+    const nAt = (population: number) => generate("logement-maison", population).g.n;
+    const seuils = [0, HABITANTS_PAR_LOGEMENT_MAISON, HABITANTS_PAR_LOGEMENT_MAISON * 2, HABITANTS_PAR_LOGEMENT_MAISON * 3];
+    for (let i = 1; i < seuils.length; i++) {
+      // Juste avant le seuil suivant, rien de nouveau depuis le seuil précédent.
+      expect(nAt(seuils[i] - 1)).toBe(nAt(seuils[i - 1]));
+      // Au seuil, une maison de plus (davantage de géométrie).
+      expect(nAt(seuils[i])).toBeGreaterThan(nAt(seuils[i] - 1));
+    }
   });
 });
 

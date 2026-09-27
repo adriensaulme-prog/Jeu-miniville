@@ -10,6 +10,7 @@ import {
   APART_FROM,
   BS,
   COL,
+  HABITANTS_PAR_LOGEMENT_MAISON,
   LOT,
   MAT,
   PER_FLOOR,
@@ -246,7 +247,12 @@ export function buildBlock(
       lr_ = lotRng(lc, lr);
     const lotSeed = (seed + idx * 7) % 999;
     if (idx < 4) {
-      const at = b.openAt + gap * idx * 0.2;
+      // Une maison = un logement, occupé tous les
+      // HABITANTS_PAR_LOGEMENT_MAISON habitants (docs/DECISIONS.md §4,
+      // "Annulation du Jalon 16") : les 4 maisons d'un bloc apparaissent
+      // vite après son ouverture, peu importe l'écart jusqu'au bloc
+      // suivant.
+      const at = b.openAt + idx * HABITANTS_PAR_LOGEMENT_MAISON;
       ev.push(at);
       if (C >= at) buildHouse(g, rect, front, lr_, ao, lotSeed);
       else buildPark(g, rect, lr_, ao, true);

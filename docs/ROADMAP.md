@@ -198,6 +198,36 @@ de vue du joueur — le titre dit ce qui change pour lui.
   (Android + iOS) et PC, pas faisable par Claude Code — en attente
   d'Adrien.
 
+## Phase 6 — Équilibrage et système de développement des villes *(en cours)*
+
+- [x] ~~Jalon 16 — Croissance rapide en début de partie (gain
+  dégressif).~~ **Annulé par Adrien le 27/09/2026** : le gain par
+  visite reste un flat +1 comme avant ; la sensation de croissance doit
+  venir du rendu 3D plutôt que du chiffre de population. Détail dans
+  `DECISIONS.md` §4 ("Annulation du Jalon 16") et point ouvert §10
+  point 33.
+- [x] **Jalon 16 (redéfini) — Croissance visible dans le rendu 3D
+  ("habitants par habitation").** Refonte complète par type de bâtiment
+  choisie par Adrien. Fait pour les **maisons** : une maison = un
+  logement, occupé tous les 4 habitants (`HABITANTS_PAR_LOGEMENT_MAISON`,
+  `src/lib/ville3d/constantes.ts`), même règle du Hameau à la Métropole.
+  Immeubles et tours volontairement inchangés (leur rythme actuel est
+  calé sur les repères de densité du cahier des charges). Détail dans
+  `DECISIONS.md` §4 ("Habitants par habitation") et point ouvert §10
+  point 33 (immeubles/tours, encore ouvert).
+- [ ] **Jalon 17 — Système de développement des villes (1/4) : choix
+  d'activité et jauges, sans effet.** Premier des quatre jalons du
+  chantier validé par Adrien dans `docs/A-INTEGRER.md` §18 (7
+  activités, `docs/SYSTEME-DEVELOPPEMENT.md` §9) : poser le choix
+  d'activité à chaque visite et les jauges associées, sans encore
+  brancher d'effet de jeu.
+- [ ] **Jalon 18 — Système de développement (2/4) : équilibre, crises,
+  manifestations, lien AntiVille.**
+- [ ] **Jalon 19 — Système de développement (3/4) : quartiers et
+  bâtiments 3D.**
+- [ ] **Jalon 20 — Système de développement (4/4) : mégaprojets et
+  technologies.**
+
 ---
 
 ## Après le MVP (non planifié en détail)
@@ -215,8 +245,12 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 26/09/2026, jalon 13 ter terminé (retours de la
-vérification mobile du Jalon 15, regroupés dans A-INTEGRER.md §14-16) —
-MVP du cahier des charges §30 livré depuis le Jalon 15, vérification
-manuelle mobile/PC d'Adrien toujours en attente pour le considérer
-définitivement clos.*
+*Dernière mise à jour : 27/09/2026, jalon 16 annulé et redéfini
+(croissance visible dans le rendu 3D plutôt que gain de population
+dégressif — DECISIONS.md §4 "Annulation du Jalon 16" et "Habitants par
+habitation") — MVP du cahier des charges §30 livré depuis le Jalon 15,
+vérification manuelle mobile/PC d'Adrien toujours en attente pour le
+considérer définitivement clos. Point encore ouvert : le même principe
+pour les immeubles et les tours (DECISIONS.md §10 point 33). Chantier
+suivant : le système de développement des villes (7 activités), validé
+par Adrien dans A-INTEGRER.md §18, découpé en Jalons 17 à 20.*

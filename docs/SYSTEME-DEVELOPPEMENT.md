@@ -1,9 +1,11 @@
 # Système de développement des villes
 
 *Proposition de game design, 23/09/2026, rédigée avec Adrien côté Claude
-chat. Statut : **à valider par Adrien** (les chiffres sont des premiers
-réglages, à équilibrer avec les villes de test). À intégrer ensuite dans
-`docs/DECISIONS.md` par Claude Code.*
+chat. **Validé par Adrien le 26/09/2026** (réponses aux questions du §10
+ci-dessous ; les chiffres restent des premiers réglages, à équilibrer
+avec les villes de test). Peut être codé en suivant le découpage en
+jalons du §9. À intégrer ensuite dans `docs/DECISIONS.md` par
+Claude Code.*
 
 ---
 
@@ -152,6 +154,7 @@ mégaprojet parmi 3** ; les visiteurs le financent.
 | Ville (15 000) | Hôpital 🏥 · Stade 🌳 · Centrale solaire ⚡ · Zone logistique 🏭 | 1 200 / 1 200 / 750 |
 | Grande ville (40 000) | Technopole 🔬 · Gare TGV 🛒 · Parc éolien ⚡ · Opéra 🌳 | 3 200 / 3 200 / 2 000 |
 | Métropole (100 000) | Tour emblématique · Aéroport 🛒 · Centre de recherche 🔬 · Centrale ⚡ | 8 000 / 8 000 / 5 000 |
+| Mégapole (250 000) | nouveau stade au-delà de Métropole, validé par Adrien le 26/09/2026 — mégaprojets à définir | 12 000 / 12 000 / 7 500 |
 | puis tous les 50 000 | nouveaux choix | coûts ×1,5 |
 
 - Les points du thème comptent **à partir du choix** du mégaprojet : les
@@ -304,21 +307,34 @@ Chaque étape est jouable et testable seule, avec les villes de test.
 
 ---
 
-## 10. Questions pour Adrien
+## 10. Réponses d'Adrien (26/09/2026) — système validé
 
-1. Les **parts cibles** (30 % résidentiel, etc.) te conviennent-elles ?
-2. Le **maire** : une contribution gratuite par jour et la
-   recommandation affichée, ça te va ? Ou faut-il un **vote des
-   habitants** de la ville à la place ?
-3. Ta phrase sur les mégaprojets était coupée (« À certains seuils de
-   population, de grands mégaprojets peuvent être… ») : le choix du
-   maire parmi 3 et le financement par les visiteurs, c'est ce que tu
-   avais en tête ?
-4. Faut-il un **stade au-delà de Métropole** (ex. Mégapole à 250 000) ?
-5. Les liens avec le **pays** (cahier §10-13 : ressources nationales,
-   votes Industrie / Techno / Culture / Commerce) : proposition — les
-   points des villes alimentent les ressources nationales de leur pays.
-   À valider quand on arrivera aux jalons « pays ».
-6. **AntiVille** (§6 bis) : les paliers selon le nombre d'attaques du
-   jour (idée d'Adrien) ; à régler avec un simulateur. Et la
-   **solidarité** après une attaque, on la garde ?
+1. **Parts cibles** : gardées telles quelles (30/12/14/12/12/12/8 %),
+   à ajuster par Claude Code avec les villes de test si besoin.
+2. **Le maire** : la proposition initiale est retenue — contribution
+   gratuite d'un point par jour + recommandation affichée aux
+   visiteurs. Pas de vote des habitants pour cette version.
+3. **Mégaprojets** : confirmé, exactement comme décrit au §6 — le maire
+   choisit un projet parmi 3 à chaque stade, financé collectivement par
+   les visiteurs qui choisissent l'activité du thème.
+4. **Stade au-delà de Métropole** : oui, ajouté — **Mégapole à
+   250 000 habitants** (voir tableau des mégaprojets au §6, et niveau à
+   ajouter dans `population_vers_niveau()` : `>= 250000` → nouveau
+   niveau 6 "Mégapole"). Les mégaprojets propres à ce palier restent à
+   définir (peuvent reprendre des variantes des paliers précédents en
+   attendant).
+5. **Liens avec le pays** (ressources nationales alimentées par les
+   points des villes) : question repoussée, comme prévu, au chantier
+   « ressources nationales et guerre » (`DECISIONS.md` §10 point 27),
+   pas encore abordé.
+6. **AntiVille** : les deux gardées — les paliers selon le nombre
+   d'attaques du jour (Incidents → Troubles → Émeutes → Crise → Ville
+   sinistrée, plafond 10 %/jour) **et** la solidarité (+1 habitant en
+   plus par visite qui choisit l'activité protectrice, pendant 24h après
+   une attaque).
+7. **Logements vides** : même rythme qu'une construction neuve (+1 par
+   visite, pas de bonus de vitesse). Une attaque garde un vrai coût en
+   temps pour la ville.
+8. **Activités débloquées par la taille** : seuils confirmés tels que
+   proposés (Services et Commerce dès Village/1 000, Énergie et
+   Industrie dès Bourg/5 000, Recherche dès Ville/15 000).

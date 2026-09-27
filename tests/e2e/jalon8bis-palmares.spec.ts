@@ -86,6 +86,8 @@ test.describe("Jalon 8bis — les palmarès", () => {
       });
       expect(erreurCroissance).toBeNull();
       const ligneCroissance = (croissance ?? []).find((l: { ville_id: string }) => l.ville_id === cible.villeId);
+      // palmares_croissance compte des événements (visites + bonus reçus),
+      // pas les habitants gagnés.
       expect(ligneCroissance?.valeur).toBe(2);
 
       const { data: visites, error: erreurVisites } = await supabaseAdmin.rpc("palmares_visites", {

@@ -2121,6 +2121,164 @@ plusieurs reprises dans ce journal.
 
 ---
 
+### Jalon 16 — croissance rapide en début de partie — 26/09/2026
+
+**Contenu.** `docs/A-INTEGRER.md` §17 : Adrien a remonté qu'une ville
+neuve grandit trop lentement (+1 habitant par visite, quel que soit le
+niveau) pour donner une sensation de progression gratifiante les
+premiers jours — objectif de rétention déjà posé au §13 (Jalon 13 bis).
+Pas une déviation du cahier des charges, un ajustement d'équilibrage ;
+chiffres exacts **laissés à l'appréciation de Claude Code** ("tranche
+selon tes reco"). Retenu, bas de la fourchette proposée par Adrien (à
+ajuster avec les villes de test si besoin) :
+
+| Niveau visité | Gain par visite |
+|---|---|
+| Hameau (< 1 000 hab.) | ×5 |
+| Village (1 000-4 999 hab.) | ×2 |
+| Bourg et au-delà (≥ 5 000 hab.) | ×1 (rythme actuel, inchangé) |
+
+Le gain dépend de la population **avant** la visite : une visite qui
+fait franchir un seuil garde le gain du niveau de départ pour cette
+visite-là (pas de bonus rétroactif). `visiter_ville()` (migration
+`0022`) recalcule ce gain à chaque appel plutôt que d'ajouter un flat
++1 ; signature et type de retour inchangés depuis la migration `0021`,
+donc `create or replace` direct, sans le contournement habituel des
+migrations précédentes (Jalons 8/13). Nouveau
+`src/lib/game/gainVisite.ts`, copie TypeScript de la même règle
+("source de vérité" pour l'affichage et les tests unitaires, à tenir
+manuellement synchronisée avec la fonction SQL) — utilisé par
+`/villes` et `/ville` pour annoncer le gain avant la visite ("+5
+population · 0/3") et par `VisiteAutomatique` pour le message de
+confirmation après coup. i18n : `villes.visiteComptee` perdait son
+"+1 habitant" fixe (règle du projet : jamais de nombre dans une chaîne
+traduite) — désormais juste "Visite comptée," suivi du nombre
+interpolé en JSX.
+
+**Testé.** `tests/unit/gainVisite.test.ts` (nouveau, 3 tests, un par
+palier avec les valeurs limites 999/1000 et 4999/5000). Tous les tests
+e2e qui vérifiaient une population calculée à partir du flat +1 ont dû
+être audités et corrigés (recherche systématique de tout appel à
+`visiter_ville` ou toute assertion sur `population`) :
+`jalon2-grandir-grace-aux-autres.spec.ts`,
+`jalon5-villes-jumelles.spec.ts`,
+`jalon13bis-revenir-plus-souvent.spec.ts`,
+`jalon13ter-visite-automatique.spec.ts` (toutes les villes de test
+partent à population 1, donc restent au palier Hameau ×5 sur toute la
+durée de ces scénarios). `jalon8bis-palmares.spec.ts` a été
+initialement corrigé à tort (le palmarès de croissance compte des
+*événements* — visites + bonus de jumelage reçus — pas les habitants
+gagnés ; sa valeur ne dépend pas du gain par visite et n'avait pas à
+changer, corrigé une seconde fois pour revenir à l'attendu d'origine).
+
+En creusant les échecs restants de ces quatre fichiers, une vraie
+source de flakiness a été isolée (pas une régression du Jalon 16) : en
+environnement de test headless, la scène 3D (`SincroniserScene`)
+provoque des « GPU stall due to ReadPixels » qui bloquent le thread
+principal, retardant le minuteur de 2,5 s de `VisiteAutomatique`
+jusqu'à ~8,5 s dans certaines conditions — confirmé en instrumentant
+un test temporaire avec les timestamps réels de la requête réseau du
+serveur action. Les assertions `toBeVisible({ timeout: 8_000 })` liées
+à un cycle de visite automatique ont donc été portées à 15 000 ms dans
+les quatre fichiers ci-dessus, cohérent avec la convention déjà en
+place ("ne jamais faire confiance à un timeout par défaut trop
+serré"). Seconde source de bruit rencontrée en cours de route et sans
+rapport avec le Jalon 16 : des comptes de diagnostic créés
+manuellement pour cet investigation avaient des noms de ville
+contenant la sous-chaîne `cible-ville`, entrant en collision avec les
+regex de recherche des tests — nettoyés (supprimés) après coup ;
+rappel pour la suite de toujours nettoyer tout compte créé
+manuellement en dehors d'un test avant de relancer la suite.
+
+Suite complète après ces corrections : 76 tests unitaires + 58 tests
+e2e, `--workers=1`. Les 4 fichiers touchés par ce jalon passent tous ;
+6 échecs résiduels dans des fichiers non touchés par ce jalon (Jalons
+1, 4, 6bis, 8, 9, 10), tous des timeouts génériques de connexion —
+même famille de flakiness environnementale que ci-dessus, pas un
+suivi qui bloque ce jalon. Poids du paquet inchangé (`gainVisite.ts`
+est quelques lignes pures, aucune nouvelle dépendance) : First Load JS
+toujours au maximum 182 Ko, largement dans le budget de 500 Ko.
+
+### Annulation du Jalon 16 — 27/09/2026
+
+**Contenu.** Adrien revient sur le principe même du Jalon 16 dès le
+lendemain : il ne veut pas d'un gain de population dégressif, le gain
+par visite doit rester un flat **+1**, comme avant. La sensation de
+croissance recherchée doit passer par le **rendu 3D** plutôt que par le
+chiffre de population : il veut voir de nouvelles habitations
+apparaître régulièrement (« tous les 4 habitants par exemple pour un
+hameau ») et demande qu'on définisse combien d'habitants correspondent
+à une habitation.
+
+Tout le contenu du Jalon 16 est donc défait : `visiter_ville()`
+(migration `0022`, réécrite et renvoyée à Adrien pour ré-application —
+un `create or replace` écrase la version dégressive sans distinction
+d'historique) revient au flat +1 de la migration `0021` ;
+`src/lib/game/gainVisite.ts` et son test supprimés ; `/villes`,
+`/ville` et `VisiteAutomatique` reviennent à une constante
+`GAIN_VISITE = 1` locale à chaque page (même style que
+`QUOTA_VISITE_QUOTIDIEN`/`DELAI_VISITE_MINUTES` déjà présents). Gardé
+en revanche, indépendant de la question dégressif/flat : l'hygiène
+i18n sur `villes.visiteComptee` (nombre interpolé en JSX, jamais dans
+la chaîne traduite) et le correctif de flakiness des tests e2e
+(timeouts de 15 s sur les cycles de `VisiteAutomatique`, la scène 3D
+pouvant ralentir le thread principal en environnement headless — voir
+journal du Jalon 16 ci-dessus).
+
+**Point ouvert — "combien d'habitants par habitation".** Le
+générateur 3D (`src/lib/ville3d/`, docs/DECISIONS.md §8) a en réalité
+*déjà* une logique de révélation progressive maison par maison, pas
+seulement bloc par bloc : dans `terrain.ts::buildBlock`, les 4
+premières parcelles d'un bloc apparaissent à des seuils espacés de
+`gap × 0,2` à l'intérieur de l'écart entre deux blocs
+(`constantes.ts::BLOCK_OPEN`) — pour le tout premier bloc d'un Hameau
+(écart 0 → 300), cela donne une maison à population 0, 60, 120 puis
+180. C'est déjà plus fin qu'un bloc entier, mais bien plus grossier que
+le rythme "tous les 4 habitants" évoqué par Adrien, et ce rythme n'est
+pas un simple paramètre isolé : il découle du nombre de blocs déjà
+tunés (`BLOCK_OPEN`, `STAGE_AT`, testés par
+`tests/unit/ville3dCroissance.test.ts` qui garantit qu'un bloc déjà
+ouvert ne bouge jamais). Soumis à Adrien via une question à choix
+(retoucher juste les seuils existants, ou refonte complète par type de
+bâtiment) : il choisit la refonte complète — voir la mise en œuvre
+ci-dessous.
+
+### « Habitants par habitation » — 27/09/2026
+
+**Contenu.** Implémentation du point ouvert ci-dessus, pour la partie
+**maisons individuelles** : nouvelle constante
+`HABITANTS_PAR_LOGEMENT_MAISON = 4` (`src/lib/ville3d/constantes.ts`,
+chiffre donné par Adrien lui-même) — une maison est UN logement, et les
+4 maisons d'un bloc (`terrain.ts::buildBlock`) apparaissent maintenant
+à `openAt + idx × 4` au lieu de `openAt + gap × idx × 0,2`. Concrètement,
+les 4 maisons d'un bloc qui vient de s'ouvrir sont toutes visibles en
+douze habitants, contre 180 avant (pour le tout premier bloc d'un
+Hameau) — même règle du Hameau à la Métropole, puisque c'est un écart
+absolu, pas une fraction de l'écart jusqu'au bloc suivant.
+
+**Immeubles et tours volontairement laissés inchangés**, et c'est un
+choix assumé plutôt qu'un oubli : un seul étage d'immeuble ou de tour
+loge d'emblée plusieurs foyers, donc le même "4 habitants par logement"
+n'a pas de sens direct à cette échelle sans une refonte beaucoup plus
+lourde (`APART_FLOOR_EVERY`, `PER_FLOOR` sont calés sur les repères de
+densité du cahier des charges — ~28 blocs à 100 000 habitants, ~58 à
+250 000, voir journal du Jalon 7bis — les retoucher risquerait de
+casser un équilibre déjà vérifié). Point à rouvrir avec Adrien si le
+rythme des immeubles/tours doit lui aussi être repensé — voir §10
+point 33.
+
+**Testé.** Nouveau test dans
+`tests/unit/ville3dCroissance.test.ts` : pour le premier bloc d'une
+ville, la géométrie ne change pas entre deux seuils de 4 habitants,
+puis change exactement au seuil suivant (vérifié aux trois premiers
+paliers de maisons, 4/8/12). Suite existante inchangée (déterminisme,
+seuils de blocs, repères 28/58, stabilité) : aucune régression, la
+constante ne touche que le calcul interne du seuil, jamais le nombre ou
+l'ordre des blocs. Vérifié aussi à l'œil : ville de test à population
+1 (une maison), puis 4 (deuxième maison visible), captures à l'appui.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -2509,3 +2667,15 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     rétention justifie-t-il d'étendre le même principe à Influence et/ou
     AntiVille, ou ces deux actions restent-elles volontairement à une
     fois par jour ?
+33. ~~"Combien d'habitants par habitation" — maisons.~~ **Fait le
+    27/09/2026** : Adrien choisit la refonte complète par type de
+    bâtiment (plutôt que juste retoucher les seuils existants) ;
+    implémenté pour les **maisons** (`HABITANTS_PAR_LOGEMENT_MAISON = 4`,
+    voir `DECISIONS.md` §4 "Habitants par habitation"). **Reste ouvert
+    pour les immeubles et les tours** : leur rythme actuel
+    (`APART_FLOOR_EVERY`, `PER_FLOOR`) est resté inchangé, un choix
+    assumé pour ne pas casser les repères de densité du cahier des
+    charges (~28 blocs à 100 000 habitants, ~58 à 250 000) plutôt qu'un
+    oubli. → **À trancher par Adrien** : le rythme des immeubles/tours
+    doit-il lui aussi être repensé en "logements", ou son rythme actuel
+    (mesuré en étages) reste-t-il satisfaisant tel quel ?

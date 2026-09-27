@@ -48,8 +48,25 @@ journal existant, puis ce fichier peut être supprimé.*
 > (migration `0021`, envoyée à Adrien, en attente de confirmation
 > d'application). §15 partie B (choix du thème) toujours bloquée
 > derrière `SYSTEME-DEVELOPPEMENT.md`, pas encore validé. Détail dans
-> `DECISIONS.md` §4, journal du Jalon 13 ter. Ce fichier peut être
-> supprimé quand Adrien aura répondu aux questions restantes.
+> `DECISIONS.md` §4, journal du Jalon 13 ter.
+> **§17 (croissance rapide en début de partie) fait le 26/09/2026 puis
+> ANNULÉ par Adrien le 27/09/2026** — le gain par visite dégressif
+> (×5/×2/×1) est défait, retour au flat +1 (migration `0022` réécrite,
+> renvoyée à Adrien). Adrien veut que la sensation de croissance passe
+> par le rendu 3D plutôt que par le chiffre de population ; reformulé
+> comme "combien d'habitants par habitation" et **fait le 27/09/2026
+> pour les maisons** (une maison = un logement, tous les 4 habitants,
+> même règle du Hameau à la Métropole — `DECISIONS.md` §4 "Habitants
+> par habitation"). Immeubles et tours volontairement laissés au
+> rythme actuel, point ouvert (`DECISIONS.md` §10 point 33).
+> **§18 (système de développement des 7 activités, 26/09/2026) :
+> VALIDÉ, en cours de mise en œuvre** — les 8 questions de
+> `SYSTEME-DEVELOPPEMENT.md` §10 ont toutes leur réponse, dont un
+> nouveau stade "Mégapole" à 250 000 habitants. Découpé en Jalons 17 à
+> 20 dans `ROADMAP.md` (Phase 6), suivant le découpage en 4 de son §9 ;
+> répond aussi à `DECISIONS.md` §10 points 16, 20 et 22. Ce fichier
+> peut être supprimé quand Adrien aura répondu aux questions restantes
+> et que les quatre jalons seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -620,3 +637,79 @@ disaient encore « l'auto-visite reste refusée / interdite » — c'était
 vrai au moment où ils ont été écrits, ce §16 vient changer cette règle
 juste après. En cas de lecture dans l'ordre, c'est ce §16 qui fait foi
 sur l'auto-visite.
+
+## 17. Croissance rapide en début de partie (décision d'Adrien, 26/09/2026)
+
+**Demande d'Adrien** : pour les villes de faible niveau, il veut que les
+maisons se développent vite, que la ville grandisse vite — plutôt que le
+rythme actuel, identique à tous les niveaux (`population_vers_niveau()`,
+migration `0008` : Hameau < 1 000, Village < 5 000, Bourg < 15 000,
+Ville < 40 000, Grande ville < 100 000, Métropole ≥ 100 000 habitants,
+et **+1 habitant par visite**, quel que soit le niveau).
+
+**Pourquoi c'est un vrai problème aujourd'hui** : avec +1 habitant par
+visite et un plafond de 3 visites/jour par (visiteur, ville) — même en
+comptant l'auto-visite du §16 — une ville avec peu de vrais visiteurs
+progresse à peine de quelques habitants par jour. Passer du Hameau au
+Village (1 000 habitants) peut prendre des semaines si peu de monde
+visite. Ça va à l'encontre de l'objectif de rétention déjà posé au §13 :
+les premiers jours doivent donner une sensation de croissance visible et
+gratifiante, sinon un nouveau joueur décroche avant même d'avoir vu sa
+ville changer de visage.
+
+**Proposition** : un **gain par visite dégressif selon le niveau
+actuel de la ville**, au lieu d'un flat +1 partout — élevé aux niveaux
+Hameau et Village pour que les premières maisons sortent de terre vite,
+puis revenant à un rythme plus classique à partir de Bourg (où le jeu
+redevient surtout une question de recruter de vrais visiteurs, pas de
+vitesse brute). Reste bien un **gain par visite réelle** (soi-même ou un
+autre joueur, §16) — cette proposition ne change pas le principe "il
+faut des visites pour grandir", juste ce que chaque visite rapporte.
+
+**Chiffres exacts laissés à Claude Code** (même logique que le plafond
+du §13, "tranche selon tes reco"), à ajuster avec les villes de test.
+Piste de départ, pas un chiffre imposé :
+- Hameau (< 1 000 hab.) : bonus fort (ex. ×5 à ×10 par visite) ;
+- Village (1 000-4 999 hab.) : bonus modéré (ex. ×2 à ×3) ;
+- Bourg et au-delà (≥ 5 000 hab.) : retour au rythme actuel (+1 par
+  visite), le jeu social prend le relais.
+
+**Ce que ça couvre déjà** : les maisons/immeubles/tours d'un bloc
+apparaissent en fonction de `population_max` (`docs/A-INTEGRER.md` §2)
+— accélérer la population aux petits niveaux accélère donc
+automatiquement l'apparition visible des maisons, pas besoin d'un
+changement séparé côté rendu 3D.
+
+**Pas une déviation du cahier des charges** : contrairement aux §13 et
+§16, ceci ne touche à aucune règle du cahier des charges — c'est un
+ajustement d'équilibrage (comme les quotas des Jalons 3/4), pas un
+principe fondateur. Peut être codé directement, sans validation
+supplémentaire.
+
+## 18. Système de développement des villes (7 activités) : VALIDÉ par Adrien (26/09/2026)
+
+**`docs/SYSTEME-DEVELOPPEMENT.md` est maintenant validé** — les 8
+questions de son §10 ont toutes une réponse d'Adrien, consignées
+directement dans le document (statut mis à jour en tête de fichier).
+Résumé des décisions :
+
+1. Parts cibles des 7 activités : gardées telles quelles (30/12/14/12/12/12/8 %).
+2. Le maire : contribution gratuite + recommandation affichée (pas de vote des habitants).
+3. Mégaprojets : confirmé tel que décrit au §6 (choix du maire parmi 3, financement collectif).
+4. **Nouveau stade "Mégapole" à 250 000 habitants**, au-delà de Métropole — à ajouter dans `population_vers_niveau()` (`>= 250000` → niveau 6), voir `SYSTEME-DEVELOPPEMENT.md` §6 pour le tableau des mégaprojets mis à jour. Ses mégaprojets propres restent à définir (peuvent reprendre des variantes en attendant). Répond aussi à `DECISIONS.md` §10 point 20.
+5. Lien ressources nationales/pays : repoussé au chantier "ressources nationales et guerre" (`DECISIONS.md` §10 point 27), pas encore abordé — ne bloque pas ce système.
+6. AntiVille : paliers **et** solidarité gardés tous les deux (voir `SYSTEME-DEVELOPPEMENT.md` §6 bis).
+7. Logements vides : même rythme qu'une construction neuve (+1/visite), pas de bonus de vitesse.
+8. Seuils de déblocage des activités par taille : confirmés tels que proposés au §3 bis.
+
+**Peut être codé** en suivant le découpage en jalons déjà proposé au §9
+de `SYSTEME-DEVELOPPEMENT.md` (1. choix d'activité à la visite + jauges,
+2. effets d'équilibre + manifestations + lien AntiVille, 3. quartiers/
+bâtiments par activité, 4. mégaprojets + technologies). Ce document
+répond aussi à `DECISIONS.md` §10 points 16 et 22 ("Revoir les règles du
+jeu") — plus la peine d'attendre pour ces deux points.
+
+**Reste un point ouvert, sans lien avec ce système** : le §10 point 23
+(titre de gouverneur de région) et point 24 (régions réelles pour
+d'autres pays) restent à trancher séparément par Adrien, non couverts
+par cette validation.
