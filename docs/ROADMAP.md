@@ -215,12 +215,13 @@ de vue du joueur — le titre dit ce qui change pour lui.
   calé sur les repères de densité du cahier des charges). Détail dans
   `DECISIONS.md` §4 ("Habitants par habitation") et point ouvert §10
   point 33 (immeubles/tours, encore ouvert).
-- [ ] **Jalon 17 — Système de développement des villes (1/4) : choix
+- [x] **Jalon 17 — Système de développement des villes (1/4) : choix
   d'activité et jauges, sans effet.** Premier des quatre jalons du
   chantier validé par Adrien dans `docs/A-INTEGRER.md` §18 (7
-  activités, `docs/SYSTEME-DEVELOPPEMENT.md` §9) : poser le choix
-  d'activité à chaque visite et les jauges associées, sans encore
-  brancher d'effet de jeu.
+  activités, `docs/SYSTEME-DEVELOPPEMENT.md` §9) : choix d'activité à
+  chaque visite (facultatif, aléatoire sinon — Adrien, 27/09/2026, la
+  visite reste automatique), 7 jauges affichées, recommandation du
+  maire. Aucun effet de jeu encore. Détail dans `DECISIONS.md` §4.
 - [ ] **Jalon 18 — Système de développement (2/4) : équilibre, crises,
   manifestations, lien AntiVille.**
 - [ ] **Jalon 19 — Système de développement (3/4) : quartiers et
@@ -245,12 +246,13 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 27/09/2026, jalon 16 annulé et redéfini
-(croissance visible dans le rendu 3D plutôt que gain de population
-dégressif — DECISIONS.md §4 "Annulation du Jalon 16" et "Habitants par
-habitation") — MVP du cahier des charges §30 livré depuis le Jalon 15,
-vérification manuelle mobile/PC d'Adrien toujours en attente pour le
-considérer définitivement clos. Point encore ouvert : le même principe
-pour les immeubles et les tours (DECISIONS.md §10 point 33). Chantier
-suivant : le système de développement des villes (7 activités), validé
-par Adrien dans A-INTEGRER.md §18, découpé en Jalons 17 à 20.*
+*Dernière mise à jour : 27/09/2026, jalon 17 fait et vérifié (choix
+d'activité et jauges, système de développement des villes 1/4 —
+DECISIONS.md §4, migration 0023 appliquée, suite e2e complète relancée)
+— MVP du cahier des charges §30 livré depuis le Jalon 15, vérification
+manuelle mobile/PC d'Adrien toujours en attente pour le considérer
+définitivement clos. Point encore ouvert : le même principe "habitants
+par habitation" pour les immeubles et les tours (DECISIONS.md §10
+point 33). Chantier en cours : le système de développement des villes
+(7 activités), validé par Adrien dans A-INTEGRER.md §18, découpé en
+Jalons 17 à 20 — 1/4 fait, Jalon 18 (effets de l'équilibre) à suivre.*

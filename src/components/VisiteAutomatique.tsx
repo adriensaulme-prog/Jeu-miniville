@@ -19,11 +19,20 @@ const DELAI_AVANT_REFRESH_MS = 1200;
  * réel : point laissé à l'appréciation de Claude Code par Adrien
  * (« risque qu'une visite se déclenche par simple curiosité »). Choix
  * retenu : un court délai après l'affichage du panneau de détail
- * plutôt qu'un geste supplémentaire — le clic pour ouvrir la ville
- * (depuis la liste, ou "Ma ville" dans la nav) reste le geste
+ * plutôt qu'un geste supplémentaire — le clic qui ouvre déjà le
+ * panneau (depuis la liste, ou "Ma ville" dans la nav) reste le geste
  * volontaire ; le délai absorbe seulement les allers-retours trop
  * rapides (ouvrir puis repartir aussitôt ne compte pas, le minuteur est
  * annulé si le composant est démonté avant la fin).
+ *
+ * Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : le choix de
+ * l'activité n'est PAS géré ici — c'est une action séparée et
+ * persistante (`ChoisirActivite.tsx`, pilotée par les données serveur,
+ * fenêtre de grâce de 5 minutes) plutôt que rattachée à ce composant
+ * transitoire. Raison technique constatée en testant : le rafraîchissement
+ * du panneau après une visite arrive très vite (le framework revalide la
+ * page dès que l'action serveur répond), trop tôt pour laisser une vraie
+ * fenêtre de choix dans CE composant sans la manquer.
  */
 export function VisiteAutomatique({
   locale,

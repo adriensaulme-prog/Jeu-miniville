@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau, progressionNiveau } from "@/lib/game/niveauVille";
 import { ligneLocale } from "@/lib/game/ligneLocale";
+import { activitesDisponibles, type Activite } from "@/lib/game/activites";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { FiltreVilles } from "./FiltreVilles";
@@ -10,6 +11,8 @@ import { ActionsAntiVille } from "./ActionsAntiVille";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { VisiteAutomatique } from "@/components/VisiteAutomatique";
+import { JaugesActivites, EMOJI_ACTIVITE } from "@/components/JaugesActivites";
+import { ChoisirActivite } from "@/components/ChoisirActivite";
 import { influencerVille, proposerJumelage } from "./actions";
 
 const QUOTA_VISITE_QUOTIDIEN = 3;
@@ -29,6 +32,7 @@ type LigneVille = {
   niveau: number;
   influence: number;
   greve_jusqua: string | null;
+  recommandation_activite: Activite | null;
   country_id: string;
   pays: { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null } | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }[] | null;
   owner: { pseudo: string } | { pseudo: string }[] | null;
@@ -71,7 +75,7 @@ export default async function VillesPage({
   const { data, error: erreurListe } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, niveau, influence, greve_jusqua, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
+      `id, nom, population, population_max, niveau, influence, greve_jusqua, recommandation_activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
     )
     .order("population", { ascending: false });
   if (erreurListe) console.error("Chargement des villes a échoué :", erreurListe.message);
@@ -190,6 +194,30 @@ export default async function VillesPage({
       ? (toutesLesVilles.find((v) => v.id === villeSelectionneeId) ?? null)
       : null;
 
+  // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
+  // de développement de la ville affichée dans le panneau détail, et
+  // l'activité de la dernière visite du joueur (si récente — fenêtre
+  // de grâce de 5 minutes, cohérente avec choisir_activite_visite()
+  // côté SQL) pour proposer de la changer.
+  const { data: jaugesBrutes } = villeSelectionnee
+    ? await supabase.rpc("jauges_ville", { p_ville_id: villeSelectionnee.id })
+    : { data: null };
+  const jauges = (jaugesBrutes ?? []) as { activite: Activite; jauge: number }[];
+
+  const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: derniereVisiteActivite } = villeSelectionnee
+    ? await supabase
+        .from("visites")
+        .select("activite")
+        .eq("visiteur_id", user.id)
+        .eq("ville_id", villeSelectionnee.id)
+        .gte("created_at", ilCinqMinutes)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
+
   const paramsConserves = new URLSearchParams();
   if (filtrePays) paramsConserves.set("pays", filtrePays);
   if (recherche) paramsConserves.set("q", recherche);
@@ -304,6 +332,18 @@ export default async function VillesPage({
                 <p className="sign-sub">
                   {traduire(locale, "villes.deJoueur")} <b>{pseudo}</b> · {ligneLocale(paysDe(c.pays), locale)}
                 </p>
+                <p className="note">
+                  {c.recommandation_activite ? (
+                    <>
+                      <span className="badge info">
+                        {EMOJI_ACTIVITE[c.recommandation_activite]} {traduire(locale, "activite.recommandation")}{" "}
+                        {traduire(locale, `activite.${c.recommandation_activite}`)}
+                      </span>
+                    </>
+                  ) : (
+                    traduire(locale, "activite.recommandationAucune")
+                  )}
+                </p>
                 <div className="stage">
                   <div className="stage-top">
                     <span className="stage-name">{libelleNiveau(progression.niveau, locale)}</span>
@@ -328,6 +368,14 @@ export default async function VillesPage({
                     <span>{traduire(locale, "ville.influence")}</span>
                   </div>
                 </div>
+
+                <JaugesActivites locale={locale} jauges={jauges} />
+                <ChoisirActivite
+                  locale={locale}
+                  villeId={c.id}
+                  activiteActuelle={activiteActuelle}
+                  activitesDisponibles={activitesDisponibles(c.niveau)}
+                />
 
                 <div className="actions">
                   <div className="act">

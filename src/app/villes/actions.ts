@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { Activite } from "@/lib/game/activites";
 
 /**
  * Visite une ville (la sienne comprise depuis le Jalon 13 ter) : +1
@@ -47,6 +48,76 @@ export async function visiterVille(villeId: string): Promise<{ succes: boolean }
   revalidatePath("/ville");
 
   return { succes: !error };
+}
+
+/**
+ * Choisit l'activité d'une visite (Jalon 17, docs/SYSTEME-DEVELOPPEMENT.md
+ * §9 point 1) : remplace l'activité tirée au sort par visiter_ville()
+ * sur la toute dernière visite du joueur pour cette ville, dans les
+ * 5 minutes qui suivent (choisir_activite_visite(), anti-triche côté
+ * SQL). Adrien, 27/09/2026 : la visite elle-même reste automatique
+ * pour la population, ce choix est une action séparée et facultative.
+ */
+export async function choisirActiviteVisite(villeId: string, activite: Activite): Promise<{ succes: boolean }> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/connexion");
+  }
+
+  const { error } = await supabaseAdmin.rpc("choisir_activite_visite", {
+    p_visiteur_id: user.id,
+    p_ville_id: villeId,
+    p_activite: activite,
+  });
+
+  if (error) {
+    console.error("choisirActiviteVisite a échoué :", error.message);
+  }
+
+  revalidatePath("/villes");
+  revalidatePath("/ville");
+
+  return { succes: !error };
+}
+
+/**
+ * Le maire choisit l'activité recommandée aux visiteurs (ou l'efface),
+ * via definir_recommandation() — seul le propriétaire de la ville peut
+ * l'appeler avec effet (vérifié côté SQL).
+ */
+export async function definirRecommandation(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/connexion");
+  }
+
+  const villeId = String(formData.get("villeId") ?? "");
+  if (!villeId) {
+    return;
+  }
+  const activiteBrute = String(formData.get("activite") ?? "");
+  const activite = activiteBrute === "" ? null : activiteBrute;
+
+  const { error } = await supabaseAdmin.rpc("definir_recommandation", {
+    p_owner_id: user.id,
+    p_ville_id: villeId,
+    p_activite: activite,
+  });
+
+  if (error) {
+    console.error("definirRecommandation a échoué :", error.message);
+  }
+
+  revalidatePath("/ville");
+  revalidatePath("/villes");
 }
 
 /**

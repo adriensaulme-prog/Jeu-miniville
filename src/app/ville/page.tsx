@@ -4,11 +4,15 @@ import { getLocale, traduire } from "@/lib/i18n";
 import { progressionNiveau, libelleNiveau } from "@/lib/game/niveauVille";
 import { ligneLocale } from "@/lib/game/ligneLocale";
 import { ordinal } from "@/lib/game/ordinal";
+import { ACTIVITES, activitesDisponibles, type Activite } from "@/lib/game/activites";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { VisiteAutomatique } from "@/components/VisiteAutomatique";
+import { JaugesActivites, EMOJI_ACTIVITE } from "@/components/JaugesActivites";
+import { ChoisirActivite } from "@/components/ChoisirActivite";
+import { definirRecommandation } from "@/app/villes/actions";
 
 // Repli si le pays de la ville n'a pas encore de géo/fuseau renseignés
 // (quelques territoires ISO 3166-1 sur 250 — voir DECISIONS.md §4,
@@ -43,6 +47,7 @@ export default async function VillePage() {
     population_max: number;
     influence: number;
     activite: number;
+    recommandation_activite: Activite | null;
     country_id: string;
     region_id: string | null;
     pays:
@@ -53,17 +58,32 @@ export default async function VillePage() {
   };
 
   const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
-  const { data } = await supabase
+  const { data, error: erreurVille } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, influence, activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
+      `id, nom, population, population_max, influence, activite, recommandation_activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
     )
     .eq("owner_id", user.id)
     .maybeSingle();
   const ville = data as LigneVille | null;
 
-  if (!ville) {
+  // Ne rediriger vers /ville/creer que si la ville n'existe vraiment
+  // pas (data et error tous les deux vides) : une vraie erreur de
+  // requête (ex. colonne pas encore migrée) ne doit jamais être confondue
+  // avec "pas de ville", sous peine de boucle de redirection avec
+  // /ville/creer (qui renvoie ici dès qu'un profil existe).
+  if (erreurVille) {
+    console.error("Chargement de Ma ville a échoué :", erreurVille.message);
+  }
+  if (!ville && !erreurVille) {
     redirect("/ville/creer");
+  }
+  if (!ville) {
+    return (
+      <main className="screen" aria-label={traduire(locale, "villes.maVille")}>
+        <p className="note">{traduire(locale, "erreurs.generique")}</p>
+      </main>
+    );
   }
   if (!ville.region_id) {
     redirect("/ville/region");
@@ -102,6 +122,24 @@ export default async function VillePage() {
   const progression = progressionNiveau(ville.population_max);
   const nomNiveauSuivant =
     progression.seuilSuivant != null ? libelleNiveau(progression.niveau + 1, locale) : null;
+
+  // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
+  // de développement de sa propre ville.
+  const { data: jaugesBrutes } = await supabase.rpc("jauges_ville", { p_ville_id: ville.id });
+  const jauges = (jaugesBrutes ?? []) as { activite: Activite; jauge: number }[];
+  const activitesDeCetteVille = activitesDisponibles(progression.niveau);
+
+  const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: derniereVisiteActivite } = await supabase
+    .from("visites")
+    .select("activite")
+    .eq("visiteur_id", user.id)
+    .eq("ville_id", ville.id)
+    .gte("created_at", ilCinqMinutes)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
 
   // Auto-visite de sa propre ville (Jalon 13 ter, docs/A-INTEGRER.md
   // §16) : même délai d'une heure et plafond de 3/jour que pour visiter
@@ -160,6 +198,23 @@ export default async function VillePage() {
           <span>{ville.nom}</span>
         </h1>
         <p className="sign-sub">{ligneLocale({ nom: nomPays, ...pays }, locale)}</p>
+        <form action={definirRecommandation} className="row">
+          <input type="hidden" name="villeId" value={ville.id} />
+          <label className="field" style={{ flex: 1 }}>
+            <span>{traduire(locale, "activite.recommandation")}</span>
+            <select name="activite" className="select" defaultValue={ville.recommandation_activite ?? ""}>
+              <option value="">{traduire(locale, "activite.aucuneRecommandation")}</option>
+              {ACTIVITES.filter((a) => activitesDeCetteVille.includes(a)).map((a) => (
+                <option key={a} value={a}>
+                  {EMOJI_ACTIVITE[a]} {traduire(locale, `activite.${a}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn small" type="submit">
+            {traduire(locale, "activite.definirRecommandation")}
+          </button>
+        </form>
         <p className="note">
           {traduire(locale, "region.actuelle")} : {nomRegion} ·{" "}
           <Link href="/ville/region" style={{ color: "var(--focus)" }}>
@@ -200,6 +255,13 @@ export default async function VillePage() {
             </div>
           ))}
         </div>
+        <JaugesActivites locale={locale} jauges={jauges} />
+        <ChoisirActivite
+          locale={locale}
+          villeId={ville.id}
+          activiteActuelle={activiteActuelle}
+          activitesDisponibles={activitesDeCetteVille}
+        />
         <div className="act">
           <span className="h3">{traduire(locale, "villes.visiter")}</span>
           <p>

@@ -64,9 +64,13 @@ journal existant, puis ce fichier peut être supprimé.*
 > `SYSTEME-DEVELOPPEMENT.md` §10 ont toutes leur réponse, dont un
 > nouveau stade "Mégapole" à 250 000 habitants. Découpé en Jalons 17 à
 > 20 dans `ROADMAP.md` (Phase 6), suivant le découpage en 4 de son §9 ;
-> répond aussi à `DECISIONS.md` §10 points 16, 20 et 22. Ce fichier
-> peut être supprimé quand Adrien aura répondu aux questions restantes
-> et que les quatre jalons seront terminés.
+> répond aussi à `DECISIONS.md` §10 points 16, 20 et 22. **Jalon 17
+> (1/4, choix d'activité et jauges) fait le 27/09/2026** — deux
+> contradictions avec le document initial (visite automatique du Jalon
+> 13 ter, auto-visite autorisée) tranchées par Adrien, pas par Claude
+> Code seul (`DECISIONS.md` §4, journal du Jalon 17). Ce fichier peut
+> être supprimé quand Adrien aura répondu aux questions restantes et
+> que les quatre jalons seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette

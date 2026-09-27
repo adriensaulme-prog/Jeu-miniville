@@ -2277,6 +2277,129 @@ constante ne touche que le calcul interne du seuil, jamais le nombre ou
 l'ordre des blocs. Vérifié aussi à l'œil : ville de test à population
 1 (une maison), puis 4 (deuxième maison visible), captures à l'appui.
 
+### Jalon 17 — Système de développement des villes (1/4) : choix d'activité et jauges — 27/09/2026
+
+**Contenu.** Premier des quatre jalons du chantier validé par Adrien
+(`docs/A-INTEGRER.md` §18, `docs/SYSTEME-DEVELOPPEMENT.md` §9 point 1) :
+les 7 jauges de développement (Résidentiel, Industrie, Commerce,
+Loisirs, Services, Énergie, Recherche), le choix d'une activité par
+visite, la recommandation du maire, l'affichage des jauges. **Aucun
+effet de jeu encore** (bonus/malus/manifestations/AntiVille : Jalon 18).
+
+Deux points du document initial (rédigé le 23/09, avant le Jalon 13
+ter) contredisaient des décisions déjà prises — **signalés à Adrien
+plutôt que tranchés seul**, comme le demande `GUIDE-METHODE.md` :
+
+1. Le document suppose qu'à chaque visite, le visiteur choisit une
+   activité — mais depuis le Jalon 13 ter, visiter est devenu
+   automatique et silencieux (2,5 s, aucun clic), exactement pour
+   supprimer ce genre de friction. Adrien (27/09/2026) : **la visite
+   reste 100 % automatique pour la population ; le choix d'activité
+   est une action séparée et facultative, ensuite** — si le visiteur ne
+   choisit rien, une activité est tirée au sort dès la visite (pas
+   d'état "en attente" à gérer côté serveur).
+2. Le document dit "le propriétaire ne peut pas se visiter lui-même,
+   mais il a une contribution de maire gratuite par jour" — écrit avant
+   que le Jalon 13 ter autorise l'auto-visite. Adrien : **se visiter
+   soi-même suit exactement la même règle qu'une autre ville** (déjà
+   vrai depuis le Jalon 13 ter) ; l'idée d'une "contribution de maire"
+   séparée est abandonnée.
+
+**Base de données** (migration `0023`, qui inclut aussi le retour au
+flat +1 du Jalon 16 annulé — `visiter_ville()` réécrite en entier,
+donc pas besoin de rejouer la `0022` séparément) :
+- `visites.activite` (nullable, contrainte sur les 7 valeurs) : tirée
+  au hasard par `visiter_ville()` parmi les activités débloquées pour
+  le niveau de la ville (`§10 point 8` : Résidentiel/Loisirs dès le
+  Hameau, Commerce/Services dès Village (1 000), Industrie/Énergie dès
+  Bourg (5 000), Recherche dès Ville (15 000)).
+- `choisir_activite_visite(visiteur, ville, activite)` : remplace
+  l'activité de la **toute dernière** visite du joueur pour cette
+  ville, seulement dans les 5 minutes qui suivent (fenêtre de grâce —
+  largement assez pour le délai de 2,5 s côté client, sans laisser
+  modifier une visite ancienne). Erreurs : `P0021` (pas de visite
+  récente), `P0022` (activité invalide ou non débloquée).
+- `cities.recommandation_activite` (nullable) + `definir_recommandation()` :
+  réservée au propriétaire (vérifié côté SQL), même contrôle de
+  déblocage que le choix d'activité.
+- `jauges_ville(ville)` : jauge de chaque activité, formule du §3
+  (`(élan + 20×part) / (élan_total + 20) / part`), "élan" = somme des
+  points pondérée par une décroissance exponentielle de 3,3 %/jour
+  (demi-vie ~3 semaines) calculée **à la volée** depuis `visites`
+  plutôt que maintenue dans un compteur à part — même logique que
+  `activite_ville()` (Jalon 9) : aucun job planifié nécessaire. Fenêtre
+  de 180 jours (poids résiduel ~0,3 % au-delà, négligeable) pour borner
+  le coût de la requête sur une ville ancienne et active.
+
+**Code applicatif** : `src/lib/game/activites.ts` (les 7 activités,
+parts cibles, seuils de déblocage par niveau, lecture des couleurs de
+jauge — copie TypeScript de la même règle que le SQL, à tenir
+synchronisée) ; `src/components/JaugesActivites.tsx` (affichage) ;
+`/ville` gagne un petit formulaire pour que le maire choisisse sa
+recommandation.
+
+**Choix de conception revu en cours de route** (constaté en testant,
+pas anticipé au départ) : la première version rattachait le choix
+d'activité à `VisiteAutomatique.tsx`, affiché quelques secondes après
+la confirmation de la visite avant que le panneau ne se rafraîchisse.
+En testant, le rafraîchissement s'est avéré arriver bien plus vite que
+prévu — le framework revalide la page dès que l'action serveur répond,
+pas seulement après le délai choisi côté client — laissant une fenêtre
+de choix trop courte et peu fiable pour qu'un joueur ait le temps de
+cliquer. Plutôt que de chasser ce timing, le choix d'activité a été
+détaché en un composant séparé et persistant,
+`src/components/ChoisirActivite.tsx` : il lit l'activité réellement
+enregistrée pour la dernière visite du joueur (donnée serveur, tant
+qu'elle reste dans la fenêtre de grâce de 5 minutes de
+`choisir_activite_visite()`) et l'affiche durablement ("Activité
+choisie : 🏠 Résidentiel — Changer"), qu'il y ait eu zéro, un ou
+plusieurs rafraîchissements entre-temps. `VisiteAutomatique.tsx` revient
+à son rôle d'origine (confirmation de la visite elle-même, +1
+population), sans rapport avec le choix d'activité.
+
+**Bug trouvé et corrigé en cours de route** (sans lien direct avec le
+choix de conception, une vraie régression) : avec la migration en
+attente d'application, `/ville` interrogeait `cities.recommandation_activite`
+(colonne pas encore créée), la requête échouait, `ville` devenait
+`null`, et le code redirigeait vers `/ville/creer` — qui redirige lui
+-même vers `/ville` dès qu'un profil existe : **boucle de redirection
+infinie** pour tout compte existant, reproduite et confirmée dans les
+logs du serveur de dev. Corrigé en distinguant "vraiment pas de
+ville" (redirige) de "erreur de requête" (log l'erreur, affiche un
+message générique, ne redirige jamais) — `src/app/ville/page.tsx`.
+Cette distinction n'existait pas avant et aurait pu se reproduire à
+n'importe quel jalon futur touchant `cities` ; corrigée une bonne fois.
+
+**Testé.** `tests/unit/activites.test.ts` (10 tests : seuils de
+déblocage par niveau, parts cibles = 100 %, bornes des 4 états de
+jauge). `tests/e2e/jalon17-choisir-activite.spec.ts` (nouveau, 7
+tests) : tirage aléatoire d'une activité débloquée pour un Hameau ;
+`choisir_activite_visite` remplace le choix dans la fenêtre de grâce et
+refuse une activité non débloquée (sans écraser le choix valide
+précédent) ; échoue sans visite récente (aucune, ou trop ancienne) ;
+l'auto-visite suit la même règle qu'une autre ville ; `definir_recommandation`
+réservée au maire, refuse une activité non débloquée, accepte
+d'effacer (`null`) ; `jauges_ville` vérifiée contre la formule calculée
+à la main (10 visites Résidentiel un même jour) et contre la
+décroissance attendue (élan résiduel ~0,5 après 21 jours, ni 1 ni 0) ;
+un test UI vérifie que les jauges s'affichent et que l'activité choisie
+reste visible et modifiable après une visite. Migration `0023`
+appliquée par Adrien, confirmée par une vérification directe (gain
+flat +1, activité tirée au sort, `jauges_ville` répond). Suite e2e
+complète relancée : 50 tests verts (dont les 8 du Jalon 17 et les 4
+fichiers touchés par le retour au flat +1) ; 7 échecs résiduels dans
+des fichiers non touchés par ce jalon (Jalons 1, 4, 6bis, 8, 9, 10, 13),
+même famille de flakiness environnementale déjà documentée (timeouts
+génériques de connexion, scène 3D ralentissant le thread principal en
+headless). Pollution de test croisée en cours de route et sans rapport
+avec le jalon lui-même : des comptes `j17-ui-*` créés pendant le
+débogage du composant de choix d'activité n'avaient pas été nettoyés
+après un `test.setTimeout` forcé (le bloc `finally` n'a pas eu
+l'occasion de s'exécuter) — nettoyés après coup, même rappel que
+d'habitude sur les comptes de diagnostic créés manuellement.
+Typecheck, lint, suite unitaire (84 tests) et build (poids inchangé)
+verts.
+
 ---
 
 ## §5. i18n
