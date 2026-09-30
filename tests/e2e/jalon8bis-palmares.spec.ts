@@ -114,7 +114,11 @@ test.describe("Jalon 8bis — les palmarès", () => {
         .select("population")
         .eq("id", victime.villeId)
         .single();
-      const perteAttendue = Math.floor(Math.max((villeAvant?.population ?? 1) * 0.1, 1));
+      // Jalon 18 : 0,01 % de la population (au moins 1), pas 10 % — la
+      // ville de test est à population 1, donc les deux formules
+      // convergent sur 1 (le plancher), mais c'est bien la nouvelle
+      // formule qui s'applique.
+      const perteAttendue = Math.max(1, Math.round((villeAvant?.population ?? 1) * 0.0001));
 
       const { error } = await supabaseAdmin.rpc("lancer_action_antiville", {
         p_attaquant_id: attaquant.userId,

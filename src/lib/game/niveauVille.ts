@@ -1,11 +1,13 @@
 import { dictionaries, type Locale } from "@/lib/i18n/dictionaries";
 
 /**
- * Niveau visuel d'une ville : 0=Hameau … 5=Métropole (cahier des
- * charges §2).
+ * Niveau visuel d'une ville : 0=Hameau … 5=Métropole, 6=Mégapole
+ * (au-delà de Métropole, validé par Adrien le 26/09/2026 —
+ * docs/SYSTEME-DEVELOPPEMENT.md §10 point 4, docs/DECISIONS.md §10
+ * point 20).
  */
 export const NIVEAU_MIN = 0;
-export const NIVEAU_MAX = 5;
+export const NIVEAU_MAX = 6;
 
 export function libelleNiveau(niveau: number, locale: Locale): string {
   if (!Number.isInteger(niveau) || niveau < NIVEAU_MIN || niveau > NIVEAU_MAX) {
@@ -36,6 +38,7 @@ export const SEUILS_NIVEAU: readonly [niveau: number, populationMin: number][] =
   [3, 15000],
   [4, 40000],
   [5, 100000],
+  [6, 250000],
 ];
 
 export function niveauPourPopulation(population: number): number {

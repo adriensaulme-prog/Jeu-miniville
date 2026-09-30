@@ -41,6 +41,7 @@ function domainePourAuth(id) {
 }
 
 function niveauPourPopulation(population) {
+  if (population >= 250000) return 6; // Mégapole
   if (population >= 100000) return 5;
   if (population >= 40000) return 4;
   if (population >= 15000) return 3;
@@ -98,6 +99,7 @@ async function creerVilleDeTest(ville) {
       population: ville.population,
       population_max: ville.population,
       influence: ville.influence,
+      influence_max: ville.influence,
       activite: ville.activite_7j ?? 0,
       niveau,
       is_test: true,
@@ -118,7 +120,46 @@ async function creerVilleDeTest(ville) {
     throw new Error(`Rattachement de la ville à l'utilisateur ${ville.id} : ${erreurCityId.message}`);
   }
 
-  return villeCreee.id;
+  return { id: villeCreee.id, userId };
+}
+
+/**
+ * Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : assigne la vocation des
+ * blocs déjà ouverts (au lieu d'attendre le premier affichage côté
+ * page, opportuniste) et donne un peu d'élan Énergie à chaque ville de
+ * test, pour que les quartiers et les installations hors-ville soient
+ * visibles dès le chargement plutôt qu'après une visite réelle. Même
+ * astuce que `gonflerActivite()` des specs e2e (Jalons 18/19) : des
+ * lignes `visites` datées de jours différents depuis le compte de la
+ * ville elle-même, ça n'a pas besoin d'un vrai visiteur.
+ */
+async function activerQuartiersEtEnergie(villeId, userId, joursEnergie, lignesParJour) {
+  const { error: erreurVocations } = await supabaseAdmin.rpc("assigner_vocations_blocs", {
+    p_ville_id: villeId,
+  });
+  if (erreurVocations) {
+    console.warn(`assigner_vocations_blocs a échoué pour ${villeId} : ${erreurVocations.message}`);
+  }
+
+  const lignes = [];
+  for (let jourIdx = 0; jourIdx < joursEnergie; jourIdx++) {
+    const date = new Date(Date.now() - jourIdx * 24 * 60 * 60 * 1000);
+    for (let i = 0; i < lignesParJour; i++) {
+      lignes.push({
+        visiteur_id: userId,
+        ville_id: villeId,
+        activite: "energie",
+        jour: date.toISOString().slice(0, 10),
+        created_at: date.toISOString(),
+      });
+    }
+  }
+  if (lignes.length > 0) {
+    const { error } = await supabaseAdmin.from("visites").insert(lignes);
+    if (error) {
+      console.warn(`Historique Énergie non chargé pour ${villeId} : ${error.message}`);
+    }
+  }
 }
 
 async function chargerJumelages(jumelages, idVilleParCleTest) {
@@ -154,11 +195,21 @@ async function main() {
 
   await supprimerVillesDeTestExistantes();
 
+  // Jalon 19 : un aperçu Énergie modeste pour toutes les villes de
+  // test (quelques éoliennes/panneaux dans la campagne), et une
+  // vitrine plus poussée (centrale comprise) pour les deux Métropoles,
+  // pour qu'au moins un exemple complet soit visible sans configuration.
+  const VILLES_VITRINE_ENERGIE = new Set(["test-01", "test-11"]);
+
   const idVilleParCleTest = new Map();
   for (const ville of seed.villes) {
-    const id = await creerVilleDeTest(ville);
+    const { id, userId } = await creerVilleDeTest(ville);
     idVilleParCleTest.set(ville.id, id);
-    console.log(`Créée : ${ville.ville} (${ville.id}) — ${ville.stade_attendu}`);
+    const vitrine = VILLES_VITRINE_ENERGIE.has(ville.id);
+    await activerQuartiersEtEnergie(id, userId, vitrine ? 150 : 40, vitrine ? 4 : 1);
+    console.log(
+      `Créée : ${ville.ville} (${ville.id}) — ${ville.stade_attendu}${vitrine ? " [vitrine Énergie]" : ""}`
+    );
   }
 
   await chargerJumelages(seed.jumelages, idVilleParCleTest);

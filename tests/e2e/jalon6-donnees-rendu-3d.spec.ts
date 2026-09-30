@@ -50,7 +50,7 @@ async function supprimerCompte(userId: string) {
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 6 — données du rendu 3D", () => {
-  test("sabotage : population_vers_niveau() suit les nouveaux seuils (Métropole = 100 000)", async () => {
+  test("sabotage : population_vers_niveau() suit les nouveaux seuils (Métropole = 100 000, Mégapole = 250 000)", async () => {
     const seuils: [number, number][] = [
       [999, 0],
       [1000, 1],
@@ -62,7 +62,9 @@ test.describe("Jalon 6 — données du rendu 3D", () => {
       [40000, 4],
       [99999, 4],
       [100000, 5],
-      [1000000, 5],
+      [249999, 5],
+      [250000, 6],
+      [10000000, 6],
     ];
     for (const [population, niveauAttendu] of seuils) {
       const { data, error } = await supabaseAdmin.rpc("population_vers_niveau", {
@@ -101,7 +103,9 @@ test.describe("Jalon 6 — données du rendu 3D", () => {
         .eq("id", cible.villeId)
         .single();
 
-      expect(villeApres?.population).toBeLessThan(5200); // ~10% de perte
+      // Jalon 18 : perte de 0,01 % (au moins 1), plus les 10 % d'avant —
+      // seul le sens de la variation compte ici, pas son ampleur.
+      expect(villeApres?.population).toBeLessThan(5200);
       expect(villeApres?.population_max).toBe(5200); // jamais touché
       expect(villeApres?.niveau).toBe(2); // pas de régression visuelle
     } finally {

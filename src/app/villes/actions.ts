@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Activite } from "@/lib/game/activites";
+import { PALIERS_ATTAQUES, type PalierAttaques } from "@/lib/game/antiville";
 
 /**
  * Visite une ville (la sienne comprise depuis le Jalon 13 ter) : +1
@@ -19,7 +20,7 @@ import type { Activite } from "@/lib/game/activites";
  * ville déclenche la visite toute seule après un court délai, plus
  * besoin de cliquer un bouton "Visiter".
  */
-export async function visiterVille(villeId: string): Promise<{ succes: boolean }> {
+export async function visiterVille(villeId: string): Promise<{ succes: boolean; gain: number }> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -29,7 +30,7 @@ export async function visiterVille(villeId: string): Promise<{ succes: boolean }
     redirect("/connexion");
   }
 
-  const { error } = await supabaseAdmin.rpc("visiter_ville", {
+  const { data, error } = await supabaseAdmin.rpc("visiter_ville", {
     p_visiteur_id: user.id,
     p_ville_id: villeId,
   });
@@ -47,7 +48,11 @@ export async function visiterVille(villeId: string): Promise<{ succes: boolean }
   revalidatePath("/villes");
   revalidatePath("/ville");
 
-  return { succes: !error };
+  // Jalon 18 : le gain n'est plus garanti (crise du Résidentiel) — le
+  // vrai chiffre vient de visiter_ville() elle-même, jamais reconstitué
+  // côté client.
+  const gain = typeof (data as { gain?: number } | null)?.gain === "number" ? (data as { gain: number }).gain : 0;
+  return { succes: !error, gain };
 }
 
 /**
@@ -121,6 +126,44 @@ export async function definirRecommandation(formData: FormData) {
 }
 
 /**
+ * Le maire choisit un mégaprojet parmi les options du palier tout
+ * juste débloqué (docs/SYSTEME-DEVELOPPEMENT.md §6, Jalon 20 1/3) —
+ * réservé au propriétaire de la ville, un seul choix par palier,
+ * jamais modifiable ensuite (choisir_megaprojet(), anti-triche côté
+ * SQL).
+ */
+export async function choisirMegaprojet(
+  villeId: string,
+  palier: number,
+  type: string
+): Promise<{ succes: boolean }> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/connexion");
+  }
+
+  const { error } = await supabaseAdmin.rpc("choisir_megaprojet", {
+    p_owner_id: user.id,
+    p_ville_id: villeId,
+    p_palier: palier,
+    p_type: type,
+  });
+
+  if (error) {
+    console.error("choisirMegaprojet a échoué :", error.message);
+  }
+
+  revalidatePath("/ville");
+  revalidatePath("/villes");
+
+  return { succes: !error };
+}
+
+/**
  * Influence une autre ville : +1 influence, au plus une fois par
  * (joueur, ville, jour) et au plus 5 fois par (joueur, jour) tous
  * cibles confondues. Comme visiterVille, toute la logique vit dans la
@@ -160,8 +203,7 @@ export async function influencerVille(formData: FormData) {
 }
 
 export type EtatActionAntiVille =
-  | { statut: "succes"; effetReduit: boolean }
-  | { statut: "protection" }
+  | { statut: "succes"; palier: PalierAttaques; perte: number | null; dureeHeures: number | null }
   | { statut: "quota" }
   | { statut: "erreur" }
   | null;
@@ -170,13 +212,16 @@ const TYPES_ACTION_ANTIVILLE = ["greve", "contamination", "propagande"] as const
 
 /**
  * Lance une action AntiVille (grève, contamination ou propagande)
- * contre une autre ville. Toute la logique — quota quotidien, blocage
- * par la protection anti-harcèlement, calcul de l'effet — vit dans la
- * fonction SQL lancer_action_antiville() (docs/DECISIONS.md §4, Jalon
- * 4). Contrairement à visiterVille/influencerVille, le résultat est
- * affiché explicitement (pas silencieusement absorbé) : se faire
- * bloquer par la protection ou le quota est un événement normal du jeu
- * que le joueur doit voir, pas une erreur à cacher.
+ * contre une autre ville. Toute la logique — quota quotidien, paliers
+ * cumulés, défense selon les jauges — vit dans la fonction SQL
+ * lancer_action_antiville() (docs/DECISIONS.md §4, Jalons 4 et 18).
+ * Contrairement à visiterVille/influencerVille, le résultat est
+ * affiché explicitement (pas silencieusement absorbé) : le joueur doit
+ * voir l'effet réel de son action (réduit par la défense, plafonné...).
+ *
+ * Jalon 18 : l'ancienne "protection anti-harcèlement" (statut
+ * "protection", code P0003) est retirée — remplacée par le système de
+ * paliers cumulés par ville (voir la migration 0024).
  */
 export async function lancerActionAntiVille(
   _etatPrecedent: EtatActionAntiVille,
@@ -209,9 +254,6 @@ export async function lancerActionAntiVille(
   revalidatePath("/villes");
 
   if (error) {
-    if (error.code === "P0003") {
-      return { statut: "protection" };
-    }
     if (error.code === "P0001") {
       return { statut: "quota" };
     }
@@ -219,8 +261,16 @@ export async function lancerActionAntiVille(
     return { statut: "erreur" };
   }
 
-  const effetReduit = Boolean((data as { effet_reduit?: boolean } | null)?.effet_reduit);
-  return { statut: "succes", effetReduit };
+  const resultat = data as { palier?: string; perte?: number | null; duree_heures?: number | null } | null;
+  const palier = PALIERS_ATTAQUES.includes(resultat?.palier as PalierAttaques)
+    ? (resultat!.palier as PalierAttaques)
+    : "calme";
+  return {
+    statut: "succes",
+    palier,
+    perte: resultat?.perte ?? null,
+    dureeHeures: resultat?.duree_heures ?? null,
+  };
 }
 
 /**

@@ -356,24 +356,34 @@ test.describe("Jalon 13 — France contre Allemagne", () => {
         .single();
       expect(erreurInsertion).toBeNull();
 
+      // Depuis la grille (effet unitaire faible/cumul/plafond/paliers,
+      // voir migration 0032) : effort_attaquant/defenseur sont figés par
+      // resoudre_conflits_en_cours(), plus recalculés à la volée par
+      // conflit_pays() — avant son premier appel, ils valent 0.
       const { data: conflitEnCours } = await supabaseAdmin.rpc("conflit_pays", { p_country_id: "AU" });
       const ligneEnCours = Array.isArray(conflitEnCours) ? conflitEnCours[0] : conflitEnCours;
       expect(ligneEnCours.statut).toBe("en_cours");
-      expect(ligneEnCours.effort_attaquant).toBe(9); // calculé à la volée, pas encore figé
-      expect(ligneEnCours.effort_defenseur).toBe(1);
+      expect(ligneEnCours.effort_attaquant).toBe(0);
+      expect(ligneEnCours.effort_defenseur).toBe(0);
+      expect(ligneEnCours.jours_gagnes_attaquant).toBe(0);
+      expect(ligneEnCours.jours_gagnes_defenseur).toBe(0);
 
       const { error: erreurResolution } = await supabaseAdmin.rpc("resoudre_conflits_en_cours");
       expect(erreurResolution).toBeNull();
 
       const { data: conflitTermine } = await supabaseAdmin
         .from("conflits")
-        .select("statut, resultat, effort_attaquant, effort_defenseur")
+        .select("statut, resultat, effort_attaquant, effort_defenseur, jours_gagnes_attaquant, jours_gagnes_defenseur")
         .eq("id", conflit.id)
         .single();
       expect(conflitTermine?.statut).toBe("termine");
       expect(conflitTermine?.resultat).toBe("attaquant");
       expect(conflitTermine?.effort_attaquant).toBe(9);
       expect(conflitTermine?.effort_defenseur).toBe(1);
+      // Une seule journée traitée ici (debut et fin le même jour calendaire
+      // dans ce test) : l'attaquant a gagné cette unique journée.
+      expect(conflitTermine?.jours_gagnes_attaquant).toBe(1);
+      expect(conflitTermine?.jours_gagnes_defenseur).toBe(0);
 
       // Idempotence : un deuxième appel ne change plus rien (déjà "termine").
       await supabaseAdmin.rpc("resoudre_conflits_en_cours");

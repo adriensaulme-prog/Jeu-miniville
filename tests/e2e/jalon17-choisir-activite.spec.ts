@@ -12,6 +12,11 @@ import { createClient } from "@supabase/supabase-js";
  * exactement la même règle qu'une autre ville. Client service_role
  * recréé ici pour la même raison que les specs des jalons précédents
  * ("server-only" hors du pipeline Next.js).
+ *
+ * Correctif Jalon 19 (docs/A-INTEGRER.md §20 B, migration `0027`) : un
+ * choix explicite est désormais définitif — un second appel sur la
+ * même visite est refusé (P0023), même activité encore débloquée et
+ * fenêtre de grâce encore ouverte.
  */
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -109,6 +114,48 @@ test.describe("Jalon 17 — choisir une activité", () => {
         .eq("ville_id", cible.villeId)
         .single();
       expect(visiteApres?.activite).toBe("loisirs");
+    } finally {
+      await supprimerCompte(cible.userId);
+      await supprimerCompte(visiteur.userId);
+    }
+  });
+
+  test("sabotage : un choix explicite verrouille la visite, un second choix (même valide) est refusé", async () => {
+    const cible = await creerCompteAvecVille("j19-verrou-cible");
+    const visiteur = await creerCompteAvecVille("j19-verrou-visiteur");
+    try {
+      await supabaseAdmin.rpc("visiter_ville", {
+        p_visiteur_id: visiteur.userId,
+        p_ville_id: cible.villeId,
+      });
+
+      const { data: premierChoix, error } = await supabaseAdmin.rpc("choisir_activite_visite", {
+        p_visiteur_id: visiteur.userId,
+        p_ville_id: cible.villeId,
+        p_activite: "loisirs",
+      });
+      expect(error).toBeNull();
+      expect(premierChoix.activite).toBe("loisirs");
+      expect(premierChoix.activite_verrouillee).toBe(true);
+
+      // Deuxième choix, pourtant parfaitement valide (Résidentiel est
+      // débloqué dès le Hameau comme Loisirs) : refusé, le verrou ne
+      // dépend pas de la validité de l'activité demandée.
+      const { error: erreurVerrou } = await supabaseAdmin.rpc("choisir_activite_visite", {
+        p_visiteur_id: visiteur.userId,
+        p_ville_id: cible.villeId,
+        p_activite: "residentiel",
+      });
+      expect(erreurVerrou?.code).toBe("P0023");
+
+      const { data: visiteApres } = await supabaseAdmin
+        .from("visites")
+        .select("activite, activite_verrouillee")
+        .eq("visiteur_id", visiteur.userId)
+        .eq("ville_id", cible.villeId)
+        .single();
+      expect(visiteApres?.activite).toBe("loisirs");
+      expect(visiteApres?.activite_verrouillee).toBe(true);
     } finally {
       await supprimerCompte(cible.userId);
       await supprimerCompte(visiteur.userId);
@@ -307,6 +354,9 @@ test.describe("Jalon 17 — choisir une activité", () => {
       await page.getByRole("button", { name: "Changer" }).click();
       await page.getByRole("button", { name: /Loisirs/ }).click();
       await expect(page.getByText("Activité choisie : 🌳 Loisirs")).toBeVisible({ timeout: 10_000 });
+      // Correctif Jalon 19 (§20 B) : ce choix explicite est verrouillé,
+      // plus de bouton pour en choisir un autre sur cette visite.
+      await expect(page.getByRole("button", { name: "Changer" })).toHaveCount(0);
     } finally {
       await supprimerCompte(visiteur.userId);
       await supprimerCompte(cible.userId);

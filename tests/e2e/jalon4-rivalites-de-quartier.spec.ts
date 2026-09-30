@@ -3,13 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 
 /**
  * Jalon 4 : trois actions AntiVille (grève, contamination, propagande)
- * avec quota quotidien (3/jour, tous types et cibles confondus) et
- * protection anti-harcèlement dégressive par paire (attaquant, cible)
- * sur une fenêtre glissante de 24h — voir docs/DECISIONS.md §4 pour le
- * raisonnement complet des paramètres d'équilibrage. Client
- * service_role recréé ici pour la même raison que les specs des jalons
- * précédents (voir leurs commentaires : "server-only" hors du pipeline
- * Next.js).
+ * avec quota quotidien (3/jour, tous types et cibles confondus) — voir
+ * docs/DECISIONS.md §4 pour le raisonnement complet des paramètres
+ * d'équilibrage. Client service_role recréé ici pour la même raison
+ * que les specs des jalons précédents (voir leurs commentaires :
+ * "server-only" hors du pipeline Next.js).
+ *
+ * L'ancienne "protection anti-harcèlement" par paire (attaquant, cible)
+ * a été remplacée au Jalon 18 par un système de paliers cumulés par
+ * ville (tous attaquants confondus) — voir
+ * tests/e2e/jalon18-effets-equilibre.spec.ts pour sa couverture.
  */
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -160,9 +163,9 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
     }
   });
 
-  test("sabotage : protection anti-harcèlement — 1re attaque pleine, 2e réduite, 3e bloquée", async () => {
-    const attaquant = await creerCompteAvecVille("harceleur");
-    const cible = await creerCompteAvecVille("cible-harcelement");
+  test("sabotage : un même attaquant peut viser la même cible plusieurs fois de suite (protection par attaquant retirée au Jalon 18)", async () => {
+    const attaquant = await creerCompteAvecVille("plus-de-protection");
+    const cible = await creerCompteAvecVille("cible-plus-de-protection");
 
     try {
       const premiere = await supabaseAdmin.rpc("lancer_action_antiville", {
@@ -171,7 +174,6 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
         p_type_action: "propagande",
       });
       expect(premiere.error).toBeNull();
-      expect(premiere.data?.effet_reduit).toBe(false);
 
       await debloquerDelaiAntiVille(attaquant.userId);
       const deuxieme = await supabaseAdmin.rpc("lancer_action_antiville", {
@@ -179,8 +181,9 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
         p_ville_id: cible.villeId,
         p_type_action: "propagande",
       });
+      // Ni réduit ni bloqué : seul le quota de 3/jour (testé plus bas)
+      // limite désormais un attaquant sur une même cible.
       expect(deuxieme.error).toBeNull();
-      expect(deuxieme.data?.effet_reduit).toBe(true);
 
       await debloquerDelaiAntiVille(attaquant.userId);
       const troisieme = await supabaseAdmin.rpc("lancer_action_antiville", {
@@ -188,7 +191,7 @@ test.describe("Jalon 4 — rivalités de quartier", () => {
         p_ville_id: cible.villeId,
         p_type_action: "propagande",
       });
-      expect(troisieme.error?.code).toBe("P0003");
+      expect(troisieme.error).toBeNull();
     } finally {
       await supprimerCompte(attaquant.userId);
       await supprimerCompte(cible.userId);

@@ -42,8 +42,8 @@ export function JaugesActivites({
             >
               <i className={etat} style={{ width: `${Math.min(100, (pourcentage / 150) * 100)}%` }} />
             </div>
-            <span className="jauge-pct">
-              {pourcentage}% · {traduire(locale, `activite.etat.${etat}`)}
+            <span className="jauge-pct" title={`${pourcentage}%`}>
+              {traduire(locale, `activite.etat.${etat}`)}
             </span>
           </div>
         );

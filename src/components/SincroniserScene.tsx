@@ -12,14 +12,25 @@ import type { ParametresVille } from "@/lib/ville3d/scene";
  */
 export function SincroniserScene(props: ParametresVille) {
   const { definirVille } = useSceneVille();
-  const { seed, populationMax, pays } = props;
+  const { seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments } = props;
 
   useEffect(() => {
-    definirVille({ seed, populationMax, pays });
+    definirVille({ seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments });
     // definirVille est stable (issue du ref dans SceneVilleFond) : seules
     // les vraies données de la ville doivent redéclencher l'appel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed, populationMax, pays.latitude, pays.longitude, pays.fuseauHoraire]);
+  }, [
+    seed,
+    populationMax,
+    pays.latitude,
+    pays.longitude,
+    pays.fuseauHoraire,
+    vocations,
+    elanEnergie,
+    megaprojets,
+    nbTechnologies,
+    monuments,
+  ]);
 
   return null;
 }

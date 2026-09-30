@@ -10,11 +10,15 @@ import {
   APART_FROM,
   BS,
   COL,
+  ENERGIE_MAX_INSTALLATIONS,
+  ENERGIE_PAR_INSTALLATION,
+  ENERGIE_SEUIL_CENTRALE,
   HABITANTS_PAR_LOGEMENT_MAISON,
   LOT,
   MAT,
   PER_FLOOR,
   PERIOD,
+  QUARTIER_NIVEAU2_APRES,
   SW,
   T,
   blockX0,
@@ -23,6 +27,29 @@ import {
 import { box, cylinder, flat, type Geo } from "./geometrie";
 import { car, conifer, tree, type TamponAO } from "./mobilier";
 import { buildApart, buildHouse, buildTower, type Facade, type Rect } from "./batiments";
+import {
+  buildCommerce,
+  buildIndustrie,
+  buildRecherche,
+  buildServices,
+  buildStade,
+  type VocationQuartier,
+} from "./quartiers";
+import { buildCentraleEnergie, buildEolienne, buildPanneauSolaire } from "./energie";
+import { buildMegaprojet } from "./megaprojets";
+import { buildMonument } from "./monuments";
+import type { TechnologiesVille } from "@/lib/game/technologies";
+
+export interface MegaprojetConstruit {
+  palier: number;
+  type: string;
+  activite: string;
+}
+
+export interface MonumentDebloque {
+  palier: number;
+  type: string;
+}
 
 export interface Bloc {
   bi: number;
@@ -32,6 +59,11 @@ export interface Bloc {
   gap: number;
   towerAt: number;
   active: boolean;
+  /** Jalon 19 : vocation fixée une fois pour toutes à l'ouverture du
+   * bloc (docs/SYSTEME-DEVELOPPEMENT.md §7) — "residentiel" par défaut
+   * pour toute ville dont les blocs n'ont pas encore de vocation
+   * assignée côté serveur (dégradation propre, pas d'erreur). */
+  vocation: VocationQuartier;
 }
 
 export interface Stats {
@@ -137,6 +169,39 @@ export function buildParking(g: Geo, rect: Rect, front: Facade, r: RNG, seed: nu
   }
 }
 
+/**
+ * Petite décoration de toit pour deux technologies (Jalon 20 2/3,
+ * docs/SYSTEME-DEVELOPPEMENT.md §6) : panneaux solaires et/ou toit
+ * végétalisé sur un immeuble. Position approximative (centre du lot,
+ * pas le contour exact du bâtiment posé par buildApart()) — suffisant
+ * pour une décoration, évite de dupliquer son calcul interne de
+ * parcelle. Volontairement pas sur les tours (leur toit a déjà son
+ * propre traitement — héliport/antenne — inutile de superposer).
+ */
+function decorTechToit(
+  g: Geo,
+  cx: number,
+  cz: number,
+  y: number,
+  w: number,
+  d: number,
+  tech: TechnologiesVille,
+  seed: number
+) {
+  if (tech.toitsVegetalises) {
+    flat(g, cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, y + 0.01, hex("#5a8f4a"), MAT.LAWN, seed);
+  }
+  if (tech.panneauxSolairesToits) {
+    const pw = w * 0.55,
+      pd = d * 0.4;
+    box(g, cx - pw / 2, y + 0.02, cz - pd / 2, cx + pw / 2, y + 0.16, cz + pd / 2, {
+      c: hex("#1f3a5f"),
+      m: MAT.PLAIN,
+      seed,
+    });
+  }
+}
+
 export function buildBlock(
   g: Geo,
   b: Bloc,
@@ -145,7 +210,8 @@ export function buildBlock(
   ao: TamponAO[],
   stats: Stats,
   glow: { x: number; z: number }[],
-  ev: number[]
+  ev: number[],
+  tech: TechnologiesVille
 ) {
   const r = rngFrom(key + "|bloc|" + b.bi + "," + b.bj);
   const bx0 = blockX0(b.bi),
@@ -186,7 +252,9 @@ export function buildBlock(
       { c: hex("#3b4148"), m: MAT.PLAIN }
     );
     box(g, x + hx - 0.3, sh + 5.3, z + hz - 0.3, x + hx + 0.3, sh + 5.5, z + hz + 0.3, {
-      c: hex("#fff1d0"),
+      // Technologie "Éclairage public LED" (Jalon 20 2/3, palier 0) :
+      // teinte froide au lieu de la lueur chaude par défaut.
+      c: tech.eclairageLed ? hex("#dcedff") : hex("#fff1d0"),
       m: MAT.LAMP,
     });
     glow.push({ x: x + hx * 2.2, z: z + hz * 2.2 });
@@ -240,6 +308,20 @@ export function buildBlock(
   const jitter = Math.floor(r() * 3);
   const lotRng = (lc: number, lr: number) => rngFrom(key + "|lot|" + b.bi + "," + b.bj + "|" + lc + "," + lr);
 
+  // Jalon 19 (§7) : hors résidentiel, les emplacements "maisons" et
+  // "immeubles" reçoivent le stade simple puis développé du quartier de
+  // vocation à la place ; le gratte-ciel reste une règle propre au
+  // résidentiel (voir plus bas, trect).
+  const vocationBuilders: Partial<
+    Record<VocationQuartier, typeof buildIndustrie>
+  > = {
+    industrie: buildIndustrie,
+    commerce: buildCommerce,
+    services: buildServices,
+    recherche: buildRecherche,
+  };
+  const build = vocationBuilders[b.vocation];
+
   const gap = b.gap;
   perim.forEach(([lc, lr], idx) => {
     const rect = lotRect(bx0, bz0, lc, lr),
@@ -247,22 +329,43 @@ export function buildBlock(
       lr_ = lotRng(lc, lr);
     const lotSeed = (seed + idx * 7) % 999;
     if (idx < 4) {
-      // Une maison = un logement, occupé tous les
-      // HABITANTS_PAR_LOGEMENT_MAISON habitants (docs/DECISIONS.md §4,
-      // "Annulation du Jalon 16") : les 4 maisons d'un bloc apparaissent
-      // vite après son ouverture, peu importe l'écart jusqu'au bloc
-      // suivant.
+      // Une maison (ou son équivalent de quartier) = un logement/lot,
+      // occupé tous les HABITANTS_PAR_LOGEMENT_MAISON habitants
+      // (docs/DECISIONS.md §4, "Annulation du Jalon 16") : les 4 lots
+      // d'un bloc apparaissent vite après son ouverture, peu importe
+      // l'écart jusqu'au bloc suivant.
       const at = b.openAt + idx * HABITANTS_PAR_LOGEMENT_MAISON;
       ev.push(at);
-      if (C >= at) buildHouse(g, rect, front, lr_, ao, lotSeed);
+      if (b.vocation === "loisirs") buildPark(g, rect, lr_, ao, C < at);
+      else if (build) {
+        if (C >= at) build(g, rect, front, 0, lr_, ao, lotSeed);
+        else buildPark(g, rect, lr_, ao, true);
+      } else if (C >= at) buildHouse(g, rect, front, lr_, ao, lotSeed);
       else buildPark(g, rect, lr_, ao, true);
     } else if (idx < 6) {
       const start = Math.max(APART_FROM, b.openAt + gap * (0.8 + 0.1 * (idx - 4)));
       ev.push(start);
-      if (C >= start) {
+      if (b.vocation === "loisirs") {
+        if (C >= start) buildStade(g, rect, lr_, ao, lotSeed);
+        else buildPark(g, rect, lr_, ao, true);
+      } else if (build) {
+        if (C >= start) {
+          // Niveau 2 ("grand complexe") au-delà de QUARTIER_NIVEAU2_APRES
+          // habitants après le déblocage — retour de test d'Adrien
+          // (docs/A-INTEGRER.md §20 A) : plus de détail que la seule
+          // étape "développée" du premier passage.
+          const niveauQuartier = C >= start + QUARTIER_NIVEAU2_APRES ? 2 : 1;
+          if (niveauQuartier === 1) ev.push(start + QUARTIER_NIVEAU2_APRES);
+          build(g, rect, front, niveauQuartier, lr_, ao, lotSeed);
+        } else buildPark(g, rect, lr_, ao, true);
+      } else if (C >= start) {
         const fl = Math.min(7, 2 + Math.floor((C - start) / APART_FLOOR_EVERY)) - (lotSeed % 2);
         ev.push(start + (Math.floor((C - start) / APART_FLOOR_EVERY) + 1) * APART_FLOOR_EVERY);
-        buildApart(g, rect, front, Math.max(2, fl), lr_, ao, lotSeed);
+        const floors = Math.max(2, fl);
+        buildApart(g, rect, front, floors, lr_, ao, lotSeed);
+        if (tech.panneauxSolairesToits || tech.toitsVegetalises) {
+          decorTechToit(g, (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2, 0.15 + floors * 3.0, 10, 9, tech, lotSeed);
+        }
       } else buildPark(g, rect, lr_, ao, true);
     } else if (idx === parkingIdx && C >= APART_FROM) buildParking(g, rect, front, lr_, lotSeed);
     else buildPark(g, rect, lr_, ao);
@@ -289,15 +392,22 @@ export function buildBlock(
     Math.max(...tl.map((q) => q[2])),
     Math.max(...tl.map((q) => q[3])),
   ];
-  ev.push(b.towerAt);
-  if (C >= b.towerAt) {
-    const F = Math.max(0, Math.min(cap, Math.floor((C - b.towerAt) / PER_FLOOR) + jitter));
-    if (F < cap) ev.push(b.towerAt + (F - jitter + 1) * PER_FLOOR);
-    buildTower(g, trect, ts.inner, F, cap, lotRng(8, 8), ao, seed);
-    stats.maxFloors = Math.max(stats.maxFloors, F);
-    stats.towers++;
-  } else {
+  // Jalon 19 (§7) : "la règle actuelle maisons→immeubles→tours reste
+  // celle des blocs résidentiels" — un bloc de quartier n'a jamais de
+  // chantier de gratte-ciel, ce coin reste un square public.
+  if (b.vocation !== "residentiel") {
     buildSquare(g, trect, lotRng(7, 7), ao);
+  } else {
+    ev.push(b.towerAt);
+    if (C >= b.towerAt) {
+      const F = Math.max(0, Math.min(cap, Math.floor((C - b.towerAt) / PER_FLOOR) + jitter));
+      if (F < cap) ev.push(b.towerAt + (F - jitter + 1) * PER_FLOOR);
+      buildTower(g, trect, ts.inner, F, cap, lotRng(8, 8), ao, seed);
+      stats.maxFloors = Math.max(stats.maxFloors, F);
+      stats.towers++;
+    } else {
+      buildSquare(g, trect, lotRng(7, 7), ao);
+    }
   }
 }
 
@@ -366,6 +476,80 @@ export function buildCountryside(g: Geo, key: string, ao: TamponAO[], cityR: num
 }
 
 /**
+ * Énergie, hors de la ville (§7) : éoliennes et panneaux solaires en
+ * nombre proportionnel à l'élan de l'activité, puis une centrale
+ * au-delà d'un seuil. Emplacements fixes par ville (un générateur par
+ * indice, comme les forêts de buildCountryside()) : une installation
+ * déjà visible ne se déplace jamais quand l'élan grandit, et une
+ * position avalée par la ville en grandissant est simplement sautée.
+ */
+export function buildEnergieCampagne(g: Geo, key: string, ao: TamponAO[], cityR: number, elan: number) {
+  const n = Math.max(0, Math.min(ENERGIE_MAX_INSTALLATIONS, Math.floor(elan / ENERGIE_PAR_INSTALLATION)));
+  for (let k = 0; k < n; k++) {
+    const r = rngFrom(key + "|energie|" + k);
+    const a = r() * Math.PI * 2,
+      dist = rr(r, 220, 1500);
+    const x = Math.cos(a) * dist,
+      z = Math.sin(a) * dist;
+    if (Math.max(Math.abs(x), Math.abs(z)) < cityR + 20) continue;
+    const seed = Math.floor(r() * 900) + 50;
+    if (r() < 0.55) buildEolienne(g, x, z, r, ao, seed);
+    else buildPanneauSolaire(g, x, z, r, ao, seed);
+  }
+  if (elan >= ENERGIE_SEUIL_CENTRALE) {
+    const r = rngFrom(key + "|energie|centrale");
+    const a = r() * Math.PI * 2,
+      dist = rr(r, 220, 1500);
+    const x = Math.cos(a) * dist,
+      z = Math.sin(a) * dist;
+    if (Math.max(Math.abs(x), Math.abs(z)) >= cityR + 20) {
+      buildCentraleEnergie(g, x, z, r, ao, Math.floor(r() * 900) + 50);
+    }
+  }
+}
+
+/**
+ * Mégaprojets construits, juste à l'extérieur de la ville (§6 : "un
+ * bâtiment unique apparaît", sans emplacement précisé) — un
+ * générateur par palier, comme les installations d'Énergie, mais à une
+ * distance qui dépend du PALIER, jamais du rayon actuel de la ville
+ * (qui grandit avec la population) : sinon un mégaprojet déjà construit
+ * s'éloignerait du centre à chaque rendu suivant, au lieu de rester
+ * fixe. Les paliers plus élevés (villes plus grandes) sont donc plus
+ * loin par construction, sans jamais recalculer par rapport à cityR.
+ */
+export function buildMegaprojetsCampagne(g: Geo, key: string, ao: TamponAO[], megaprojets: MegaprojetConstruit[]) {
+  for (const m of megaprojets) {
+    const r = rngFrom(key + "|megaprojet|" + m.palier);
+    const a = r() * Math.PI * 2,
+      dist = 220 + m.palier * 90 + rr(r, 0, 40);
+    const x = Math.cos(a) * dist,
+      z = Math.sin(a) * dist;
+    buildMegaprojet(g, x, z, m.type, m.activite, m.palier, r, ao, Math.floor(r() * 900) + 50);
+  }
+}
+
+/**
+ * Monuments d'influence débloqués (Jalon 20 3/3, docs/A-INTEGRER.md
+ * §19) : "près du croisement central... zone symbolique" (§19) — plus
+ * proches du centre que les mégaprojets (des repères modestes, pas des
+ * bâtiments civiques), mais toujours juste à l'extérieur de la ville
+ * pour ne jamais chevaucher un bloc (même limite pratique que les
+ * mégaprojets, distance fixe par palier — jamais relative au rayon
+ * courant, pour qu'un monument déjà débloqué ne se déplace jamais).
+ */
+export function buildMonumentsCampagne(g: Geo, key: string, ao: TamponAO[], monuments: MonumentDebloque[]) {
+  for (const m of monuments) {
+    const r = rngFrom(key + "|monument|" + m.palier);
+    const a = r() * Math.PI * 2,
+      dist = 200 + m.palier * 15 + rr(r, 0, 15);
+    const x = Math.cos(a) * dist,
+      z = Math.sin(a) * dist;
+    buildMonument(g, x, z, m.type, m.palier, ao, Math.floor(r() * 900) + 50);
+  }
+}
+
+/**
  * Rues autour de chaque bloc actif, plus les deux grands axes qui
  * traversent toute la ville (elle est née à leur croisement). Cases de rue
  * repérées par des indices entiers (ti, tj) centrés sur x = ti·T ; une rue
@@ -399,6 +583,57 @@ export function buildRoadsAndTraffic(g: Geo, activeBlocks: Bloc[], key: string, 
       const t = rr(rc, 3, 13);
       if (ri) car(g, x0 + T / 2 + lane, z0 + t, false, rc); // rue orientée Z
       else car(g, x0 + t, z0 + T / 2 + lane, true, rc);
+    }
+  }
+}
+
+/**
+ * Technologie "Tramway" (Jalon 20 2/3, palier 2) : rails posés sur les
+ * deux grands axes centraux, plus quelques rames. Décoratif, ne
+ * remplace pas la route déjà dessinée par buildRoadsAndTraffic().
+ */
+export function buildTramway(g: Geo, key: string, cityR: number) {
+  const railC = hex("#4a4d52"),
+    y = 0.06,
+    off = 1.6;
+  flat(g, -off - 0.15, -cityR, -off + 0.15, cityR, y, railC, MAT.PLAIN);
+  flat(g, off - 0.15, -cityR, off + 0.15, cityR, y, railC, MAT.PLAIN);
+  flat(g, -cityR, -off - 0.15, cityR, -off + 0.15, y, railC, MAT.PLAIN);
+  flat(g, -cityR, off - 0.15, cityR, off + 0.15, y, railC, MAT.PLAIN);
+
+  const tramC = hex("#2f6fb2");
+  for (const sgn of [-1, 1]) {
+    const r = rngFrom(key + "|tram|" + sgn);
+    const d = rr(r, cityR * 0.2, cityR * 0.7);
+    box(g, -1.1, y, sgn * d - 4, 1.1, y + 3.2, sgn * d + 4, { c: tramC, m: MAT.PLAIN, seed: 1 });
+    box(g, sgn * d - 4, y, -1.1, sgn * d + 4, y + 3.2, 1.1, { c: tramC, m: MAT.PLAIN, seed: 2 });
+  }
+}
+
+/**
+ * Technologie "Drones" (Jalon 20 2/3, palier 4) : quelques drones de
+ * livraison en vol au-dessus de la ville, à des positions fixes par
+ * ville (un générateur par indice).
+ */
+export function buildDrones(g: Geo, key: string, cityR: number, n = 6) {
+  const bodyC = hex("#2b2f36"),
+    rotorC = hex("#8a8f93");
+  for (let i = 0; i < n; i++) {
+    const r = rngFrom(key + "|drone|" + i);
+    const a = r() * Math.PI * 2,
+      d = rr(r, cityR * 0.1, cityR * 0.85),
+      x = Math.cos(a) * d,
+      z = Math.sin(a) * d,
+      y = rr(r, 18, 34);
+    box(g, x - 0.35, y, z - 0.35, x + 0.35, y + 0.18, z + 0.35, { c: bodyC, m: MAT.PLAIN });
+    for (const [dx, dz] of [
+      [-0.9, -0.9],
+      [0.9, -0.9],
+      [-0.9, 0.9],
+      [0.9, 0.9],
+    ]) {
+      box(g, x + dx - 0.5, y + 0.05, z + dz - 0.05, x + dx + 0.5, y + 0.1, z + dz + 0.05, { c: bodyC, m: MAT.PLAIN });
+      cylinder(g, x + dx, y + 0.1, z + dz, 0.32, 0.03, 8, rotorC, MAT.PLAIN, null, null);
     }
   }
 }

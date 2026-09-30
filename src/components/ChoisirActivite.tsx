@@ -22,6 +22,7 @@ export function ChoisirActivite({
   locale,
   villeId,
   activiteActuelle,
+  verrouillee,
   activitesDisponibles,
 }: {
   locale: Locale;
@@ -30,6 +31,10 @@ export function ChoisirActivite({
    * déjà choisie), ou null si aucune visite récente ne peut plus être
    * modifiée (fenêtre de grâce écoulée, ou jamais visité). */
   activiteActuelle: Activite | null;
+  /** Jalon 19 (docs/A-INTEGRER.md §20 B) : un choix explicite déjà fait
+   * pour cette visite est définitif — plus de bouton "changer" une fois
+   * vrai, même si la fenêtre de grâce de 5 minutes n'est pas écoulée. */
+  verrouillee: boolean;
   activitesDisponibles: Activite[];
 }) {
   const router = useRouter();
@@ -53,13 +58,13 @@ export function ChoisirActivite({
       <p>
         {traduire(locale, "activite.choisie")} {EMOJI_ACTIVITE[activiteActuelle]}{" "}
         {traduire(locale, `activite.${activiteActuelle}`)}{" "}
-        {!ouvert && (
+        {!ouvert && !verrouillee && (
           <button type="button" className="btn small" onClick={() => setOuvert(true)}>
             {traduire(locale, "activite.changer")}
           </button>
         )}
       </p>
-      {ouvert && (
+      {ouvert && !verrouillee && (
         <>
           <p>
             <b>{traduire(locale, "activite.choisir")}</b> — {traduire(locale, "activite.choisirNote")}

@@ -25,32 +25,13 @@ function BoutonAction({
   );
 }
 
-function messagePourEtat(etat: EtatActionAntiVille, locale: Locale): string | null {
-  if (!etat) return null;
-  switch (etat.statut) {
-    case "succes":
-      return traduire(
-        locale,
-        etat.effetReduit ? "villes.antiVilleReussieEffetReduit" : "villes.antiVilleReussie"
-      );
-    case "protection":
-      return traduire(locale, "villes.antiVilleProtection");
-    case "quota":
-      return traduire(locale, "villes.antiVilleQuota");
-    case "erreur":
-      return traduire(locale, "villes.antiVilleErreur");
-  }
-}
-
 export function ActionsAntiVille({
   locale,
   villeId,
-  protectionActive,
   quotaAtteint,
 }: {
   locale: Locale;
   villeId: string;
-  protectionActive: boolean;
   quotaAtteint: boolean;
 }) {
   const [etat, action] = useActionState<EtatActionAntiVille, FormData>(
@@ -61,12 +42,6 @@ export function ActionsAntiVille({
   if (quotaAtteint) {
     return <p className="note">{traduire(locale, "villes.quotaAntiVilleAtteint")}</p>;
   }
-
-  if (protectionActive) {
-    return <p className="note">{traduire(locale, "villes.protectionActive")}</p>;
-  }
-
-  const message = messagePourEtat(etat, locale);
 
   return (
     <form action={action} className="row" style={{ display: "grid", gap: 8 }}>
@@ -91,7 +66,26 @@ export function ActionsAntiVille({
           note={traduire(locale, "villes.propagandeNote")}
         />
       </div>
-      {message ? <p className="note">{message}</p> : null}
+      {etat?.statut === "succes" ? (
+        <p className="note">
+          {traduire(locale, "villes.antiVilleReussie")}{" "}
+          {etat.perte !== null ? (
+            <>
+              {traduire(locale, "villes.antiVillePerteInfligee")} {etat.perte}.{" "}
+            </>
+          ) : null}
+          {etat.dureeHeures !== null ? (
+            <>
+              {traduire(locale, "villes.antiVilleDureeBlocage")} {Math.round(etat.dureeHeures * 10) / 10} h.{" "}
+            </>
+          ) : null}
+          {traduire(locale, "villes.antiVillePalier")} {traduire(locale, `villes.palier.${etat.palier}`)}
+        </p>
+      ) : etat?.statut === "quota" ? (
+        <p className="note">{traduire(locale, "villes.antiVilleQuota")}</p>
+      ) : etat?.statut === "erreur" ? (
+        <p className="note">{traduire(locale, "villes.antiVilleErreur")}</p>
+      ) : null}
     </form>
   );
 }

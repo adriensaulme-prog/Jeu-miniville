@@ -26,7 +26,7 @@ describe("libelleNiveau", () => {
 
   it("refuse un niveau hors plage (sabotage : détecter une ville avec un niveau invalide)", () => {
     expect(() => libelleNiveau(-1, "fr")).toThrow(RangeError);
-    expect(() => libelleNiveau(6, "fr")).toThrow(RangeError);
+    expect(() => libelleNiveau(7, "fr")).toThrow(RangeError);
   });
 
   it("refuse un niveau non entier", () => {
@@ -47,8 +47,8 @@ describe("niveauPourPopulation", () => {
     }
   });
 
-  it("plafonne à Métropole (5) bien au-delà du dernier seuil", () => {
-    expect(niveauPourPopulation(1_000_000)).toBe(NIVEAU_MAX);
+  it("plafonne à Mégapole (6) bien au-delà du dernier seuil", () => {
+    expect(niveauPourPopulation(10_000_000)).toBe(NIVEAU_MAX);
   });
 
   it("refuse une population négative (sabotage : ne doit jamais arriver, la colonne DB l'interdit déjà)", () => {
@@ -76,8 +76,8 @@ describe("progressionNiveau", () => {
     expect(progressionNiveau(1000).seuilSuivant).toBe(5000);
   });
 
-  it("n'a plus de seuil suivant au niveau maximal (Métropole)", () => {
-    const p = progressionNiveau(1_000_000);
+  it("n'a plus de seuil suivant au niveau maximal (Mégapole)", () => {
+    const p = progressionNiveau(10_000_000);
     expect(p.niveau).toBe(NIVEAU_MAX);
     expect(p.seuilSuivant).toBeNull();
     expect(p.pourcentage).toBe(100);

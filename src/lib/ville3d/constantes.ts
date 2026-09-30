@@ -145,3 +145,55 @@ export const CAR_COLORS = ["#b8352f", "#ececec", "#b5bac0", "#25272b", "#2e5b9b"
 );
 export const FOLIAGE = ["#4d8a38", "#5d9a3f", "#3d7434", "#6ea64a", "#557f36"].map(hex);
 export const CONIFER = ["#2e5c34", "#35683a", "#284f2f"].map(hex);
+
+// Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) — palettes des 5
+// vocations de quartier autres que Résidentiel/Loisirs (Loisirs
+// réutilise buildPark/buildStade, pas de mur à peindre).
+export const INDUSTRIE_WALLS = ["#c9c4b8", "#b7b2a4", "#a8a296", "#c4bcae"].map(hex);
+export const INDUSTRIE_ACCENT = hex("#e3b236");
+export const COMMERCE_WALLS = ["#e7d9b8", "#d9c9a0", "#e3cbb0", "#cfd8d4"].map(hex);
+export const COMMERCE_ENSEIGNE = ["#c23b2c", "#1f6fb2", "#2f7d4f", "#a86400"].map(hex);
+export const SERVICES_WALLS = ["#e8dfd3", "#dcd0c4", "#e3d9cc"].map(hex);
+export const SERVICES_CROIX = hex("#c23b2c");
+export const RECHERCHE_WALLS = ["#d7dee3", "#c9d3da", "#dde4e8"].map(hex);
+export const RECHERCHE_DOME = hex("#8fb9ea");
+export const INDUSTRIE_FENCE = hex("#8a8f93");
+export const FUMEE = hex("#d9d9d6");
+
+// Retour de test d'Adrien sur le Jalon 19 (docs/A-INTEGRER.md §20 A,
+// 27/09/2026) : le niveau de détail des quartiers doit se rapprocher de
+// celui des maisons — passé de "simple/développée" (booléen) à 3
+// niveaux (0 simple, 1 développée, 2 grand complexe), le niveau 2
+// atteint ce nombre d'habitants après le déblocage du niveau 1, même
+// logique de progression que APART_FLOOR_EVERY pour les immeubles.
+export const QUARTIER_NIVEAU2_APRES = 10000;
+
+// Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) — mégaprojets du
+// maire : bâtiments simples pour cette première passe ("un socle +
+// une silhouette + une couleur d'accent selon l'activité du thème",
+// pas encore le niveau de détail des maisons/quartiers — voir
+// docs/DECISIONS.md §4, journal du Jalon 20).
+export const MEGAPROJET_ACCENT: Record<string, Couleur> = {
+  residentiel: hex("#c23b2c"),
+  industrie: INDUSTRIE_ACCENT,
+  commerce: hex("#1f6fb2"),
+  loisirs: hex("#2f7d4f"),
+  services: SERVICES_CROIX,
+  energie: hex("#f2c230"),
+  recherche: RECHERCHE_DOME,
+};
+
+// Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) — Énergie : pas de bloc
+// dans la ville, des installations dans la campagne autour, en nombre
+// proportionnel à son élan (jauges_ville()). Un repère tous les 4
+// points d'élan, même logique de réactivité que HABITANTS_PAR_LOGEMENT_MAISON
+// (chiffres à ajuster par Claude Code avec les villes de test si besoin,
+// docs/DECISIONS.md §10 point 1).
+export const ENERGIE_PAR_INSTALLATION = 4;
+export const ENERGIE_MAX_INSTALLATIONS = 24;
+export const ENERGIE_SEUIL_CENTRALE = 100;
+export const EOLIENNE_MAT = hex("#e7e9ec");
+export const PANNEAU_CADRE = hex("#2b2f36");
+export const PANNEAU_CELLULE = hex("#1f3a5f");
+export const CENTRALE_WALLS = ["#e2e4e6", "#d7dadd"].map(hex);
+export const CENTRALE_ACCENT = hex("#f2c230");

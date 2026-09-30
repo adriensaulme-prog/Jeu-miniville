@@ -15,7 +15,8 @@
 import * as THREE from "three";
 import { bakeAO, dimensionsAO } from "./ao";
 import { CITY_R_MIN } from "./constantes";
-import { generate, type ResultatGeneration } from "./generer";
+import { generate, type ResultatGeneration, type VocationsBlocs } from "./generer";
+import type { MegaprojetConstruit, MonumentDebloque } from "./terrain";
 import { FS, SFS, SVS, VS } from "./shaders";
 import {
   heureDansLeFuseau,
@@ -36,6 +37,16 @@ export interface ParametresVille {
   /** population_max, jamais la population instantanée (docs/DECISIONS.md §4, Jalon 6). */
   populationMax: number;
   pays: ParametresPays;
+  /** Jalon 19 : vocation de chaque bloc déjà ouvert (table city_blocks), absente = dégradation vers "residentiel" partout. */
+  vocations?: VocationsBlocs;
+  /** Jalon 19 : élan de l'activité Énergie (jauges_ville()), pilote les installations dans la campagne. */
+  elanEnergie?: number;
+  /** Jalon 20 (1/3) : mégaprojets déjà construits (etat_megaprojets(), statut = "construit"). */
+  megaprojets?: MegaprojetConstruit[];
+  /** Jalon 20 (2/3) : nombre de paliers de technologies déjà débloqués (table technologies). */
+  nbTechnologies?: number;
+  /** Jalon 20 (3/3) : monuments d'influence déjà débloqués (table monuments). */
+  monuments?: MonumentDebloque[];
 }
 
 const L = (c: [number, number, number]): [number, number, number] => [
@@ -256,7 +267,15 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
 
   function reconstruire(params: ParametresVille) {
     pays = params.pays;
-    const res = generate(params.seed, params.populationMax);
+    const res = generate(
+      params.seed,
+      params.populationMax,
+      params.vocations,
+      params.elanEnergie ?? 0,
+      params.megaprojets ?? [],
+      params.nbTechnologies ?? 0,
+      params.monuments ?? []
+    );
     stats = res.stats;
     cityR = res.stats.cityR;
     // Nouvelle ville (et pas juste la même qui grandit) : on recadre, sinon

@@ -4,7 +4,16 @@ import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau, progressionNiveau } from "@/lib/game/niveauVille";
 import { ligneLocale } from "@/lib/game/ligneLocale";
 import { activitesDisponibles, type Activite } from "@/lib/game/activites";
+import { palierAttaques, type PalierAttaques } from "@/lib/game/antiville";
+import { palierVisites, palierInfluence, type PalierPopularite, type PalierRenommee } from "@/lib/game/popularite";
+import { palierJumelage } from "@/lib/game/jumelages";
+import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
+import { typeMonument } from "@/lib/game/monuments";
+import type { VocationsBlocs } from "@/lib/ville3d/generer";
+import type { VocationQuartier } from "@/lib/ville3d/quartiers";
+import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { FiltreVilles } from "./FiltreVilles";
 import { ActionsAntiVille } from "./ActionsAntiVille";
@@ -13,6 +22,10 @@ import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { VisiteAutomatique } from "@/components/VisiteAutomatique";
 import { JaugesActivites, EMOJI_ACTIVITE } from "@/components/JaugesActivites";
 import { ChoisirActivite } from "@/components/ChoisirActivite";
+import { BulletinMunicipal, type EvenementBulletin } from "@/components/BulletinMunicipal";
+import { Megaprojets, type EtatMegaprojet } from "@/components/Megaprojets";
+import { Technologies } from "@/components/Technologies";
+import { Monuments } from "@/components/Monuments";
 import { influencerVille, proposerJumelage } from "./actions";
 
 const QUOTA_VISITE_QUOTIDIEN = 3;
@@ -20,7 +33,6 @@ const DELAI_VISITE_MINUTES = 60;
 const GAIN_VISITE = 1;
 const QUOTA_INFLUENCE_QUOTIDIEN = 5;
 const QUOTA_ANTIVILLE_QUOTIDIEN = 3;
-const SEUIL_PROTECTION_ANTIVILLE = 2;
 const QUOTA_JUMELAGES_ACTIFS = 3;
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
 
@@ -31,6 +43,7 @@ type LigneVille = {
   population_max: number;
   niveau: number;
   influence: number;
+  influence_max: number;
   greve_jusqua: string | null;
   recommandation_activite: Activite | null;
   country_id: string;
@@ -75,7 +88,7 @@ export default async function VillesPage({
   const { data, error: erreurListe } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, niveau, influence, greve_jusqua, recommandation_activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
+      `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
     )
     .order("population", { ascending: false });
   if (erreurListe) console.error("Chargement des villes a échoué :", erreurListe.message);
@@ -106,7 +119,6 @@ export default async function VillesPage({
 
   const maintenant = new Date();
   const aujourdhui = maintenant.toISOString().slice(0, 10);
-  const il24hEnArriere = new Date(maintenant.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
 
   // Jalon 13 bis : jusqu'à QUOTA_VISITE_QUOTIDIEN visites par jour et par
@@ -158,27 +170,19 @@ export default async function VillesPage({
   const nbAntiVilleUtilisees = (actionsAntiVilleAujourdhui ?? []).length;
   const quotaAntiVilleAtteint = nbAntiVilleUtilisees >= QUOTA_ANTIVILLE_QUOTIDIEN;
 
-  const { data: actionsAntiVilleRecentes } = await supabase
-    .from("actions_antiville")
-    .select("ville_id")
-    .eq("attaquant_id", user.id)
-    .gte("created_at", il24hEnArriere);
-  const nbActionsRecentesParVille = new Map<string, number>();
-  for (const action of actionsAntiVilleRecentes ?? []) {
-    nbActionsRecentesParVille.set(action.ville_id, (nbActionsRecentesParVille.get(action.ville_id) ?? 0) + 1);
-  }
-
   const { data: mesJumelages } = await supabase
     .from("jumelages")
-    .select("ville_proposante_id, ville_ciblee_id, statut")
+    .select("id, ville_proposante_id, ville_ciblee_id, statut")
     .or(`ville_proposante_id.eq.${maVilleId},ville_ciblee_id.eq.${maVilleId}`)
     .in("statut", ["en_attente", "actif"]);
   const statutJumelageParVille = new Map<string, "actif" | "envoye" | "recu">();
+  const jumelageIdParVille = new Map<string, string>();
   let nbJumelagesActifs = 0;
   for (const j of mesJumelages ?? []) {
     const autreVilleId = j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
     if (j.statut === "actif") {
       statutJumelageParVille.set(autreVilleId, "actif");
+      jumelageIdParVille.set(autreVilleId, j.id);
       nbJumelagesActifs++;
     } else {
       statutJumelageParVille.set(
@@ -188,6 +192,19 @@ export default async function VillesPage({
     }
   }
   const quotaJumelagesAtteint = nbJumelagesActifs >= QUOTA_JUMELAGES_ACTIFS;
+
+  // Jalon 22 (docs/DECISIONS.md §10 point 22) : palier de solidité de
+  // chaque jumelage actif, dérivé du cumul de jours où son bonus a déjà
+  // été accordé — affichage seulement, aucun effet ajouté.
+  const joursBonusParJumelage = new Map<string, number>();
+  if (nbJumelagesActifs > 0) {
+    const { data: joursBonusBruts } = await supabase.rpc("jours_bonus_jumelages_ville", {
+      p_ville_id: maVilleId,
+    });
+    for (const ligne of (joursBonusBruts ?? []) as { jumelage_id: string; jours: number }[]) {
+      joursBonusParJumelage.set(ligne.jumelage_id, ligne.jours);
+    }
+  }
 
   const villeSelectionnee =
     villeSelectionneeId && villeSelectionneeId !== maVilleId
@@ -202,13 +219,13 @@ export default async function VillesPage({
   const { data: jaugesBrutes } = villeSelectionnee
     ? await supabase.rpc("jauges_ville", { p_ville_id: villeSelectionnee.id })
     : { data: null };
-  const jauges = (jaugesBrutes ?? []) as { activite: Activite; jauge: number }[];
+  const jauges = (jaugesBrutes ?? []) as { activite: Activite; elan: number; jauge: number }[];
 
   const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const { data: derniereVisiteActivite } = villeSelectionnee
     ? await supabase
         .from("visites")
-        .select("activite")
+        .select("activite, activite_verrouillee")
         .eq("visiteur_id", user.id)
         .eq("ville_id", villeSelectionnee.id)
         .gte("created_at", ilCinqMinutes)
@@ -217,6 +234,39 @@ export default async function VillesPage({
         .maybeSingle()
     : { data: null };
   const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
+  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+
+  // Jalon 18 : palier d'attaques du jour et bulletin municipal de la
+  // ville affichée dans le panneau détail — et le tirage quotidien de
+  // manifestation, vérifié opportunistement à chaque affichage (même
+  // logique que verifier_president(), Jalon 11 : pas de tâche planifiée
+  // dans ce projet).
+  let palierAttaquesVille: PalierAttaques = "calme";
+  let palierVisitesVille: PalierPopularite = "calme";
+  let palierInfluenceVille: PalierRenommee = "calme";
+  let evenementsBulletin: EvenementBulletin[] = [];
+  if (villeSelectionnee) {
+    await supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: villeSelectionnee.id });
+    const { data: nbAttaques } = await supabase.rpc("attaques_recues_aujourdhui", {
+      p_ville_id: villeSelectionnee.id,
+    });
+    palierAttaquesVille = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
+    const { data: nbVisitesRecues } = await supabase.rpc("visites_recues_aujourdhui", {
+      p_ville_id: villeSelectionnee.id,
+    });
+    palierVisitesVille = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
+    const { data: nbInfluenceRecue } = await supabase.rpc("actions_influence_recues_aujourdhui", {
+      p_ville_id: villeSelectionnee.id,
+    });
+    palierInfluenceVille = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
+    const { data: evenements } = await supabase
+      .from("city_events")
+      .select("id, type, activite, type_action, valeur, created_at")
+      .eq("ville_id", villeSelectionnee.id)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
+  }
 
   const paramsConserves = new URLSearchParams();
   if (filtrePays) paramsConserves.set("pays", filtrePays);
@@ -235,10 +285,115 @@ export default async function VillesPage({
   const villeAffichee3D = villeSelectionnee ?? toutesLesVilles.find((v) => v.id === maVilleId) ?? null;
   const pays3D = villeAffichee3D ? paysDe(villeAffichee3D.pays) : PAYS_PAR_DEFAUT;
 
+  // Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs déjà
+  // ouverts et élan de l'Énergie, pour la ville affichée en 3D (celle du
+  // panneau détail si une ville est sélectionnée, sinon "Ma ville").
+  let vocations3D: VocationsBlocs = new Map();
+  let elanEnergie3D = 0;
+  if (villeAffichee3D) {
+    await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: villeAffichee3D.id });
+    const { data: blocsBruts } = await supabase
+      .from("city_blocks")
+      .select("rang, vocation")
+      .eq("ville_id", villeAffichee3D.id);
+    vocations3D = new Map((blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier]));
+    const jauges3D =
+      villeSelectionnee && villeAffichee3D.id === villeSelectionnee.id
+        ? jauges
+        : ((await supabase.rpc("jauges_ville", { p_ville_id: villeAffichee3D.id })).data ?? []);
+    elanEnergie3D =
+      (jauges3D as { activite: Activite; elan: number }[]).find((j) => j.activite === "energie")?.elan ?? 0;
+  }
+
+  // Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : construit les
+  // mégaprojets financés (opportuniste, même logique qu'au-dessus) puis
+  // lit l'état de tous les chantiers, pour la ville affichée en 3D.
+  let etatMegaprojets: EtatMegaprojet[] = [];
+  let megaprojetsConstruits: MegaprojetConstruit[] = [];
+  if (villeAffichee3D) {
+    await supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: villeAffichee3D.id });
+    const { data: megaprojetsBruts } = await supabase.rpc("etat_megaprojets", { p_ville_id: villeAffichee3D.id });
+    const chantiers = (megaprojetsBruts ?? []) as {
+      palier: number;
+      type: string;
+      activite: string;
+      statut: "en_chantier" | "construit";
+      points: number;
+      cout_points: number;
+      materiaux: number;
+      cout_materiaux: number;
+      revenus: number;
+      cout_revenus: number;
+    }[];
+    etatMegaprojets = chantiers.map((c) => ({
+      palier: c.palier,
+      type: c.type as EtatMegaprojet["type"],
+      activite: c.activite,
+      statut: c.statut,
+      points: c.points,
+      coutPoints: c.cout_points,
+      materiaux: c.materiaux,
+      coutMateriaux: c.cout_materiaux,
+      revenus: c.revenus,
+      coutRevenus: c.cout_revenus,
+    }));
+    megaprojetsConstruits = chantiers
+      .filter((c) => c.statut === "construit")
+      .map((c) => ({ palier: c.palier, type: c.type, activite: c.activite }));
+  }
+
+  // Jalon 20 (2/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : débloque les
+  // technologies déjà financées (opportuniste, même logique
+  // qu'au-dessus) puis lit combien sont débloquées et les points de
+  // Recherche déjà accumulés, pour la ville affichée en 3D.
+  let nbTechnologiesDebloquees3D = 0;
+  let pointsRecherche3D = 0;
+  if (villeAffichee3D) {
+    await supabaseAdmin.rpc("avancer_technologies", { p_ville_id: villeAffichee3D.id });
+    const { count } = await supabase
+      .from("technologies")
+      .select("id", { count: "exact", head: true })
+      .eq("ville_id", villeAffichee3D.id);
+    nbTechnologiesDebloquees3D = count ?? 0;
+    const { data: pointsBruts } = await supabase.rpc("stock_ville", {
+      p_ville_id: villeAffichee3D.id,
+      p_activite: "recherche",
+    });
+    pointsRecherche3D = typeof pointsBruts === "number" ? pointsBruts : 0;
+  }
+
+  // Jalon 20 (3/3, docs/A-INTEGRER.md §19) : débloque les monuments
+  // déjà atteints (opportuniste, même logique qu'au-dessus) puis lit
+  // combien sont débloqués, pour la ville affichée en 3D.
+  let nbMonumentsDebloques3D = 0;
+  let monumentsDebloques3D: MonumentDebloque[] = [];
+  if (villeAffichee3D) {
+    await supabaseAdmin.rpc("avancer_monuments", { p_ville_id: villeAffichee3D.id });
+    const { data: monumentsBruts } = await supabase
+      .from("monuments")
+      .select("palier")
+      .eq("ville_id", villeAffichee3D.id);
+    nbMonumentsDebloques3D = monumentsBruts?.length ?? 0;
+    monumentsDebloques3D = [];
+    for (const m of monumentsBruts ?? []) {
+      const type = typeMonument(m.palier as number);
+      if (type) monumentsDebloques3D.push({ palier: m.palier as number, type });
+    }
+  }
+
   return (
     <main className={`screen${villeSelectionnee ? " detail" : ""}`} aria-label={traduire(locale, "villes.titre")}>
       {villeAffichee3D ? (
-        <SincroniserScene seed={villeAffichee3D.id} populationMax={villeAffichee3D.population_max} pays={pays3D} />
+        <SincroniserScene
+          seed={villeAffichee3D.id}
+          populationMax={villeAffichee3D.population_max}
+          pays={pays3D}
+          vocations={vocations3D}
+          elanEnergie={elanEnergie3D}
+          megaprojets={megaprojetsConstruits}
+          nbTechnologies={nbTechnologiesDebloquees3D}
+          monuments={monumentsDebloques3D}
+        />
       ) : null}
 
       <PanneauFlottant locale={locale} className="dock dock-float dock-left">
@@ -311,7 +466,6 @@ export default async function VillesPage({
               : null;
             const dejaInfluencee = villesDejaInfluencees.has(c.id);
             const estEnGreve = !!c.greve_jusqua && new Date(c.greve_jusqua) > maintenant;
-            const protectionActive = (nbActionsRecentesParVille.get(c.id) ?? 0) >= SEUIL_PROTECTION_ANTIVILLE;
             const progression = progressionNiveau(c.population_max);
             const statutJum = statutJumelageParVille.get(c.id);
 
@@ -374,8 +528,22 @@ export default async function VillesPage({
                   locale={locale}
                   villeId={c.id}
                   activiteActuelle={activiteActuelle}
+                  verrouillee={activiteVerrouillee}
                   activitesDisponibles={activitesDisponibles(c.niveau)}
                 />
+                <Megaprojets
+                  locale={locale}
+                  villeId={c.id}
+                  estMaire={c.id === maVilleId}
+                  nbOuverts={nbMegaprojetsOuverts(c.population_max)}
+                  chantiers={etatMegaprojets}
+                />
+                <Technologies
+                  locale={locale}
+                  paliersDebloques={nbTechnologiesDebloquees3D}
+                  pointsRecherche={pointsRecherche3D}
+                />
+                <Monuments locale={locale} paliersDebloques={nbMonumentsDebloques3D} influenceMax={c.influence_max} />
 
                 <div className="actions">
                   <div className="act">
@@ -386,6 +554,11 @@ export default async function VillesPage({
                         {nbVisitesAujourdhui}/{QUOTA_VISITE_QUOTIDIEN}
                       </span>
                     </p>
+                    {palierVisitesVille !== "calme" ? (
+                      <p className="note">
+                        <span className="badge">{traduire(locale, `popularite.palier.${palierVisitesVille}`)}</span>
+                      </p>
+                    ) : null}
                     {plafondVisiteAtteint ? (
                       <p className="note">{traduire(locale, "villes.quotaAtteint")}</p>
                     ) : minutesAvantRevisite !== null ? (
@@ -393,7 +566,7 @@ export default async function VillesPage({
                         {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
                       </p>
                     ) : (
-                      <VisiteAutomatique locale={locale} villeId={c.id} peutVisiter gain={GAIN_VISITE} />
+                      <VisiteAutomatique locale={locale} villeId={c.id} peutVisiter />
                     )}
                   </div>
 
@@ -405,6 +578,11 @@ export default async function VillesPage({
                         {actionsInfluenceRestantes}/{QUOTA_INFLUENCE_QUOTIDIEN}
                       </span>
                     </p>
+                    {palierInfluenceVille !== "calme" ? (
+                      <p className="note">
+                        <span className="badge">{traduire(locale, `renommee.palier.${palierInfluenceVille}`)}</span>
+                      </p>
+                    ) : null}
                     {dejaInfluencee || actionsInfluenceRestantes <= 0 || estEnGreve ? (
                       <button className="btn" type="button" disabled>
                         {traduire(locale, dejaInfluencee ? "villes.dejaInfluencee" : "villes.quotaAtteint")}
@@ -426,23 +604,28 @@ export default async function VillesPage({
                     {QUOTA_ANTIVILLE_QUOTIDIEN - nbAntiVilleUtilisees}/{QUOTA_ANTIVILLE_QUOTIDIEN}
                   </span>
                 </div>
-                {protectionActive ? (
+                {palierAttaquesVille !== "calme" ? (
                   <p className="note">
-                    <span className="badge warn">{traduire(locale, "villes.protegee")}</span>{" "}
-                    {traduire(locale, "villes.protegeeNote")}
+                    <span className="badge warn">
+                      {traduire(locale, "villes.antiVillePalier")} {traduire(locale, `villes.palier.${palierAttaquesVille}`)}
+                    </span>
                   </p>
                 ) : null}
-                <ActionsAntiVille
-                  locale={locale}
-                  villeId={c.id}
-                  protectionActive={protectionActive}
-                  quotaAtteint={quotaAntiVilleAtteint}
-                />
+                <ActionsAntiVille locale={locale} villeId={c.id} quotaAtteint={quotaAntiVilleAtteint} />
                 <p className="note">{traduire(locale, "villes.pasDeDestruction")}</p>
+                <BulletinMunicipal locale={locale} evenements={evenementsBulletin} />
 
                 <div className="row">
                   {statutJum === "actif" ? (
-                    <span className="badge good">{traduire(locale, "jumelages.jumeleeAvecTaVille")}</span>
+                    <>
+                      <span className="badge good">{traduire(locale, "jumelages.jumeleeAvecTaVille")}</span>
+                      <span className="badge">
+                        {traduire(
+                          locale,
+                          `jumelages.palier.${palierJumelage(joursBonusParJumelage.get(jumelageIdParVille.get(c.id) ?? "") ?? 0)}`
+                        )}
+                      </span>
+                    </>
                   ) : statutJum === "envoye" ? (
                     <span className="badge">{traduire(locale, "jumelages.demandeEnvoyee")}</span>
                   ) : statutJum === "recu" ? (

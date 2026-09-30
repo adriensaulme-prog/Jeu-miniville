@@ -133,7 +133,7 @@ test.describe("Jalon 14 — rester dans la légalité", () => {
         .select("influence")
         .eq("id", cible2.villeId)
         .single();
-      expect(villeCible2?.influence).toBe(0); // -2 plafonné à 0, une seule fois
+      expect(villeCible2?.influence).toBe(0); // Jalon 18 : -1 (perte plancher), déjà à 0
     } finally {
       await supprimerCompte(attaquant.userId);
       await supprimerCompte(cible1.userId);

@@ -87,12 +87,21 @@ de vue du joueur — le titre dit ce qui change pour lui.
 
 ## À placer (Adrien choisit quand)
 
-- [ ] **Revoir les règles du jeu.** Tous les mécanismes et actions revus
-  sur une même grille : effets unitaires faibles, cumul des attaques
-  reçues dans la journée, plafond de 10 % par jour, paliers visibles
-  (Incidents, Troubles, Émeutes, Crise, Ville sinistrée). Proposition en
-  réflexion (`docs/SYSTEME-DEVELOPPEMENT.md` §6 bis, `DECISIONS.md` §10
-  point 22), pas de code avant validation.
+- [x] **Jalon 21 — Revoir les règles du jeu (pays/guerre).** Grille
+  effet unitaire faible / cumul du jour / plafond / paliers visibles,
+  déjà faite pour AntiVille au Jalon 18, appliquée à la guerre entre
+  pays (choix d'Adrien, 28/09/2026, parmi les mécaniques restantes).
+  Un conflit inflige désormais une perte de population faible et
+  plafonnée chaque jour au camp perdant, cumulée, avec un badge de
+  palier visible sur `/pays` (Calme → Victoire écrasante) — voir
+  `DECISIONS.md` §4 et §10 point 22, migration `0032`.
+- [x] **Jalon 22 — Revoir les règles du jeu (visites/influence/jumelages).**
+  Suite du Jalon 21 : paliers visibles (popularité, renommée, solidité
+  d'un jumelage) sur `/ville`, `/villes` et `/jumelages`. Effets
+  positifs déjà plafonnés par joueur : aucun nouveau plafond ajouté
+  (choix d'Adrien), contrairement à AntiVille/guerre. **Point 22 de
+  `DECISIONS.md` §10 maintenant entièrement résolu** — migration
+  `0033`.
 - [ ] **La bibliothèque de bâtiments** (puis thèmes et boutique).
   Proposition `docs/BATIMENTS-ET-PACKS.md`, en attente des réponses
   d'Adrien (`DECISIONS.md` §10 point 21).
@@ -222,12 +231,68 @@ de vue du joueur — le titre dit ce qui change pour lui.
   chaque visite (facultatif, aléatoire sinon — Adrien, 27/09/2026, la
   visite reste automatique), 7 jauges affichées, recommandation du
   maire. Aucun effet de jeu encore. Détail dans `DECISIONS.md` §4.
-- [ ] **Jalon 18 — Système de développement (2/4) : équilibre, crises,
-  manifestations, lien AntiVille.**
-- [ ] **Jalon 19 — Système de développement (3/4) : quartiers et
-  bâtiments 3D.**
-- [ ] **Jalon 20 — Système de développement (4/4) : mégaprojets et
-  technologies.**
+- [x] **Jalon 18 — Système de développement (2/4) : équilibre, crises,
+  manifestations, lien AntiVille.** Bonus/crises des 7 activités
+  branchés (§4), manifestations quotidiennes (§5), refonte complète
+  d'AntiVille en paliers cumulés par ville tous attaquants confondus
+  (§6bis — remplace l'ancienne protection anti-harcèlement par
+  attaquant), bulletin municipal. Grève redéfinie par Adrien
+  (27/09/2026, contradiction du document initial signalée plutôt que
+  tranchée seule) : durée selon le nombre cumulé d'attaques du jour,
+  ajustée par la taille de la ville. Détail dans `DECISIONS.md` §4.
+  Points ouverts : gratte-ciel figés en crise Énergie, fumée 3D et
+  notification pays aux paliers Émeutes/Crise (§10 points 34-35).
+- [x] **Jalon 19 — Système de développement (3/4) : quartiers et
+  bâtiments 3D.** Vocation de chaque bloc fixée une fois pour toutes à
+  l'ouverture (§7, table `city_blocks` identifiée par rang, pas par
+  coordonnées), assignée par l'activité la plus en retard entre sa part
+  de points et sa part de blocs (résidentiel ≥ moitié des blocs) ;
+  nouveaux bâtiments pour Industrie/Commerce/Services/Recherche/Loisirs ;
+  Énergie hors de la ville (éoliennes, panneaux solaires, puis centrale,
+  proportionnel à son élan). Migration `0026` appliquée, suite e2e
+  dédiée verte (5 tests), suite complète 79/80 (seul échec : flakiness
+  pré-existante sans rapport, voir `DECISIONS.md` §4). **Repris après
+  retour de test d'Adrien** (`docs/A-INTEGRER.md` §20, migration
+  corrective `0027`) : plus de détail par quartier (niveau 0/1/2 au
+  lieu de 2 étapes, Énergie en particulier enrichie) et choix
+  d'activité verrouillé après un premier choix explicite. Détail dans
+  `DECISIONS.md` §4.
+- [x] **Jalon 20 — Système de développement (4/4) : mégaprojets,
+  technologies, et monuments d'influence.** Découpé en 3 sous-jalons à
+  la demande d'Adrien (27/09/2026, "un sous-jalon à la fois"), chacun
+  testable séparément — les trois faits :
+  - [x] **1/3 — Mégaprojets du maire.** Choix parmi 3-4 projets à
+    chaque palier de population (Bourg → Mégapole, puis tous les
+    50 000), financement collectif (stocks matériaux/revenus + points
+    de l'activité du thème), bâtiment 3D simple + bonus permanent pour
+    les 4 projets où le document donne un chiffre exact (Stade,
+    Centrale solaire/Parc éolien/Centrale, Hôpital, Opéra). Migration
+    `0028` appliquée, suite e2e dédiée verte (5 tests), suite complète
+    83/86 (échecs = flakiness pré-existante sans rapport). Détail dans
+    `DECISIONS.md` §4.
+  - [x] **2/3 — Technologies de Recherche.** Paliers de points de
+    Recherche cumulés (100, 300, 800, 2 000, 5 000, puis ×2) débloqués
+    automatiquement (pas de choix du maire, contrairement aux
+    mégaprojets) : éclairage LED, panneaux solaires sur les toits,
+    tramway, toits végétalisés, drones — effets 3D simples, aucun bonus
+    numérique câblé pour cette première passe. Bug trouvé et corrigé
+    avant envoi (`stock_ville()`/`etat_megaprojets()` pas
+    `security definer`, sous-comptaient la progression des mégaprojets
+    pour un visiteur non-maire). Migration `0029` appliquée, suite e2e
+    dédiée verte (2 tests), suite complète 84/88 (échecs = flakiness
+    pré-existante). Détail dans `DECISIONS.md` §4.
+  - [x] **3/3 — Monuments d'influence.** Monuments (bornes, statues,
+    arches...) débloqués automatiquement par paliers d'influence
+    record — nouveau champ `cities.influence_max` (jamais décroissant,
+    même principe que `population_max`), 16 paliers de 10 à
+    1 000 000 (`docs/A-INTEGRER.md` §19), aucun choix ni financement,
+    purement cosmétique. Bâtiments 3D plus modestes que les
+    mégaprojets. Migration `0030` appliquée, suite e2e dédiée verte
+    (3 tests), suite complète 82/88 (échecs = flakiness pré-existante
+    sans rapport). Détail dans `DECISIONS.md` §4.
+
+  **Chantier "système de développement des villes" (Jalons 17 à 20)
+  terminé côté code** — reste la vérification manuelle d'Adrien.
 
 ---
 
@@ -246,13 +311,26 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 27/09/2026, jalon 17 fait et vérifié (choix
-d'activité et jauges, système de développement des villes 1/4 —
-DECISIONS.md §4, migration 0023 appliquée, suite e2e complète relancée)
-— MVP du cahier des charges §30 livré depuis le Jalon 15, vérification
-manuelle mobile/PC d'Adrien toujours en attente pour le considérer
-définitivement clos. Point encore ouvert : le même principe "habitants
-par habitation" pour les immeubles et les tours (DECISIONS.md §10
-point 33). Chantier en cours : le système de développement des villes
-(7 activités), validé par Adrien dans A-INTEGRER.md §18, découpé en
-Jalons 17 à 20 — 1/4 fait, Jalon 18 (effets de l'équilibre) à suivre.*
+*Dernière mise à jour : 28/09/2026. **Chantier "système de
+développement des villes" (Jalons 17 à 20, validé par Adrien dans
+A-INTEGRER.md §18) terminé côté code** : les 3 sous-jalons du Jalon 20
+(mégaprojets `0028`, technologies `0029`, monuments d'influence `0030`)
+sont appliqués et vérifiés (suites e2e dédiées vertes, suite complète
+82/88 — échecs = flakiness de connexion pré-existante, sans rapport).
+Rattrapage du niveau "Mégapole" (250 000 habitants, migration `0031`,
+déjà validé par Adrien le 26/09/2026 mais oublié) fait le 28/09/2026.
+**Jalons 21 et 22 "Revoir les règles du jeu" codés le 28/09/2026** :
+effet unitaire faible/cumul du jour/plafond/paliers visibles pour la
+guerre entre pays (migration `0032`), puis paliers visibles seulement
+(sans nouveau plafond, effets positifs déjà limités par joueur) pour
+visites/influence/jumelages (migration `0033`). **`DECISIONS.md` §10
+point 22 maintenant entièrement résolu.** Reste la vérification
+manuelle d'Adrien sur l'ensemble du chantier. Toute la Phase 6 est
+maintenant cochée. MVP du cahier des charges §30 livré depuis le
+Jalon 15, vérification manuelle mobile/PC d'Adrien toujours en attente
+pour le considérer définitivement clos. Points encore ouverts :
+"habitants par habitation" pour les immeubles/tours (§10 point 33),
+gratte-ciel figés en crise Énergie et fumée 3D/notification pays (§10
+points 34-35). Prochaine étape non planifiée en détail — un seul
+chantier en attente du choix d'Adrien ("À placer" ci-dessus) : la
+bibliothèque de bâtiments (packs cosmétiques).*

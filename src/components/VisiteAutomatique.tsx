@@ -33,23 +33,24 @@ const DELAI_AVANT_REFRESH_MS = 1200;
  * du panneau après une visite arrive très vite (le framework revalide la
  * page dès que l'action serveur répond), trop tôt pour laisser une vraie
  * fenêtre de choix dans CE composant sans la manquer.
+ *
+ * Jalon 18 : le gain n'est plus garanti (crise du Résidentiel, voir
+ * docs/SYSTEME-DEVELOPPEMENT.md §4) — le message de confirmation
+ * affiche donc le gain RÉEL renvoyé par visiter_ville(), jamais celui
+ * annoncé avant la visite (qui reste une estimation de base).
  */
 export function VisiteAutomatique({
   locale,
   villeId,
   peutVisiter,
-  gain,
 }: {
   locale: Locale;
   villeId: string;
   peutVisiter: boolean;
-  /** Gain de population de cette visite — affiché dans le message de
-   * confirmation, jamais recalculé ici : juste ce que le serveur a
-   * déjà déterminé pour l'affichage du bouton avant la visite. */
-  gain: number;
 }) {
   const router = useRouter();
   const [comptee, setComptee] = useState(false);
+  const [gainReel, setGainReel] = useState(0);
 
   useEffect(() => {
     if (!peutVisiter) {
@@ -59,6 +60,7 @@ export function VisiteAutomatique({
     const minuteur = setTimeout(() => {
       visiterVille(villeId).then((resultat) => {
         if (resultat.succes) {
+          setGainReel(resultat.gain);
           setComptee(true);
           // Laisse le message de confirmation le temps d'être vu avant
           // que router.refresh() ne fasse repasser le panneau côté
@@ -75,7 +77,9 @@ export function VisiteAutomatique({
   }
   return (
     <p className="note">
-      {traduire(locale, "villes.visiteComptee")} +{gain} {traduire(locale, "ville.population").toLowerCase()}.
+      {gainReel > 0
+        ? `${traduire(locale, "villes.visiteComptee")} +${gainReel} ${traduire(locale, "ville.population").toLowerCase()}.`
+        : traduire(locale, "villes.visiteComptSansGain")}
     </p>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getLocale, traduire } from "@/lib/i18n";
 import { libelleNiveau } from "@/lib/game/niveauVille";
+import { palierJumelage } from "@/lib/game/jumelages";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
@@ -92,6 +93,18 @@ export default async function JumelagesPage() {
   const recues = jumelages.filter((j) => j.statut === "en_attente" && j.ville_ciblee_id === maVilleId);
   const envoyees = jumelages.filter((j) => j.statut === "en_attente" && j.ville_proposante_id === maVilleId);
 
+  // Jalon 22 (docs/DECISIONS.md §10 point 22) : palier de solidité de
+  // chaque jumelage actif — affichage seulement, aucun effet ajouté.
+  const joursBonusParJumelage = new Map<string, number>();
+  if (actifs.length > 0) {
+    const { data: joursBonusBruts } = await supabaseAdmin.rpc("jours_bonus_jumelages_ville", {
+      p_ville_id: maVilleId,
+    });
+    for (const ligne of (joursBonusBruts ?? []) as { jumelage_id: string; jours: number }[]) {
+      joursBonusParJumelage.set(ligne.jumelage_id, ligne.jours);
+    }
+  }
+
   function Carte({ j, boutons }: { j: JumelageBrut; boutons?: React.ReactNode }) {
     const v = villeDe(j);
     if (!v) return null;
@@ -142,7 +155,14 @@ export default async function JumelagesPage() {
             <Carte
               key={j.id}
               j={j}
-              boutons={<span className="badge good">{traduire(locale, "jumelages.bonusAujourdhui")}</span>}
+              boutons={
+                <>
+                  <span className="badge good">{traduire(locale, "jumelages.bonusAujourdhui")}</span>
+                  <span className="badge">
+                    {traduire(locale, `jumelages.palier.${palierJumelage(joursBonusParJumelage.get(j.id) ?? 0)}`)}
+                  </span>
+                </>
+              }
             />
           ))
         )}

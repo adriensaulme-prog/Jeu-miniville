@@ -68,9 +68,39 @@ journal existant, puis ce fichier peut être supprimé.*
 > (1/4, choix d'activité et jauges) fait le 27/09/2026** — deux
 > contradictions avec le document initial (visite automatique du Jalon
 > 13 ter, auto-visite autorisée) tranchées par Adrien, pas par Claude
-> Code seul (`DECISIONS.md` §4, journal du Jalon 17). Ce fichier peut
-> être supprimé quand Adrien aura répondu aux questions restantes et
-> que les quatre jalons seront terminés.
+> Code seul (`DECISIONS.md` §4, journal du Jalon 17). **Jalon 18 (2/4,
+> effets de l'équilibre) fait le 27/09/2026** — une troisième
+> contradiction (mécanique de la grève, entre le tableau du §6bis et sa
+> liste d'effets unitaires) de nouveau signalée plutôt que tranchée
+> seule ; Adrien redéfinit la grève par une échelle selon le nombre
+> cumulé d'attaques du jour (`DECISIONS.md` §4, journal du Jalon 18).
+> **Jalon 19 (3/4, quartiers et bâtiments 3D) fait le 27/09/2026** —
+> vocation de chaque bloc (table `city_blocks`, identifiée par rang),
+> nouveaux bâtiments de quartier, Énergie hors de la ville. Portée
+> réduite assumée à valider par Adrien : deux étapes par vocation au
+> lieu des 3-4 du document (`DECISIONS.md` §4, journal du Jalon 19).
+> Migration `0026` pas encore envoyée/appliquée au moment de cette
+> note.
+> **§19 (monuments d'influence, 27/09/2026) : fait le 27/09/2026**
+> comme "Jalon 20 3/3" — catalogue des 16 paliers repris tel quel,
+> nouveau champ `cities.influence_max`, bâtiments 3D simples. Migration
+> `0030` envoyée à Adrien, en attente de confirmation d'application.
+> Détail dans `DECISIONS.md` §4, journal du Jalon 20 (3/3).
+> **§20 (retours de test Jalon 19, 27/09/2026) : fait le 27/09/2026** —
+> (A) niveau de détail des quartiers repris (0/1/2 au lieu de 2 étapes,
+> Énergie en particulier enrichie) ; (B) choix d'activité désormais
+> verrouillé après un premier choix explicite (migration corrective
+> `0027`, envoyée à Adrien, en attente de confirmation d'application).
+> Détail dans `DECISIONS.md` §4, journal du Jalon 19.
+> **§21 (affichage des jauges d'activité, 27/09/2026) : fait le
+> 27/09/2026** — `JaugesActivites.tsx` affiche désormais l'état
+> (Crise/Fragile/Équilibré/Point fort) en texte principal, le
+> pourcentage exact passant en info secondaire (attribut `title`,
+> infobulle au survol). Calcul, seuils et barre de progression
+> inchangés (pur affichage front-end, aucune migration). Ce fichier
+> peut être supprimé
+> quand Adrien aura répondu aux questions restantes et que les jalons
+> de la Phase 6 seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -717,3 +747,214 @@ jeu") — plus la peine d'attendre pour ces deux points.
 (titre de gouverneur de région) et point 24 (régions réelles pour
 d'autres pays) restent à trancher séparément par Adrien, non couverts
 par cette validation.
+
+## 19. Monuments d'influence : bâtiments spéciaux débloqués par paliers (décision d'Adrien, 27/09/2026)
+
+**Demande d'Adrien** : prévoir des bâtiments spéciaux (statues,
+monuments, ou autre) débloqués régulièrement par paliers — il avait en
+tête des paliers du type 10, 25, 50, 100, 250… jusqu'à un million.
+Clarifié en échange avec Claude chat : la métrique concernée est
+**l'influence** de la ville (pas la population, ni un "affluence" qui
+n'existe pas encore dans le jeu).
+
+**Pourquoi un nouveau champ `influence_max`** : `cities.influence`
+(entier, jamais négatif) peut **baisser** — la Propagande (AntiVille)
+lui retire des points, et le §6 bis de `SYSTEME-DEVELOPPEMENT.md` ajoute
+d'autres effets qui la font varier. Pour des monuments qui ne
+disparaissent jamais une fois débloqués (même principe que
+`population_max` : « la ville reste dessinée à son record »), il faut
+un **record historique**, pas la valeur courante. Ajouter
+`cities.influence_max` (jamais décroissant, mis à jour partout où
+`influence` change), et débloquer les monuments sur `influence_max`,
+pas sur `influence`.
+
+**Paliers proposés** (16 paliers, même logique ×2 / ×2,5 que les
+exemples d'Adrien, prolongée jusqu'à un million) :
+
+10 · 25 · 50 · 100 · 250 · 500 · 1 000 · 2 500 · 5 000 · 10 000 ·
+25 000 · 50 000 · 100 000 · 250 000 · 500 000 · 1 000 000
+
+Chiffres exacts à ajuster avec les villes de test, comme d'habitude —
+Claude Code peut resserrer ou espacer les premiers paliers si 10/25/50
+s'avèrent trop rapides ou trop lents à l'usage.
+
+**Suggestions de bâtiments par palier** (à ajuster librement, l'idée
+est la progression, pas la liste figée) :
+
+| Palier | Monument |
+|---|---|
+| 10 | Borne commémorative |
+| 25 | Banc public gravé |
+| 50 | Fontaine simple |
+| 100 | Buste / petite statue |
+| 250 | Obélisque |
+| 500 | Arc de triomphe miniature |
+| 1 000 | Horloge municipale |
+| 2 500 | Fontaine monumentale (place) |
+| 5 000 | Statue équestre |
+| 10 000 | Mur des remerciements (liste des plus généreux, lien avec le palmarès Jalon 8bis) |
+| 25 000 | Arche monumentale |
+| 50 000 | Tour-observatoire |
+| 100 000 | Statue emblématique, unique par ville (générée proceduralement comme les bâtiments) |
+| 250 000 | Temple / monument national |
+| 500 000 | Statue géante, silhouette visible de loin dans la ville en 3D |
+| 1 000 000 | Monument ultime — piste pour plus tard : inscription personnalisable par le joueur |
+
+**Principes** :
+- **Purement cosmétique/prestige**, comme les packs de thèmes
+  (`BATIMENTS-ET-PACKS.md` §4) — pas de bonus de gameplay pour rester
+  cohérent avec l'esprit "pas de pay to win", même si ici rien ne
+  s'achète. Exception possible plus tard : un lien avec les "avantages
+  nationaux" du cahier des charges §13 une fois ce système construit
+  (`DECISIONS.md` §10 point 31), mais pas maintenant.
+- **Jamais retiré** une fois débloqué, même si l'influence courante
+  rebaisse ensuite (voir `influence_max` ci-dessus) — cohérent avec la
+  règle "jamais de destruction permanente d'une ville".
+- **Nouvelle famille de bâtiment** dans le catalogue prévu par
+  `BATIMENTS-ET-PACKS.md` §2 : `monument`, distincte de `mégaprojet`
+  (les mégaprojets sont choisis par le maire et financés collectivement
+  selon le stade de population — Jalon 20 à venir — alors que les
+  monuments d'influence se débloquent **automatiquement**, sans choix
+  ni financement, dès que le record d'influence franchit le palier).
+- Emplacement suggéré : près du croisement central de la ville (zone
+  symbolique), pas mêlé aux blocs résidentiels/quartiers ordinaires.
+
+**Cette demande répond aussi à un autre point d'Adrien** : les
+"magasins et parcs selon comment la ville se développe" sont **déjà
+prévus**, pas besoin d'un ajout séparé — c'est exactement ce que décrit
+`SYSTEME-DEVELOPPEMENT.md` §7 ("Ce qu'on voit dans la ville") avec les
+blocs Commerce et Loisirs par activité, prévu pour le Jalon 19
+("quartiers et bâtiments"), pas encore fait.
+
+**Où caser ça dans les jalons** : peut s'ajouter au Jalon 20 (mégaprojets
+et technologies, à venir) plutôt qu'un jalon séparé, puisque les deux
+sont des "bâtiments spéciaux au-delà des quartiers ordinaires" — à
+la discrétion de Claude Code.
+
+## 20. Retours de test sur le Jalon 19 : détail visuel et choix d'activité définitif (Adrien, 27/09/2026)
+
+Deux retours après avoir testé le système de développement en ligne.
+
+### A. Éoliennes et usines : bien moins développées que les bâtiments actuels
+
+**Constat d'Adrien**, confirmé en lisant le code : `buildEolienne()`
+(`src/lib/ville3d/energie.ts`) est un mât + une nacelle + 3 pales, et
+`buildIndustrie()` (`src/lib/ville3d/quartiers.ts`) est une boîte avec
+un silo optionnel — très en retrait par rapport aux maisons/immeubles/
+tours de `batiments.ts` (plusieurs modèles, variantes de toits,
+fenêtres, balcons, couleurs).
+
+**Ce n'est pas un oubli, c'est un compromis déjà signalé par Claude
+Code lui-même** : le journal du Jalon 19 (`DECISIONS.md` §4) note
+explicitement une "portée réduite assumée" — deux étapes par vocation
+de quartier (simple/développée) au lieu des 3-4 étapes décrites par
+`SYSTEME-DEVELOPPEMENT.md` §7, pour livrer les 6 vocations dans un
+temps raisonnable plutôt que 2-3 vocations très détaillées. Le
+document demandait déjà d'y revenir : « À valider par Adrien : garder
+ces deux étapes, ou demander d'aller vers 3-4 étapes par vocation dans
+un futur passage. »
+
+**Réponse d'Adrien, via ce retour de test** : non, le niveau de détail
+actuel n'est pas suffisant, en particulier pour l'Énergie (éoliennes)
+et l'Industrie (usines). **À reprendre** pour se rapprocher du niveau
+de variété déjà atteint sur les maisons (plusieurs modèles/variantes,
+pas juste une géométrie paramétrée en plus grand) :
+- 🏭 Industrie : plus d'étapes (les 3-4 du document — entrepôt/atelier,
+  puis usine et cheminées, puis grand complexe), plusieurs variantes de
+  bâtiment par étape comme pour les maisons ;
+- ⚡ Énergie : éoliennes avec plus de variété (hauteur, nombre de pales
+  déjà variable mais modèle unique) et surtout **plus de présence
+  visuelle** — silhouette plus travaillée, pas juste mât+nacelle+pales
+  minimalistes ;
+- même logique à vérifier pour Commerce, Services et Recherche
+  (`buildCommerce`, `buildServices`, `buildRecherche`, présentes dans
+  `quartiers.ts`), qui partagent le même compromis "2 étapes" que
+  l'Industrie.
+
+Chiffres/détails exacts (nombre de modèles par étape, nombre d'étapes)
+laissés à Claude Code comme d'habitude, mais la direction est claire :
+**rapprocher du niveau de finition des maisons**, quitte à prendre plus
+de temps que prévu au Jalon 19.
+
+### B. Le choix d'activité doit être définitif, pas modifiable
+
+**Règle voulue par Adrien** : une fois l'activité choisie pour une
+visite, impossible d'en choisir une autre — le choix est **validé**
+immédiatement, exactement comme la visite elle-même (population
+comprise), et rapporte 1 point dans l'activité choisie.
+
+**Écart avec l'implémentation actuelle** (`choisir_activite_visite()`,
+migration `0023`) : la fonction accepte d'être rappelée **plusieurs
+fois** dans sa fenêtre de grâce de 5 minutes, et écrase à chaque fois
+l'activité de la visite la plus récente — rien n'empêche aujourd'hui un
+joueur de changer d'avis deux, trois fois de suite avant que les 5
+minutes ne s'écoulent. L'intention initiale du document (remplacer
+UNE FOIS l'activité tirée au sort) est correcte, mais pas appliquée
+strictement dans le code.
+
+**À corriger** : une fois qu'un choix explicite a été enregistré pour
+une visite (que ce soit pour remplacer le tirage au sort ou un premier
+choix), un second appel à `choisir_activite_visite()` sur la même
+visite doit être refusé (nouveau code d'erreur, suite du registre
+`P0021`/`P0022` de la migration `0023`). Nécessite de distinguer
+"activité tirée au sort" de "activité choisie par le joueur" — par
+exemple une colonne `visites.activite_verrouillee boolean default
+false`, mise à `true` dès qu'un choix explicite réussit, et vérifiée en
+tout début de la fonction (erreur si déjà vraie).
+
+**Ce qui ne change pas** : la fenêtre de grâce de 5 minutes reste utile
+pour laisser le temps au joueur de voir la visite automatique se
+déclencher puis de choisir — seul le fait de pouvoir *changer* un choix
+déjà fait doit disparaître.
+
+---
+
+## 21. Affichage des jauges d'activité : niveaux plutôt que pourcentages (précision d'Adrien, 27/09/2026)
+
+**Demande initiale d'Adrien** : « pour les activités je pense au lieu
+de mettre des pourcentages mettre des niveaux, et chaque niveau
+débloquerait de nouvelles choses ».
+
+**Clarification demandée et réponse d'Adrien** : la jauge en % de
+chaque activité sert aujourd'hui au système d'équilibre du Jalon 18
+(part reçue vs part cible, demi-vie ~3 semaines, seuils 60 % / 90 % /
+120 % pour Crise / Fragile / Équilibré / Point fort, bonus/malus,
+manifestations, protection AntiVille liée à l'équilibre) — un système
+qui peut redescendre si une activité est délaissée. Remplacer ça par
+des niveaux qui débloquent des choses (donc qui ne redescendent
+jamais) aurait touché cette mécanique déjà livrée. Adrien a confirmé
+vouloir l'option la plus légère : **« c'est très bien comme ça, ça ne
+change rien »** — c'est-à-dire changer uniquement l'affichage, pas le
+calcul.
+
+**Ce qui ne change pas** : le calcul de la jauge (part reçue vs part
+cible), la demi-vie, les seuils 60/90/120 %, les effets bonus/malus/
+crise/manifestation du Jalon 18, et le fait que la jauge peut
+redescendre. Rien de tout cela ne bouge. Il n'y a **aucun nouveau
+palier de déblocage** lié à ce chiffre (contrairement à l'idée
+initiale de "débloquer de nouvelles choses" par niveau — cette partie
+de l'idée n'est pas retenue ici ; voir §19 "Monuments d'influence" pour
+un système de paliers de déblocage, mais basé sur l'influence, pas sur
+les jauges d'activité).
+
+**Ce qui change** : uniquement l'affichage donné au joueur. Au lieu
+d'un pourcentage brut ("58 %"), montrer quelque chose de plus lisible,
+calculé à partir de la même valeur — par exemple les 4 états déjà
+nommés (Crise / Fragile / Équilibré / Point fort) présentés comme le
+"niveau" de l'activité, avec une barre/jauge visuelle qui se remplit
+selon la valeur plutôt qu'un simple nombre. Le pourcentage exact peut
+rester disponible en info secondaire (tooltip, détail au clic) pour les
+joueurs qui veulent le chiffre précis.
+
+**Implémentation suggérée** (libre à Claude Code d'ajuster côté UI) :
+- Continuer à calculer et stocker la jauge en % exactement comme
+  aujourd'hui (Jalon 18, aucune migration nécessaire).
+- Côté affichage uniquement, dériver un libellé/niveau de cette valeur
+  (les 4 états existants suffisent, pas besoin d'inventer une nouvelle
+  échelle numérotée séparée) et l'afficher avec une barre de
+  progression plutôt qu'un pourcentage nu.
+- Aucun changement de base de données, aucune nouvelle migration.
+
+**Portée** : pur affichage front-end. N'affecte ni `DECISIONS.md`
+(pas de nouveau point ouvert nécessaire, cette précision referme la
+question sans créer de point ouvert), ni `ROADMAP.md`.

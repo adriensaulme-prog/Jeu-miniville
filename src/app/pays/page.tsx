@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
+import { palierGuerre } from "@/lib/game/conflits";
 import { CartePays, type CarteRegionDonnees, type MarqueurVille } from "./CartePays";
 import { SelecteurPays } from "./SelecteurPays";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
@@ -78,6 +79,8 @@ type ConflitPays = {
   resultat: ResultatConflit | null;
   effort_attaquant: number;
   effort_defenseur: number;
+  jours_gagnes_attaquant: number;
+  jours_gagnes_defenseur: number;
   cout_ressources: Partial<Record<Categorie, number>>;
 };
 
@@ -289,6 +292,9 @@ export default async function PaysPage({
   const nomPaysDefenseur = conflit
     ? ((listePays ?? []).find((p) => p.id === conflit.pays_defenseur_id)?.nom ?? conflit.pays_defenseur_id)
     : null;
+  const palierConflit = conflit
+    ? palierGuerre(Math.max(conflit.jours_gagnes_attaquant, conflit.jours_gagnes_defenseur))
+    : null;
 
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
@@ -488,7 +494,20 @@ export default async function PaysPage({
                   {traduire(locale, conflit.statut === "en_cours" ? "pays.conflit.enCours" : "pays.conflit.termine")}
                 </span>
               </div>
+              {palierConflit ? (
+                <p className="note">
+                  <span className="badge">{traduire(locale, `pays.conflit.palier.${palierConflit}`)}</span>
+                </p>
+              ) : null}
               <div className="tiles">
+                <div className="tile">
+                  <b>{new Intl.NumberFormat(locale).format(conflit.jours_gagnes_attaquant)}</b>
+                  <span>{traduire(locale, "pays.conflit.joursGagnesAttaquant")}</span>
+                </div>
+                <div className="tile">
+                  <b>{new Intl.NumberFormat(locale).format(conflit.jours_gagnes_defenseur)}</b>
+                  <span>{traduire(locale, "pays.conflit.joursGagnesDefenseur")}</span>
+                </div>
                 <div className="tile">
                   <b>{new Intl.NumberFormat(locale).format(conflit.effort_attaquant)}</b>
                   <span>{traduire(locale, "pays.conflit.effortAttaquant")}</span>
@@ -498,6 +517,9 @@ export default async function PaysPage({
                   <span>{traduire(locale, "pays.conflit.effortDefenseur")}</span>
                 </div>
               </div>
+              {conflit.statut === "en_cours" ? (
+                <p className="note">{traduire(locale, "pays.conflit.effetQuotidien")}</p>
+              ) : null}
               {conflit.statut === "termine" && conflit.resultat ? (
                 <p className="note">
                   {traduire(locale, "pays.conflit.resultat")}{" "}

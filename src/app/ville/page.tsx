@@ -5,6 +5,13 @@ import { progressionNiveau, libelleNiveau } from "@/lib/game/niveauVille";
 import { ligneLocale } from "@/lib/game/ligneLocale";
 import { ordinal } from "@/lib/game/ordinal";
 import { ACTIVITES, activitesDisponibles, type Activite } from "@/lib/game/activites";
+import { palierAttaques } from "@/lib/game/antiville";
+import { palierVisites, palierInfluence } from "@/lib/game/popularite";
+import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
+import type { VocationsBlocs } from "@/lib/ville3d/generer";
+import type { VocationQuartier } from "@/lib/ville3d/quartiers";
+import { typeMonument } from "@/lib/game/monuments";
+import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SincroniserScene } from "@/components/SincroniserScene";
@@ -12,6 +19,10 @@ import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { VisiteAutomatique } from "@/components/VisiteAutomatique";
 import { JaugesActivites, EMOJI_ACTIVITE } from "@/components/JaugesActivites";
 import { ChoisirActivite } from "@/components/ChoisirActivite";
+import { BulletinMunicipal, type EvenementBulletin } from "@/components/BulletinMunicipal";
+import { Megaprojets, type EtatMegaprojet } from "@/components/Megaprojets";
+import { Technologies } from "@/components/Technologies";
+import { Monuments } from "@/components/Monuments";
 import { definirRecommandation } from "@/app/villes/actions";
 
 // Repli si le pays de la ville n'a pas encore de géo/fuseau renseignés
@@ -46,6 +57,7 @@ export default async function VillePage() {
     population: number;
     population_max: number;
     influence: number;
+    influence_max: number;
     activite: number;
     recommandation_activite: Activite | null;
     country_id: string;
@@ -61,7 +73,7 @@ export default async function VillePage() {
   const { data, error: erreurVille } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, influence, activite, recommandation_activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
+      `id, nom, population, population_max, influence, influence_max, activite, recommandation_activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
     )
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -126,13 +138,90 @@ export default async function VillePage() {
   // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
   // de développement de sa propre ville.
   const { data: jaugesBrutes } = await supabase.rpc("jauges_ville", { p_ville_id: ville.id });
-  const jauges = (jaugesBrutes ?? []) as { activite: Activite; jauge: number }[];
+  const jauges = (jaugesBrutes ?? []) as { activite: Activite; elan: number; jauge: number }[];
   const activitesDeCetteVille = activitesDisponibles(progression.niveau);
+  const elanEnergie = jauges.find((j) => j.activite === "energie")?.elan ?? 0;
+
+  // Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs déjà
+  // ouverts, assignée de façon opportuniste (même logique que
+  // verifier_president()/verifier_manifestation() ci-dessous) puis lue
+  // pour le rendu 3D.
+  await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: ville.id });
+  const { data: blocsBruts } = await supabase
+    .from("city_blocks")
+    .select("rang, vocation")
+    .eq("ville_id", ville.id);
+  const vocations: VocationsBlocs = new Map(
+    (blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier])
+  );
+
+  // Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : construit les
+  // mégaprojets financés (opportuniste, même logique qu'au-dessus) puis
+  // lit l'état de tous les chantiers pour l'affichage et le rendu 3D.
+  await supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: ville.id });
+  const { data: megaprojetsBruts } = await supabase.rpc("etat_megaprojets", { p_ville_id: ville.id });
+  const chantiers = (megaprojetsBruts ?? []) as {
+    palier: number;
+    type: string;
+    activite: string;
+    statut: "en_chantier" | "construit";
+    points: number;
+    cout_points: number;
+    materiaux: number;
+    cout_materiaux: number;
+    revenus: number;
+    cout_revenus: number;
+  }[];
+  const etatMegaprojets: EtatMegaprojet[] = chantiers.map((c) => ({
+    palier: c.palier,
+    type: c.type as EtatMegaprojet["type"],
+    activite: c.activite,
+    statut: c.statut,
+    points: c.points,
+    coutPoints: c.cout_points,
+    materiaux: c.materiaux,
+    coutMateriaux: c.cout_materiaux,
+    revenus: c.revenus,
+    coutRevenus: c.cout_revenus,
+  }));
+  const nbMegaprojetsDebloques = nbMegaprojetsOuverts(ville.population_max);
+  const megaprojetsConstruits: MegaprojetConstruit[] = chantiers
+    .filter((c) => c.statut === "construit")
+    .map((c) => ({ palier: c.palier, type: c.type, activite: c.activite }));
+
+  // Jalon 20 (2/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : débloque les
+  // technologies déjà financées (opportuniste, même logique que
+  // ci-dessus) puis lit combien sont débloquées et les points de
+  // Recherche déjà accumulés, pour l'affichage et le rendu 3D.
+  await supabaseAdmin.rpc("avancer_technologies", { p_ville_id: ville.id });
+  const { count: nbTechnologiesDebloquees } = await supabase
+    .from("technologies")
+    .select("id", { count: "exact", head: true })
+    .eq("ville_id", ville.id);
+  const { data: pointsRechercheBruts } = await supabase.rpc("stock_ville", {
+    p_ville_id: ville.id,
+    p_activite: "recherche",
+  });
+  const pointsRecherche = typeof pointsRechercheBruts === "number" ? pointsRechercheBruts : 0;
+
+  // Jalon 20 (3/3, docs/A-INTEGRER.md §19) : débloque les monuments
+  // déjà atteints (opportuniste, même logique que ci-dessus) puis lit
+  // combien sont débloqués, pour l'affichage et le rendu 3D. Catalogue
+  // fini et connu côté client (monuments.ts) : pas besoin d'une
+  // fonction de lecture dédiée, une simple liste suffit.
+  await supabaseAdmin.rpc("avancer_monuments", { p_ville_id: ville.id });
+  const { data: monumentsBruts } = await supabase.from("monuments").select("palier").eq("ville_id", ville.id);
+  const nbMonumentsDebloquesVille = monumentsBruts?.length ?? 0;
+  const monumentsDebloques: MonumentDebloque[] = [];
+  for (const m of monumentsBruts ?? []) {
+    const type = typeMonument(m.palier as number);
+    if (type) monumentsDebloques.push({ palier: m.palier as number, type });
+  }
 
   const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const { data: derniereVisiteActivite } = await supabase
     .from("visites")
-    .select("activite")
+    .select("activite, activite_verrouillee")
     .eq("visiteur_id", user.id)
     .eq("ville_id", ville.id)
     .gte("created_at", ilCinqMinutes)
@@ -140,6 +229,30 @@ export default async function VillePage() {
     .limit(1)
     .maybeSingle();
   const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
+  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+
+  // Jalon 18 : tirage quotidien de manifestation (opportuniste, comme
+  // verifier_president ci-dessus) et bulletin municipal de sa propre
+  // ville — les attaques reçues et l'éventuelle manifestation valent
+  // aussi d'être vues sur "Ma ville", pas seulement en visitant.
+  await supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: ville.id });
+  const { data: nbAttaques } = await supabase.rpc("attaques_recues_aujourdhui", { p_ville_id: ville.id });
+  const palierAttaquesVille = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
+  // Jalon 22 (docs/DECISIONS.md §10 point 22) : paliers de
+  // popularité/renommée, affichage seulement — aucun plafond ajouté.
+  const { data: nbVisitesRecues } = await supabase.rpc("visites_recues_aujourdhui", { p_ville_id: ville.id });
+  const palierVisitesVille = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
+  const { data: nbInfluenceRecue } = await supabase.rpc("actions_influence_recues_aujourdhui", {
+    p_ville_id: ville.id,
+  });
+  const palierInfluenceVille = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
+  const { data: evenements } = await supabase
+    .from("city_events")
+    .select("id, type, activite, type_action, valeur, created_at")
+    .eq("ville_id", ville.id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+  const evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
 
   // Auto-visite de sa propre ville (Jalon 13 ter, docs/A-INTEGRER.md
   // §16) : même délai d'une heure et plafond de 3/jour que pour visiter
@@ -182,7 +295,16 @@ export default async function VillePage() {
 
   return (
     <main className="screen" aria-label={traduire(locale, "villes.maVille")}>
-      <SincroniserScene seed={ville.id} populationMax={ville.population_max} pays={pays} />
+      <SincroniserScene
+        seed={ville.id}
+        populationMax={ville.population_max}
+        pays={pays}
+        vocations={vocations}
+        elanEnergie={elanEnergie}
+        megaprojets={megaprojetsConstruits}
+        nbTechnologies={nbTechnologiesDebloquees ?? 0}
+        monuments={monumentsDebloques}
+      />
       <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <span className="eyebrow">{traduire(locale, "villes.maVille")}</span>
@@ -260,8 +382,18 @@ export default async function VillePage() {
           locale={locale}
           villeId={ville.id}
           activiteActuelle={activiteActuelle}
+          verrouillee={activiteVerrouillee}
           activitesDisponibles={activitesDeCetteVille}
         />
+        <Megaprojets
+          locale={locale}
+          villeId={ville.id}
+          estMaire={true}
+          nbOuverts={nbMegaprojetsDebloques}
+          chantiers={etatMegaprojets}
+        />
+        <Technologies locale={locale} paliersDebloques={nbTechnologiesDebloquees ?? 0} pointsRecherche={pointsRecherche} />
+        <Monuments locale={locale} paliersDebloques={nbMonumentsDebloquesVille} influenceMax={ville.influence_max} />
         <div className="act">
           <span className="h3">{traduire(locale, "villes.visiter")}</span>
           <p>
@@ -277,9 +409,27 @@ export default async function VillePage() {
               {traduire(locale, "villes.revisiterDans")} {minutesAvantRevisite} min
             </p>
           ) : (
-            <VisiteAutomatique locale={locale} villeId={ville.id} peutVisiter gain={GAIN_VISITE} />
+            <VisiteAutomatique locale={locale} villeId={ville.id} peutVisiter />
           )}
         </div>
+        {palierAttaquesVille !== "calme" ? (
+          <p className="note">
+            <span className="badge warn">
+              {traduire(locale, "villes.antiVillePalier")} {traduire(locale, `villes.palier.${palierAttaquesVille}`)}
+            </span>
+          </p>
+        ) : null}
+        {palierVisitesVille !== "calme" || palierInfluenceVille !== "calme" ? (
+          <p className="note">
+            {palierVisitesVille !== "calme" ? (
+              <span className="badge">{traduire(locale, `popularite.palier.${palierVisitesVille}`)}</span>
+            ) : null}{" "}
+            {palierInfluenceVille !== "calme" ? (
+              <span className="badge">{traduire(locale, `renommee.palier.${palierInfluenceVille}`)}</span>
+            ) : null}
+          </p>
+        ) : null}
+        <BulletinMunicipal locale={locale} evenements={evenementsBulletin} />
       </PanneauFlottant>
     </main>
   );

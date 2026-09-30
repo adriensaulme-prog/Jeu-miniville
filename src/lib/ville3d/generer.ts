@@ -16,11 +16,27 @@ import {
   buildBlock,
   buildCountryRoads,
   buildCountryside,
+  buildDrones,
+  buildEnergieCampagne,
   buildIdleBlock,
+  buildMegaprojetsCampagne,
+  buildMonumentsCampagne,
   buildRoadsAndTraffic,
+  buildTramway,
   type Bloc,
+  type MegaprojetConstruit,
+  type MonumentDebloque,
   type Stats,
 } from "./terrain";
+import type { VocationQuartier } from "./quartiers";
+import { technologiesDepuisPalier, type TechnologiesVille } from "@/lib/game/technologies";
+
+/** Vocation de chaque bloc déjà ouvert, par rang (0 = le plus central) —
+ * donnée serveur (table city_blocks, Jalon 19), absente = "residentiel"
+ * par défaut (dégradation propre avant que le bloc n'ait sa vocation
+ * assignée, ou pour une ville dont les blocs sont plus vieux que ce
+ * jalon). */
+export type VocationsBlocs = ReadonlyMap<number, VocationQuartier>;
 
 export interface ResultatGeneration {
   g: Geo;
@@ -36,7 +52,11 @@ const cleDe = (name: string) => (name || "").trim().toLowerCase() || "ville";
  * population donnée. Pur : c'est lui qui garantit qu'une ville qui grandit
  * ne déplace jamais un bloc déjà ouvert (tests/unit/ville3dCroissance.test.ts).
  */
-export function planifierBlocs(name: string, C: number): { blocks: Bloc[]; K: number } {
+export function planifierBlocs(
+  name: string,
+  C: number,
+  vocations?: VocationsBlocs
+): { blocks: Bloc[]; K: number } {
   const key = cleDe(name);
   // Nombre de blocs ouverts à ce stade, puis candidats en anneaux autour
   // du croisement central (blocs repérés par des entiers relatifs).
@@ -57,6 +77,7 @@ export function planifierBlocs(name: string, C: number): { blocks: Bloc[]; K: nu
         gap: 0,
         towerAt: 0,
         active: false,
+        vocation: "residentiel",
       });
     }
   blocks.sort((a, b) => a.d - b.d || a.bi - b.bi || a.bj - b.bj);
@@ -66,20 +87,34 @@ export function planifierBlocs(name: string, C: number): { blocks: Bloc[]; K: nu
     b.gap = openAtK(k + 1) - b.openAt;
     b.towerAt = towerAtK(k);
     b.active = C >= b.openAt;
+    // Jalon 19 : vocation fixée par rang une fois pour toutes (§7) —
+    // le rang k ici correspond exactement au rang stocké en base
+    // (city_blocks.rang), puisque cet ordre (distance au centre + aléa
+    // stable par ville) ne dépend que de la graine, jamais de C.
+    b.vocation = vocations?.get(k) ?? "residentiel";
   });
   return { blocks, K };
 }
 
-export function generate(name: string, C: number): ResultatGeneration {
+export function generate(
+  name: string,
+  C: number,
+  vocations?: VocationsBlocs,
+  elanEnergie = 0,
+  megaprojets: MegaprojetConstruit[] = [],
+  nbTechnologies = 0,
+  monuments: MonumentDebloque[] = []
+): ResultatGeneration {
   const key = cleDe(name);
   const g = new Geo();
   const ao: TamponAO[] = [],
     glow: { x: number; z: number }[] = [],
     ev: number[] = [];
   const stats: Stats = { maxFloors: 0, towers: 0, active: 0 };
+  const tech: TechnologiesVille = technologiesDepuisPalier(nbTechnologies);
   flat(g, -4000, -4000, 4000, 4000, 0, COL.meadow, MAT.MEADOW);
 
-  const { blocks, K } = planifierBlocs(name, C);
+  const { blocks, K } = planifierBlocs(name, C, vocations);
   blocks.forEach((b, k) => {
     if (k <= K) ev.push(b.openAt);
   });
@@ -105,11 +140,16 @@ export function generate(name: string, C: number): ResultatGeneration {
 
   buildRoadsAndTraffic(g, act, key, Math.ceil(cityR / T));
   for (const b of blocks) {
-    if (b.active) buildBlock(g, b, C, key, ao, stats, glow, ev);
+    if (b.active) buildBlock(g, b, C, key, ao, stats, glow, ev, tech);
     else if (!horsVille(b)) buildIdleBlock(g, b, key, ao);
   }
+  if (tech.tramway) buildTramway(g, key, cityR);
+  if (tech.drones) buildDrones(g, key, cityR);
   buildCountryside(g, key, ao, cityR);
   buildCountryRoads(g, key, ao, cityR);
+  buildEnergieCampagne(g, key, ao, cityR, elanEnergie);
+  buildMegaprojetsCampagne(g, key, ao, megaprojets);
+  buildMonumentsCampagne(g, key, ao, monuments);
   stats.next = ev.filter((t) => t > C).reduce((m, t) => Math.min(m, t), Infinity);
   return { g, ao, glow, stats: { ...stats, cityR } };
 }

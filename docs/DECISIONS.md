@@ -2400,6 +2400,815 @@ d'habitude sur les comptes de diagnostic créés manuellement.
 Typecheck, lint, suite unitaire (84 tests) et build (poids inchangé)
 verts.
 
+### Jalon 18 — Système de développement des villes (2/4) : les effets de l'équilibre — 27/09/2026
+
+**Contenu.** Deuxième des quatre jalons du chantier
+(`docs/A-INTEGRER.md` §18) : branche les bonus/crises des 7 activités
+(§4), les manifestations (§5) et le lien AntiVille (§6bis) posés sans
+effet au Jalon 17. Périmètre volontairement resserré — voir l'en-tête
+de la migration `0024` pour le détail complet — en laissant de côté
+les mégaprojets/stocks/technologies (§6, Jalon 20), la vocation des
+quartiers (Jalon 19), et deux effets purement cosmétiques renvoyés en
+points ouverts (§10 points 34 et 35 : gratte-ciel qui se figent en
+crise Énergie, fumée 3D au palier Émeutes / notification du pays au
+palier Crise).
+
+**Grève redéfinie par Adrien (27/09/2026), signalé plutôt que tranché
+seul.** Le document initial (23/09) se contredisait entre "bloque
+24 h, durée modulée par l'Industrie" (tableau) et "−0,1 % d'influence
+par attaque, cumulé" (liste des effets unitaires) — deux mécaniques
+different. Adrien tranche : une échelle selon le nombre CUMULÉ
+d'actions grève reçues aujourd'hui (tous attaquants, pas par
+attaquant) — 1 action → bloque 1 h, 5 → 2 h, 20 → 5 h pour un Hameau,
+ajustée par la taille de la ville ("plus la ville est grosse, plus il
+faudra d'actions"). Formule retenue pour relier ces trois points
+(chiffres exacts délégués à Claude Code) : racine carrée du nombre
+d'actions divisé par un facteur de taille calqué sur l'échelle des
+niveaux (1/2/5/10/25/50 du Hameau à la Métropole) —
+`duree_blocage_greve_heures()`, à ajuster avec les villes de test.
+L'Industrie continue de moduler cette durée (jusqu'à −60 % en point
+fort, +50 % en crise).
+
+**L'ancienne "protection anti-harcèlement"** (par paire attaquant/cible,
+2 attaques en 24h → effet réduit, 3e bloquée, code P0003) est
+**entièrement remplacée** par le nouveau système de paliers cumulés
+PAR VILLE (tous attaquants confondus) — une attaque isolée pèse peu
+(effet unitaire minuscule : contamination −0,01 % au moins 1,
+propagande −0,1 % au moins 1), une attaque massive coordonnée pèse
+lourd (effets qui s'additionnent, plafonnés à 10 %/jour pour
+contamination et propagande). Paliers visibles : Incidents (1-9
+attaques/jour) → Troubles (10-99) → Émeutes (100-499) → Crise
+(500-999) → Ville sinistrée (1000+, plafond atteint, plus aucune perte
+jusqu'au lendemain). P0003 devient inutilisé (même précédent que
+P0005) ; le quota par attaquant (3/jour) et l'anti-rafale (2 s, Jalon
+14) restent inchangés — protections différentes, pas remplacées.
+
+**Formules retenues pour les effets progressifs** (§4 : "montent de 0
+à leur maximum entre 60 % et 150 % de jauge, plafonnés") — la
+lecture du document laissait une ambiguïté entre une progression
+continue sur toute la plage et deux effets séparés ancrés à 60 %/150 % ;
+retenu : deux fonctions symétriques,
+`intensite_crise(jauge)` = 0 à 60 % → 1 à 0 % ; `intensite_point_fort(jauge)`
+= 0 à 120 % → 1 à 150 % (et au-delà, plafonné) — la zone 60-120 %
+(Fragile + Équilibré) n'a par construction aucun effet numérique, elle
+ne fait qu'avertir visuellement (cohérent avec le tableau §4, qui ne
+liste que "Point fort" et "Crise", jamais "Fragile"). Chaque effet du
+tableau applique cette intensité à son maximum donné (ex. Industrie
+point fort : durée × (1 − 0,6 × intensité) ; Énergie crise :
+risque de manifestation × (1 + intensité)) — sauf indication contraire
+explicite du document : le Résidentiel garde sa formule propre
+(probabilité = jauge ÷ 60 %, donnée telle quelle) et le Commerce en
+crise perd le bonus de jumelage de façon binaire ("pas de bonus", pas
+de "jusqu'à").
+
+**Solidarité** (§6bis, "optionnel, à valider" dans le document, mais
+confirmée gardée par `A-INTEGRER.md` §18/§10 point 6) : si une visite
+choisit (au hasard ou explicitement, via `choisir_activite_visite`)
+l'activité qui protège contre le type de la dernière attaque reçue
+dans les 24h, +1 habitant de plus (+2 au palier Émeutes et au-delà,
+"solidarité doublée pour les défenseurs"). Une seule fois par visite
+(`visites.bonus_solidarite_applique`), jamais retiré si l'activité
+change ensuite.
+
+**Manifestations** (§5) : pas de tâche planifiée dans ce projet (même
+choix que `activite_ville()`, Jalon 9, et `verifier_president()`,
+Jalon 11) — `verifier_manifestation()` est appelée de façon
+opportuniste à chaque affichage de la page d'une ville (`/ville` et
+`/villes`), idempotente via `cities.derniere_verification_manifestation`.
+Risque = +10 points par activité en crise (+20 pour l'Énergie),
+divisé progressivement si l'Énergie est en point fort ; perte de 1 %
+des habitants (plancher 1), réduite/aggravée par les Loisirs, jamais
+plus d'une fois par ville et par jour. Une ville équilibrée n'a
+jamais de manifestation.
+
+**Bulletin municipal** : nouvelle table `city_events` (lecture
+publique, comme `cities`), remplie par `lancer_action_antiville()` et
+`verifier_manifestation()`. Affiché en bas du panneau détail sur
+`/villes` et `/ville` (`BulletinMunicipal.tsx`) — dernières
+manifestations et attaques reçues, sans jamais mélanger avec les
+lignes "vérifié, rien trouvé" (idempotence gérée par une date sur
+`cities`, pas par une ligne `city_events` à blanc — sinon le bulletin
+se serait rempli de bruit).
+
+**Bug trouvé et corrigé en cours de route** (pas un choix de
+conception, une régression réelle du Jalon 17 mise au jour en
+préparant ce jalon) : le message de confirmation de visite
+(`VisiteAutomatique.tsx`) affichait toujours "+1 population", recopié
+depuis une prop statique calculée AVANT la visite — jamais le vrai
+gain renvoyé par le serveur. Sans conséquence tant que le gain était
+garanti (avant ce jalon), mais devenu trompeur dès que le Résidentiel
+peut être en crise (gain réellement à 0 alors que l'UI annoncerait
+"+1"). `visiter_ville()` change de type de retour (jsonb avec le gain
+réel inclus) pour corriger ça — voir la note sur `drop function`
+ci-dessous.
+
+**Base de données** (migration `0024`, ~820 lignes — la plus grosse du
+projet à ce jour) :
+- `visiter_ville()` : type de retour changé en `jsonb` (gain réel,
+  jamais garanti) → `drop function` avant `create` (piège habituel des
+  changements de type de retour, voir Jalons 8/13/16). `lancer_action_antiville()`,
+  `choisir_activite_visite()`, `reclamer_bonus_jumelages()`,
+  `influencer_ville()` : signature et type de retour inchangés,
+  `create or replace` direct.
+- Nouvelles fonctions utilitaires pures : `jauge_activite()` (une
+  seule jauge, wrapper de `jauges_ville()`), `intensite_crise()`,
+  `intensite_point_fort()`, `activite_protectrice()`,
+  `attaques_recues_aujourdhui()`, `palier_attaques()`,
+  `ratio_taille_ville()`, `duree_blocage_greve_heures()`.
+- `visites.bonus_solidarite_applique`, `cities.derniere_verification_manifestation`,
+  `actions_antiville.duree_heures` (nouvelles colonnes).
+
+**Testé.** `tests/unit/antiville.test.ts` (2 tests : bornes exactes des
+6 paliers, copie TypeScript de `palier_attaques()`).
+`tests/e2e/jalon18-effets-equilibre.spec.ts` (nouveau, 9 tests) :
+palier cumulé tous attaquants confondus ; plafond de 10 %/jour pour la
+contamination (12 attaques sur une ville à 100 habitants, jamais plus
+de 10 perdus) ; durée de grève dépendante du cumul du jour ; crise du
+Résidentiel (ville poussée en crise profonde via un historique de
+visites synthétique — voir `gonflerActivite()`, contourne la
+contrainte unique `(visiteur_id, ville_id, jour)` avec des dates
+différentes plutôt que des centaines de comptes — puis 15 vraies
+visites, gain total < 15 avec une probabilité d'échec du test
+≈ 3×10⁻¹¹ si la crise n'a plus d'effet) ; solidarité (accordée une
+fois, pas deux) ; crise du Commerce sur le bonus de jumelage (une
+ville touchée, l'autre non) ; `verifier_manifestation` neutre et
+idempotente sur une ville équilibrée, puis déclenchée sur au moins une
+de 8 villes en crise profonde indépendantes (probabilité d'échec
+≈ 2,6×10⁻⁶) ; point fort Recherche sur l'influence (15 essais,
+probabilité d'échec ≈ 3×10⁻⁵ si le doublement n'existe plus). Tests
+existants audités et mis à jour : `jalon4-rivalites-de-quartier.spec.ts`
+(protection anti-harcèlement remplacée par une vérification que le
+même attaquant peut désormais frapper la même cible plusieurs fois de
+suite) ; `jalon8bis-palmares.spec.ts` et `jalon6-donnees-rendu-3d.spec.ts`
+(commentaires et formule de calcul de la perte attendue mis à jour —
+la valeur numérique elle-même ne changeait pas pour une ville de test
+à très petite population, coïncidence du plancher "au moins 1").
+Typecheck, lint, suite unitaire (86 tests) et build (poids inchangé,
+182 Ko max) verts.
+
+**Bug trouvé après application de la migration** (vérification directe
+par RPC, avant même de relancer la suite e2e) : le plafond quotidien de
+perte (10 % de la population/influence **avant** l'attaque) valait 0
+quand cette valeur de départ était nulle ou très petite — 10 % de
+presque rien s'arrondit à 0, donc une ville neuve (0 influence)
+devenait **immunisée** contre toute propagande, même la toute première
+attaque du jour. Corrigé par un plancher `greatest(1, ...)` sur le
+plafond lui-même (migration corrective `0025`, appliquée par Adrien) —
+cohérent avec le plancher "au moins 1" déjà appliqué à l'effet unitaire
+de chaque attaque.
+
+**Suite e2e complète relancée après les deux migrations** : 73 tests
+verts (dont les 9 du Jalon 18). Deux échecs rencontrés en cours de
+route, tous deux sans rapport avec ce jalon : `jalon13-france-contre-allemagne.spec.ts`
+(donnée résiduelle d'un run interrompu plus tôt dans la session — une
+ligne `conflits` Argentine/Mexique jamais nettoyée — supprimée
+manuellement, le test repasse ensuite) ; `jalon8-se-classer.spec.ts`
+(flakiness déjà documentée à plusieurs reprises dans ce journal, "rang
+national dynamique"). Un des 9 tests du Jalon 18 lui-même
+(`crise du Résidentiel`) a d'abord échoué à son tour : le calcul à la
+main dans son commentaire s'est avéré faux (élan d'une seule activité
+gonflée ≈ 30, jauge Résidentiel ≈ 40 %, probabilité de gain ≈ 67 % —
+pas assez creusé pour rendre 15 succès sur 15 improbable). Corrigé en
+gonflant trois activités au lieu d'une (élan total ≈ 90, jauge ≈ 18 %,
+probabilité ≈ 30 %, probabilité d'échec du test ≈ 1,4×10⁻⁸) — vérifié
+fiable sur plusieurs relances.
+
+### Jalon 19 — Système de développement des villes (3/4) : quartiers et bâtiments 3D — 27/09/2026
+
+**Contenu.** Troisième des quatre jalons du chantier : la vocation de
+chaque bloc (§7 — résidentiel, industrie, commerce, loisirs, services,
+recherche, une fois pour toutes à l'ouverture du bloc) et les nouveaux
+bâtiments 3D qui vont avec, plus l'Énergie hors de la ville (panneaux
+solaires, éoliennes, puis centrale, dans la campagne autour). Adrien a
+été interrogé explicitement sur l'ampleur du jalon avant de commencer
+(les 5 nouvelles vocations de quartier représentent d'un coup plus de
+nouveaux bâtiments que tous les jalons précédents cumulés) et a choisi
+la **version complète** (progression à deux étapes pour chacune, plutôt
+qu'un seul stade fixe).
+
+**Portée réduite assumée, à signaler explicitement : deux étapes par
+vocation de quartier, pas trois ou quatre.** Le document (§7) décrit
+jusqu'à 4 étapes par activité ("entrepôts et ateliers, puis usines et
+cheminées, puis grand complexe" pour l'Industrie, "école puis
+université, campus, laboratoires" pour la Recherche, etc.), à la
+manière des maisons → immeubles → tours du Résidentiel. Implémenté ici
+avec seulement **deux étapes** ("simple", puis "développée") par
+vocation — moins riche que ce qu'Adrien a validé en choisissant
+"version complète". Compromis choisi par Claude Code pour livrer les
+6 vocations (5 quartiers + Énergie hors-ville) avec une silhouette et
+une couleur clairement distinctes chacune, dans un temps raisonnable,
+plutôt que 2-3 vocations à 4 étapes chacune. Loisirs suit son propre
+schéma proche du document (parc, comme avant le Jalon 6bis, puis un
+stade simplifié) ; les 4 autres (Industrie, Commerce, Services,
+Recherche) ont chacune un bâtiment "simple" et un bâtiment "développé"
+avec une silhouette/couleur/accessoire dédiés (silo pour l'Industrie,
+enseigne et vitrine pour le Commerce, croix pour les Services, dôme
+pour la Recherche). **À valider par Adrien** : garder ces deux étapes,
+ou demander d'aller vers 3-4 étapes par vocation dans un futur passage.
+
+**Blocs identifiés par RANG, jamais par coordonnées (bi, bj).**
+L'ordre d'ouverture des blocs (`planifierBlocs()`, distance au centre +
+aléa stable par ville) est déjà une fonction pure de la graine et de la
+population — le dupliquer en SQL (avec son générateur pseudo-aléatoire)
+aurait été fragile et inutile. La nouvelle table `city_blocks` retient
+donc seulement `(ville_id, rang, vocation)` ; le rang k du client
+(`planifierBlocs()`) correspond exactement au rang k stocké en base.
+
+**Algorithme d'assignation** (§7, "l'activité la plus en retard entre
+sa part de points et sa part de blocs, le résidentiel garde au moins la
+moitié des blocs") : `assigner_vocations_blocs()`, appelée de façon
+opportuniste à chaque affichage d'une ville (même logique que
+`verifier_manifestation()`), idempotente — ne retouche jamais un bloc
+déjà en base. Entièrement déterministe (aucun tirage au sort,
+contrairement aux mécaniques du Jalon 18) : à élan nul partout, la
+séquence des 8 premiers blocs est toujours résidentiel, commerce,
+résidentiel, industrie, résidentiel, loisirs, résidentiel, recherche —
+départage alphabétique stable entre les 5 activités de quartier à
+égalité. Testé valeur par valeur plutôt que statistiquement (voir Testé
+ci-dessous).
+
+**Énergie, hors de la ville** (§7) : pas de bloc dans la ville, des
+installations dans la campagne autour (éoliennes et panneaux solaires),
+en nombre proportionnel à l'élan de l'activité (`jauges_ville()`), puis
+une centrale au-delà d'un seuil. Emplacements tirés une fois par ville
+(un générateur par indice, comme les forêts de `buildCountryside()`) :
+une installation déjà visible ne se déplace jamais quand l'élan
+grandit, et une position avalée par la ville en grandissant est
+simplement sautée (même dégradation que les forêts). Seuils choisis par
+Claude Code (un repère tous les 4 points d'élan, comme
+`HABITANTS_PAR_LOGEMENT_MAISON`, jusqu'à 24 installations, centrale à
+partir de 100) — **à ajuster avec les villes de test si besoin**, comme
+les autres chiffres délégués des Jalons 17-18.
+
+**Le gratte-ciel reste une règle strictement résidentielle** (§7 : "la
+règle actuelle maisons → immeubles → tours reste celle des blocs
+résidentiels") : un bloc de quartier n'a jamais de chantier de
+gratte-ciel, cet emplacement reste un square public en permanence.
+
+**Base de données** (migration `0026`, nouvelle table `city_blocks` +
+deux fonctions) :
+- `city_blocks(id, ville_id, rang, vocation, created_at)`, lecture
+  publique (comme `cities`), jamais écrite depuis le client.
+- `nb_blocs_ouverts(population)` : copie SQL de la table de seuils
+  `BLOCK_OPEN`/`openAtK()` (`src/lib/ville3d/constantes.ts`) — à tenir
+  synchronisée si ces seuils changent côté 3D.
+- `assigner_vocations_blocs(ville_id)` : voir l'algorithme ci-dessus.
+  Aucun nouveau code d'erreur (rien d'appelable directement par un
+  joueur).
+
+**Câblage 3D** : `generate()` et `planifierBlocs()` (`generer.ts`)
+prennent désormais des paramètres optionnels `vocations` (Map rang →
+vocation) et `elanEnergie`, absents = dégradation propre vers
+"tout résidentiel, pas d'installation Énergie" (ville dont les blocs
+n'ont pas encore de vocation assignée, ou plus vieille que ce jalon).
+`buildBlock()` (`terrain.ts`) branche sur `b.vocation` pour choisir les
+bâtiments de chaque parcelle et ne jamais construire de gratte-ciel
+hors résidentiel. Câblé bout en bout uniquement sur les deux pages qui
+affichent une ville précise avec ses vraies données (`/ville`,
+`/villes`) — pas sur les pages de vitrine/classement (accueil,
+classement, jumelages, palmarès, aperçu de création), qui continuent
+d'afficher une ville générique tout-résidentiel (même choix que
+`verifier_manifestation()`, jamais appelée non plus sur ces pages).
+
+**Testé.** Vérification directe du générateur (script jetable, en
+dehors du pipeline de test — comparaison des couleurs de sommets
+générées aux palettes attendues) avant toute vérification visuelle,
+après une fausse alerte : le premier essai dans le navigateur semblait
+montrer une ville inchangée malgré les nouveaux paramètres, à cause
+d'un état de Fast Refresh périmé (tableau de dépendances de
+`useEffect` qui change de taille) — un nouvel onglet a suffi à lever le
+doute, et la vérification programmatique a confirmé que les couleurs
+des 5 palettes de quartier étaient bien présentes dans la géométrie
+produite. Vérification visuelle ensuite dans le navigateur : éolienne
+bien visible dans la campagne, bâtiment à bandeau rouge (Commerce),
+volumes à toit plat distincts des maisons/immeubles, dôme bleuté
+(Recherche). `tests/unit` existants (86 tests, dont la géométrie
+déterministe) toujours verts sans modification — la signature de
+`generate()` reste rétrocompatible (nouveaux paramètres optionnels).
+`tests/e2e/jalon19-quartiers.spec.ts` (nouveau, 5 tests) : premier bloc
+toujours résidentiel ; séquence déterministe des 8 premiers blocs à
+élan nul ; une activité dont l'élan domine passe devant l'ordre
+alphabétique par défaut ; idempotence (deuxième appel sans effet) ;
+une ville qui grandit n'ajoute que des blocs, sans jamais retoucher
+ceux déjà ouverts. Migration `0026` appliquée par Adrien, les 5 tests
+vérifiés verts contre la vraie base, puis suite complète relancée :
+79/80 verts, seul échec `jalon8-se-classer.spec.ts` ("rang national
+dynamique", flakiness pré-existante déjà documentée plus haut dans ce
+journal, sans lien avec ce jalon — confirmé en reproduisant le même
+échec avec les changements de ce jalon mis de côté via `git stash`).
+
+**Retour de test d'Adrien, deux corrections (`docs/A-INTEGRER.md` §20,
+27/09/2026)** :
+
+**A. Niveau de détail des quartiers, repris.** Le niveau "2 étapes"
+signalé comme portée réduite ci-dessus a été jugé insuffisant par
+Adrien après test en ligne, en particulier pour l'Énergie (éolienne
+trop minimaliste) et l'Industrie. Repris avec un **niveau numérique
+0/1/2** (au lieu du booléen `developpe`) pour Industrie, Commerce,
+Services et Recherche — 0 simple, 1 développée, 2 grand complexe —, le
+niveau 2 atteint `QUARTIER_NIVEAU2_APRES` (10 000, chiffre à ajuster
+comme d'habitude) habitants après le déblocage du niveau 1, même
+logique de progression que `APART_FLOOR_EVERY` pour les immeubles :
+pas de nouvelle architecture de blocs, juste plus de richesse dans les
+deux emplacements de lot déjà existants (maisons/immeubles). Ajouts
+par vocation, dans l'esprit "plusieurs éléments optionnels tirés au
+sort" déjà utilisé par les maisons (`buildHouse()`) plutôt qu'une
+géométrie mise à l'échelle : Industrie (lanterneaux de toit, cheminée
+fumante, réservoirs, palettes, clôture, camion garé) ; Commerce
+(second bandeau, parvis + voitures + climatiseurs en toiture) ;
+Services (aile secondaire + repère héliporté sur le toit, ambulance) ;
+Recherche (second dôme, panneaux solaires en toiture, antenne).
+Énergie (`energie.ts`) : éolienne agrandie et bien plus détaillée (mât
+à bande d'avertissement, nacelle à nez + balise clignotante, pales à
+deux segments), panneaux solaires posés en petite ferme de 3 à 5
+unités au lieu d'une seule, centrale avec un second réservoir, un
+bâtiment technique séparé, une clôture et des pylônes de raccordement
+vers la ville.
+
+**B. Choix d'activité verrouillé après un premier choix explicite.**
+`choisir_activite_visite()` acceptait d'être rappelée plusieurs fois
+dans sa fenêtre de grâce de 5 minutes, en écrasant à chaque fois le
+choix précédent — Adrien veut qu'un choix explicite soit définitif.
+Nouvelle colonne `visites.activite_verrouillee` (faux par défaut, donc
+le tirage au sort automatique de `visiter_ville()` n'est pas
+concerné : il reste remplaçable une fois) ; `choisir_activite_visite()`
+refuse désormais un second appel sur la même visite (nouveau code
+`P0023`, suite de P0021/P0022) — migration corrective `0027`. Côté
+client, `ChoisirActivite.tsx` reçoit une nouvelle prop `verrouillee` et
+masque le bouton "Changer" dès que le choix est verrouillé, sur
+`/ville` et `/villes`.
+
+**Testé (correctifs).** Deux nouveaux tests dans
+`tests/e2e/jalon17-choisir-activite.spec.ts` (fichier qui teste déjà
+cette fonction) : un choix explicite verrouille la visite et un second
+choix — pourtant valide — est refusé (`P0023`) sans écraser le
+premier ; le test UI existant du même fichier étendu pour vérifier que
+le bouton "Changer" disparaît après un choix. Le niveau de détail des
+quartiers (A) n'est pas testé automatiquement au-delà de la géométrie
+déterministe déjà couverte (`ville3dGenerer.test.ts`) : vérifié comme
+au premier passage, par script jetable (présence des nouvelles
+couleurs/matériaux dans la géométrie produite pour la configuration
+réelle de Belval-sur-Loire) puis contrôle visuel dans le navigateur
+(repères héliportés visibles sur plusieurs bâtiments Services, silos
+et accent Industrie visibles, dôme Recherche visible) — les
+installations Énergie n'ont pas pu être repérées visuellement dans le
+temps disponible (positionnées loin dans la campagne, hors du champ de
+caméra exploré), confirmées uniquement par la vérification
+programmatique.
+
+### Jalon 20 (1/3) — Système de développement des villes (4/4) : les mégaprojets du maire — 27/09/2026
+
+**Contenu.** Premier des trois sous-jalons du dernier chantier du
+système de développement (mégaprojets, puis technologies de Recherche,
+puis monuments d'influence — Adrien, 27/09/2026 : « un sous-jalon à la
+fois »). Le maire choisit un mégaprojet parmi 3-4 à chaque palier de
+population (Bourg 5 000, Ville 15 000, Grande ville 40 000, Métropole
+100 000, Mégapole 250 000, puis un palier de plus tous les 50 000) ;
+les visiteurs le financent (matériaux/revenus accumulés + points de
+l'activité du thème) ; une fois financé, un bâtiment apparaît et — pour
+4 des ~18 projets — un bonus permanent s'applique.
+
+**Portée assumée, signalée avant de commencer** (Adrien a confirmé
+cette approche via `AskUserQuestion`) : le mécanisme complet pour tous
+les paliers dès cette passe, mais des bâtiments 3D volontairement
+simples (un socle + une silhouette parmi trois archétypes + une
+couleur d'accent selon l'activité du thème — pas encore le niveau de
+détail des maisons/quartiers), et seuls les 4 mégaprojets où le
+document donne un chiffre exact ont un effet numérique câblé : Stade
+(pertes de manifestation ×0,75), Centrale solaire/Parc éolien/Centrale
+(élan Énergie ×1,2, cumulatif), Hôpital (contamination ÷2 en plus de la
+défense existante), Opéra (propagande ÷2 en plus de la défense
+existante). Les autres (dont Zone logistique, dont le bonus documenté
+dépend d'une "pause pendant la grève" qui n'existe pas pour les
+stocks — pas construite dans cette passe, point ouvert) restent
+purement cosmétiques pour l'instant, comme les monuments d'influence.
+
+**Stocks calculés à la volée, pas de compteur à part** (même logique
+que `jauges_ville()`/`activite_ville()`) : les matériaux et les revenus
+sont un simple `count(*)` sur `visites.activite` ('industrie'/'commerce'),
+**sans la fenêtre de 180 jours des jauges** — contrairement à l'élan,
+un stock "s'accumule et ne redescend jamais" (§6), seule la dépense (à
+la construction d'un mégaprojet) est retenue, sur deux nouvelles
+colonnes `cities.materiaux_depenses`/`revenus_depenses`. Les points de
+l'activité du thème d'un mégaprojet comptent "à partir du choix" (§6) :
+comptés depuis `megaprojets.choisi_le`, jamais avant.
+
+**Catalogue de la Mégapole (palier 4) et au-delà inventé par Claude
+Code**, comme autorisé par la réponse d'Adrien du 26/09/2026
+("peuvent reprendre des variantes des paliers précédents en
+attendant") : Grand stade (loisirs), Centrale nouvelle génération
+(énergie), Siège international (commerce) — mêmes 3 options réutilisées
+à chaque palier au-delà de la Mégapole, coûts ×1,5 par palier
+supplémentaire comme demandé. Tour emblématique (Métropole, sans
+activité de thème dans le tableau du document) : activité de thème
+fixée à Résidentiel par Claude Code, faute de mieux précisé.
+
+**Emplacement des bâtiments en 3D** : juste à l'extérieur de la ville
+(le document ne précise pas où), à une distance qui dépend du **palier**
+et non du rayon courant de la ville — sinon un mégaprojet déjà construit
+se serait éloigné du centre à chaque fois que la ville grandit ensuite.
+Positions fixes par ville et par palier (un générateur par palier,
+même logique que les installations d'Énergie), sans vérification de
+collision avec les blocs résidentiels/quartiers (simplification
+assumée, risque réel mais faible vu le petit nombre de mégaprojets par
+ville).
+
+**Base de données** (migration `0028`) :
+- `cities.materiaux_depenses`, `cities.revenus_depenses` (nouvelles
+  colonnes).
+- `city_events.type` : nouvelle valeur `megaprojet_construit` (contrainte
+  CHECK réécrite).
+- `megaprojets(id, ville_id, palier, type, statut, choisi_le, construit_le)`,
+  lecture publique, `unique (ville_id, palier)` — un palier, un projet,
+  jamais retouché (même philosophie que `city_blocks`, Jalon 19).
+- Nouvelles fonctions utilitaires pures : `stock_ville()`,
+  `megaprojet_options()`, `seuil_megaprojet()`, `nb_megaprojets_ouverts()`,
+  `cout_megaprojet()`, `nb_megaprojets_construits()`.
+- `choisir_megaprojet()` : réservé au maire, nouveaux codes d'erreur
+  **P0024** (palier pas encore débloqué), **P0025** (palier déjà
+  choisi), **P0026** (type invalide pour ce palier).
+- `avancer_megaprojets()` : construit les chantiers financés, appelée
+  de façon opportuniste à chaque affichage d'une ville (même logique
+  que `assigner_vocations_blocs()`/`verifier_manifestation()`).
+- `etat_megaprojets()` : lecture pour l'affichage (progression).
+- `jauges_ville()`, `verifier_manifestation()`, `lancer_action_antiville()` :
+  signatures inchangées, `create or replace` direct, modifiées pour les
+  4 bonus ci-dessus.
+
+**Interface** : nouveau composant `Megaprojets.tsx` (liste des
+chantiers en cours/construits avec barres de progression matériaux/
+revenus/points, et pour le maire un choix parmi 3-4 boutons dès qu'un
+palier se débloque), affiché sur `/ville` (maire) et `/villes` (panneau
+détail, lecture seule pour un visiteur). Bulletin municipal
+(`BulletinMunicipal.tsx`) étendu pour le nouvel événement
+`megaprojet_construit`.
+
+**Testé.** `tests/unit/megaprojets.test.ts` (nouveau, 8 tests) : parité
+du mirroir TypeScript (`src/lib/game/megaprojets.ts`) avec les formules
+SQL (seuils, catalogue, coûts). `tests/e2e/jalon20-megaprojets.spec.ts`
+(nouveau, 5 tests) : refus palier non débloqué/type invalide/non-maire ;
+financement complet (stocks + points du thème depuis `choisi_le`,
+dépense exacte, idempotence, événement de bulletin) ; bonus Hôpital et
+Opéra (comparés sur deux villes jumelles, l'une avec le mégaprojet
+construit directement inséré, l'autre non — anti-rafale de 2 s du
+Jalon 14 contournée avec deux attaquants distincts plutôt qu'un seul) ;
+bonus Centrale solaire sur l'élan Énergie. Migration `0028` appliquée
+par Adrien, les 5 tests vérifiés verts contre la vraie base, puis suite
+complète relancée : 83/86 verts, les 3 échecs tous la flakiness
+pré-existante déjà documentée plus haut dans ce journal, sans rapport
+avec ce jalon. Typecheck, lint et suite unitaire (94 tests) vérifiés
+verts après chaque étape.
+
+### Jalon 20 (2/3) — Système de développement des villes (4/4) : les technologies de Recherche — 27/09/2026
+
+**Contenu.** Deuxième des trois sous-jalons du dernier chantier. "Tous
+les paliers de points de Recherche cumulés (100, 300, 800, 2 000,
+5 000, puis ×2), une technologie se débloque. Elle est surtout
+visuelle" (§6). Contrairement aux mégaprojets (1/3), **aucun choix du
+maire** : un seul stock (les points de Recherche déjà accumulés, même
+fonction `stock_ville()` que les mégaprojets) qui débloque
+automatiquement chaque palier — mécanique nettement plus simple, pas
+de dimension "matériaux/revenus" à financer en parallèle.
+
+**Catalogue des 5 premiers paliers choisi par Claude Code**, dans
+l'ordre où le document les cite : éclairage public LED, panneaux
+solaires sur les toits, tramway, toits végétalisés, drones. Les
+paliers suivants (×2 à chaque fois au-delà de 5 000) n'ont pas encore
+d'effet visuel défini — point ouvert, même logique que les mégaprojets
+sans bonus câblé. Le nom de chaque technologie ne vit que côté
+TypeScript (`src/lib/game/technologies.ts`) : la table ne retient que
+le palier (0 = LED, 1 = panneaux, etc.), à tenir synchronisé.
+
+**Effets 3D, volontairement simples** (même philosophie que les
+mégaprojets 1/3) : lampadaires en teinte froide (LED) ; petits panneaux
+et patch végétalisé approximatifs sur le toit des immeubles
+(volontairement **pas** sur les tours, dont le toit a déjà son propre
+traitement héliport/antenne — superposer aurait été confus) ; rails et
+quelques rames sur les deux grands axes centraux (tramway) ; quelques
+drones de livraison en vol à position fixe par ville (générateur par
+indice, même logique que les installations d'Énergie). Aucun bonus
+numérique câblé pour cette première passe ("avec parfois un petit
+bonus" du document reste vague) — purement visuel, comme la plupart des
+mégaprojets.
+
+**Bug trouvé et corrigé avant l'envoi, pas après cette fois** (en
+préparant ce sous-jalon, avant même d'écrire la migration
+correspondante) : `stock_ville()` et `etat_megaprojets()` (Jalon 20
+1/3, migration `0028`) n'étaient pas `security definer`. Un visiteur
+authentifié appelant `etat_megaprojets()` directement pour afficher la
+progression d'un chantier ne voyait, à travers la policy RLS
+`visites_lecture_propre` (`auth.uid() = visiteur_id`), que **ses
+propres visites** — les barres de matériaux/revenus/points auraient
+été très sous-comptées pour toute ville avec plusieurs visiteurs.
+`jauges_ville()` avait déjà `security definer` pour la même raison
+depuis le Jalon 17 ; `avancer_megaprojets()` n'était pas concerné (déjà
+`security definer`, donc déjà correcte pour la vraie construction) —
+seul l'AFFICHAGE de la progression était faux. Corrigé en tête de la
+migration `0029` (avant qu'elle ne soit envoyée à Adrien, donc jamais
+appliquée en l'état buggé).
+
+**Base de données** (migration `0029`) :
+- Correctif ci-dessus sur `stock_ville()`/`etat_megaprojets()`.
+- `city_events.type` : nouvelle valeur `technologie_debloquee`
+  (contrainte CHECK réécrite) — sans bulletin, un joueur ne saurait pas
+  qu'une technologie vient de se débloquer (cahier des charges §31,
+  "on comprend l'action en moins d'une minute").
+- `technologies(id, ville_id, palier, debloquee_le)`, lecture publique,
+  `unique (ville_id, palier)`.
+- `seuil_technologie()`, `avancer_technologies()` (opportuniste, même
+  logique que `assigner_vocations_blocs()`/`avancer_megaprojets()`,
+  boucle qui termine toujours car `seuil_technologie()` est strictement
+  croissant).
+
+**Interface** : nouveau composant `Technologies.tsx` (lecture seule —
+liste des technologies débloquées + progression vers la prochaine),
+affiché sur `/ville` et `/villes`. Bulletin municipal étendu pour
+`technologie_debloquee`.
+
+**Testé.** `tests/unit/technologies.test.ts` (nouveau, 6 tests) :
+parité du mirroir TypeScript avec les formules SQL, plus
+`technologiesDepuisPalier()` (dérive les 5 booléens depuis le nombre de
+paliers débloqués). `tests/e2e/jalon20-technologies.spec.ts` (nouveau,
+2 tests, écrits mais **pas encore exécutés** — migration `0029` pas
+encore appliquée par Adrien au moment de l'écriture) : déblocage
+progressif (plusieurs paliers d'un coup si les points le permettent),
+bulletin par palier, idempotence ; **régression ciblée sur le bug
+ci-dessus** — `stock_ville()`/`etat_megaprojets()` appelées par un
+client authentifié (pas service_role) voient bien les visites de
+tous les visiteurs, pas seulement les siennes. Vérification
+programmatique du rendu 3D (script jetable, comme aux Jalons 19/20 1/3) :
+présence de la couleur LED et augmentation du nombre de sommets avec
+les 5 technologies actives, aucun NaN. Contrôle visuel dans le
+navigateur : lampadaires en teinte froide bien visibles ; rails,
+panneaux de toit et drones **pas repérés à l'œil** dans le temps
+disponible (rendu nocturne, géométries fines sur fond sombre) —
+confirmés uniquement par la vérification programmatique, comme
+certains éléments du Jalon 19. Migration `0029` appliquée par Adrien ;
+premier essai des 2 tests en échec (bug de timing dans le test
+lui-même — les visites de la vérification RLS étaient insérées avant
+`choisi_le` du mégaprojet, donc hors de la fenêtre de comptage des
+points), corrigé, les 2 tests vérifiés verts contre la vraie base
+ensuite, puis suite complète : 84/88 verts (échecs = flakiness de
+connexion déjà documentée, sans rapport). Typecheck, lint et suite
+unitaire (100 tests) vérifiés verts.
+
+**Hors-jalon, traité le même jour** : `docs/A-INTEGRER.md` §21 (Adrien,
+précision sur l'affichage des jauges d'activité) — après clarification,
+Adrien confirme ne changer que l'affichage, pas le calcul ni les
+seuils du Jalon 18 ("c'est très bien comme ça, ça ne change rien").
+`JaugesActivites.tsx` : l'état (Crise/Fragile/Équilibré/Point fort)
+devient le texte principal, le pourcentage exact passe en infobulle
+(`title`). Pur front-end, aucune migration, aucun test cassé.
+
+### Jalon 20 (3/3) — Système de développement des villes (4/4) : les monuments d'influence — 27/09/2026
+
+**Contenu.** Dernier des trois sous-jalons — et donc dernier jalon du
+chantier "système de développement des villes" ouvert au Jalon 17.
+`docs/A-INTEGRER.md` §19 : des monuments (bornes, statues, arches...)
+débloqués automatiquement par paliers d'**influence record**, jamais
+retirés même si l'influence courante rebaisse ensuite. Mécaniquement
+très proche des technologies (2/3) — aucun choix du maire, aucun
+financement, déblocage automatique — mais un **catalogue fini de 16
+paliers** (10 à 1 000 000, cf. §19), pas de "puis ×2" à l'infini
+au-delà comme les mégaprojets/technologies.
+
+**`cities.influence_max`, nouveau record jamais décroissant** — même
+principe que `population_max`. Comme ce projet maintient ces records
+**en ligne, explicitement, dans chaque fonction anti-triche** plutôt
+que via un trigger caché (cohérent avec le reste du code), les deux
+seules fonctions qui touchent `cities.influence` aujourd'hui —
+`influencer_ville()` et `lancer_action_antiville()` (branche
+propagande) — sont recréées pour maintenir `influence_max` en même
+temps. Une perte de propagande ne peut jamais faire reculer le record
+(pas besoin d'écrire `greatest(influence_max, ...)` dans cette
+branche : ce serait un no-op).
+
+**Catalogue des 16 paliers repris tel quel du document** (§19) :
+borne commémorative, banc public, fontaine simple, buste, obélisque,
+arc de triomphe miniature, horloge municipale, fontaine monumentale,
+statue équestre, mur des remerciements, arche monumentale,
+tour-observatoire, statue emblématique, temple national, statue
+géante, monument ultime.
+
+**Bâtiments 3D, plus modestes que les mégaprojets** — même philosophie
+"simple d'abord", mais volontairement plus petits et plus sobres (une
+borne ou un buste n'est pas un bâtiment civique) : un socle, une
+silhouette parmi trois archétypes (colonne/obélisque, statue/buste,
+arche/fontaine) selon le type, une teinte dorée/bronze commune plutôt
+que liée à une activité (les monuments ne sont rattachés à aucune
+activité). Placés plus près du centre-ville que les mégaprojets (§19 :
+"près du croisement central... zone symbolique"), mais toujours à une
+distance fixe par palier (jamais relative au rayon courant de la
+ville, même raison que pour les mégaprojets) — **risque de
+chevauchement avec un bloc réel un peu plus élevé que pour les
+mégaprojets**, puisque les premiers paliers (10-50 d'influence, faciles
+à atteindre même très tôt) sont placés proches du rayon minimal d'une
+ville (`CITY_R_MIN`) : simplification assumée, à surveiller.
+
+**Base de données** (migration `0030`) :
+- `cities.influence_max` (nouvelle colonne, rétro-remplie à `influence`
+  pour les villes déjà existantes).
+- `influencer_ville()`, `lancer_action_antiville()` : signatures
+  inchangées, `create or replace` direct, modifiées pour maintenir
+  `influence_max`.
+- `monument_catalogue()` : catalogue fixe (palier, seuil, type).
+- `monuments(id, ville_id, palier, debloque_le)`, lecture publique,
+  `unique (ville_id, palier)`.
+- `city_events.type` : nouvelle valeur `monument_debloque` (contrainte
+  CHECK réécrite).
+- `avancer_monuments()` : opportuniste, s'arrête dès le premier palier
+  pas encore atteint (paliers croissants, pas besoin de tout parcourir).
+
+**Interface** : nouveau composant `Monuments.tsx` (lecture seule, même
+forme que `Technologies.tsx`), affiché sur `/ville` et `/villes`.
+Bulletin municipal étendu pour `monument_debloque`.
+
+**Testé.** `tests/unit/monuments.test.ts` (nouveau, 5 tests) : parité
+du catalogue TypeScript avec le catalogue SQL, `nbMonumentsDebloques()`
+plafonne bien à 16 très au-delà du dernier seuil.
+`tests/e2e/jalon20-monuments.spec.ts` (nouveau, 3 tests, écrits mais
+**pas encore exécutés** — migration `0030` pas encore appliquée par
+Adrien au moment de l'écriture) : déblocage progressif jusqu'à 16
+paliers max (testé avec une influence très au-delà du dernier seuil) ;
+`influencer_ville()` fait bien avancer `influence_max` en même temps
+qu'`influence` ; une perte de propagande réduit `influence` mais jamais
+`influence_max`, et aucun monument déjà débloqué ne disparaît ensuite.
+Vérification programmatique du rendu 3D (script jetable) : présence de
+la couleur dorée/bronze, augmentation du nombre de sommets, aucun NaN
+— pas de contrôle visuel dans le navigateur cette fois (diminishing
+returns après les contrôles similaires des Jalons 19/20 1-2, la
+géométrie est du même type que celle déjà vérifiée à l'œil pour les
+mégaprojets). Typecheck, lint et suite unitaire (105 tests) vérifiés
+verts.
+
+**Chantier "système de développement des villes" (Jalons 17 à 20)
+terminé côté code** — reste la vérification manuelle d'Adrien sur
+l'ensemble, et les points ouverts déjà notés en cours de route (portée
+réduite du détail visuel des quartiers, validée puis reprise ; bonus
+non câblés pour la plupart des mégaprojets/technologies ; risque de
+chevauchement des monuments proches du centre, ci-dessus).
+
+### Niveau "Mégapole" (250 000 habitants) — rattrapage d'un point déjà validé — 28/09/2026
+
+**Retrouvé en faisant le point une fois le chantier ci-dessus
+terminé** : Adrien avait validé un niveau au-delà de Métropole dès le
+26/09/2026 (`docs/SYSTEME-DEVELOPPEMENT.md` §10 point 4, "oui, ajouté
+— Mégapole à 250 000 habitants"), consigné comme point ouvert §10
+point 20 ("à trancher par Adrien" — en réalité déjà tranché, la note
+n'avait juste jamais été mise à jour) — mais **jamais réellement
+câblé** : `NIVEAU_MAX` valait toujours 5 et `population_vers_niveau()`
+plafonnait toujours à Métropole. Une ville franchissant 250 000
+habitants restait donc affichée "Métropole" indéfiniment. Pas une
+nouvelle décision, juste un oubli pendant le sprint des Jalons 17-20 —
+corrigé directement, sans repasser par Adrien.
+
+**Changé** : `NIVEAU_MAX` (6), `SEUILS_NIVEAU` (`src/lib/game/niveauVille.ts`),
+`population_vers_niveau()` (migration `0031`, `create or replace`
+direct), clé i18n `niveau.6` ("Mégapole"/"Megapolis"), et la copie
+locale de seuils dans `scripts/charger-villes-test.mjs`. Rattrapage
+`cities.niveau` pour une ville déjà existante qui dépasserait déjà
+250 000 (aucune parmi les villes de test actuelles, la plus grande
+fait 114 000, mais la migration le fait au cas où). Aucun autre
+endroit du code ne supposait Métropole comme niveau maximal (recherché
+explicitement) — `progressionNiveau()`/`libelleNiveau()` et leur
+affichage (`ville/page.tsx`, `villes/page.tsx`) itèrent déjà
+génériquement sur `SEUILS_NIVEAU`, pas de segment figé à corriger.
+
+**Testé.** `tests/unit/niveauVille.test.ts` : les deux tests qui
+plafonnaient à Métropole/5 (bornes du niveau maximal) mis à jour pour
+Mégapole/6, le test de refus d'un niveau hors plage déplacé de 6 à 7.
+`tests/e2e/jalon6-donnees-rendu-3d.spec.ts` : seuils étendus jusqu'à
+250 000/6, la valeur à 1 000 000 (qui attendait encore 5) corrigée.
+Typecheck, lint et suite unitaire (105 tests) vérifiés verts. Suite
+e2e complète pas encore relancée — migration `0031` pas encore
+envoyée/appliquée au moment de l'écriture.
+
+---
+
+### Jalon 21 — « Revoir les règles du jeu » appliqué à la guerre entre pays — 28/09/2026
+
+**Origine** : §10 point 22, retour d'Adrien après le Jalon 4 ("−10 % de
+population, c'est exagéré") — grille à appliquer à tous les mécanismes
+(effet unitaire faible, cumul du jour, plafond, paliers visibles), déjà
+faite pour AntiVille au Jalon 18. Choix d'Adrien (multiSelect,
+28/09/2026) : reprendre uniquement **Pays (guerre/mobilisation)** dans
+cette passe — visites, influence et jumelages restent non touchés.
+
+**Constat avant de coder** (relecture des migrations 0016/0017) :
+contrairement à AntiVille, un conflit pays n'avait **encore aucun effet
+concret** — `resoudre_conflits_en_cours()` posait juste un badge
+attaquant/défenseur/égalité à J+7, sans jamais toucher `population` ni
+`influence`. Signalé et tranché avec Adrien via `AskUserQuestion` avant
+de coder (le point n'était pas "quel chiffre choisir" mais "est-ce
+qu'on crée un effet réel ou juste un affichage narratif ?") : Adrien a
+choisi l'effet réel.
+
+**Traduction de la grille sur un mécanisme sans clic individuel**
+(l'automatisation `effort_national()` du correctif Jalon 13 reste
+inchangée) : l'« unité » devient la JOURNÉE du conflit, pas une
+attaque. `resoudre_conflits_en_cours()` (migration `0032`,
+`create or replace` direct) avance chaque conflit `en_cours` jour par
+jour depuis son `dernier_jour_traite` (nouvelle colonne) :
+- **effet unitaire faible** : le camp qui perd la comparaison
+  `effort_national()` du jour (bonus défensif ×1,5 inchangé) perd
+  0,1 % de population sur chacune de ses villes ce jour-là ;
+- **cumul du jour** : compteurs `jours_gagnes_attaquant`/
+  `jours_gagnes_defenseur` (nouvelles colonnes `conflits`) ;
+- **plafond** : 5 % de perte maximum par ville sur toute la durée du
+  conflit, suivi via `city_events` (nouveau type `'guerre'` + nouvelle
+  colonne `conflit_id`, pour ne pas confondre deux guerres simultanées
+  d'un même pays contre deux adversaires différents) ;
+- **paliers visibles** : `palierGuerre()` (`src/lib/game/conflits.ts`,
+  copie TS pure comme `palierAttaques()`), 6 paliers de "Calme" à
+  "Victoire écrasante" selon le nombre de journées gagnées par le camp
+  en tête, affichés sur `/pays`.
+
+Le verdict final à J+7 se base désormais sur la **majorité des
+journées gagnées cumulées**, pas sur un seul instantané du dernier
+jour — plus fidèle à l'esprit "cumul" de la grille, et plus juste (un
+camp qui a dominé 5 jours sur 7 ne peut plus perdre sur un simple sursaut
+du 7e jour). Chiffres (0,1 %/jour, plafond 5 %) : décision de Claude
+Code, contestable — mêmes ordres de grandeur que le 0,01 %/plafond
+10 % d'AntiVille, ajustés pour un rythme "1 unité/jour" plutôt que
+"potentiellement des centaines d'unités/jour".
+
+**Rattrapage documenté comme simplification assumée** : la fonction
+est opportuniste (pas de cron), appelée à chaque affichage de `/pays`.
+Si personne ne consulte la page plusieurs jours de suite, tous les
+jours manqués sont rattrapés d'un coup — mais `effort_national()` ne
+reflète que l'état ACTUEL des pays (pas d'historique jour par jour),
+donc les jours rattrapés réutilisent le même instantané. Même famille
+d'approximation que l'activité 7 jours glissants (Jalon 9).
+
+**Testé.** `tests/unit/conflits.test.ts` (4 tests, parité `palierGuerre()`).
+`tests/e2e/jalon21-grille-guerre.spec.ts` (4 tests) : cumul sur
+plusieurs jours rattrapés en un seul appel (valeurs exactes) ; plafond
+qui borne strictement la perte totale même sur ~90 jours rattrapés
+d'un coup (preuve : le plafond est toujours calculé sur la population
+courante, qui ne fait que décroître, donc toujours ≤ 5 % de la
+population de départ) ; verdict basé sur le cumul et non le dernier
+jour (scénario où le camp qui gagne "aujourd'hui" perd quand même la
+guerre) ; affichage du palier et des compteurs sur `/pays`.
+`tests/e2e/jalon13-france-contre-allemagne.spec.ts` mis à jour : le
+test qui vérifiait un recalcul "à la volée" par `conflit_pays()` avant
+toute résolution a été adapté (ce recalcul n'existe plus, les valeurs
+sont désormais toujours figées par `resoudre_conflits_en_cours()`).
+Typecheck et suite unitaire complète (109 tests) vérifiés verts. Suite
+e2e pas encore relancée — migration `0032` pas encore envoyée/appliquée
+au moment de l'écriture.
+
+---
+
+### Jalon 22 — « Revoir les règles du jeu », suite : paliers pour visites, influence, jumelages — 28/09/2026
+
+**Suite du Jalon 21** : Adrien a choisi de continuer sur le reste de la
+grille (visites, influence, jumelages — §10 point 22).
+
+**Différence assumée, tranchée avec Adrien avant de coder**
+(`AskUserQuestion`) : contrairement à AntiVille et à la guerre entre
+pays, ces trois mécaniques sont des effets **positifs** pour la ville
+qui les reçoit (population/influence gagnées, bonus de jumelage), déjà
+plafonnés **par joueur** (3 visites/jour, 5 actions d'influence/jour,
+délais anti-rafale, 3 jumelages actifs max, bonus de jumelage borné à
+une fois par jour) — contrairement à AntiVille/guerre qui n'avaient
+aucun plafond par cible avant leur passage sur cette grille. Ajouter un
+plafond quotidien PAR VILLE CIBLÉE (tous visiteurs confondus)
+freinerait la croissance d'une ville populaire, ce qui n'a pas le même
+esprit que la demande initiale ("−10 %, c'est exagéré", un effet
+négatif à adoucir). Décision d'Adrien : **paliers visibles seulement,
+aucun plafond ajouté** sur ces trois mécaniques.
+
+**Fait** (migration `0033`, 3 nouvelles fonctions `security definer` —
+même raison que `attaques_recues_aujourdhui()` au Jalon 18 : les
+tables sous-jacentes (`visites`, `actions_influence`, `jumelage_bonus`)
+ont des policies RLS "lecture propre", un maire ne peut pas lire
+directement les lignes des AUTRES joueurs sur sa ville) :
+- `visites_recues_aujourdhui()` / `palierVisites()`
+  (`src/lib/game/popularite.ts`) : popularité du jour (Calme →
+  Fréquentée → Très fréquentée → En vogue → Virale) ;
+- `actions_influence_recues_aujourdhui()` / `palierInfluence()`
+  (même fichier) : renommée du jour (Calme → Respectée → Renommée →
+  Célèbre → Légendaire) ;
+- `jours_bonus_jumelages_ville()` / `palierJumelage()`
+  (`src/lib/game/jumelages.ts`) : solidité d'un jumelage actif, sur le
+  cumul de jours où son bonus a déjà été accordé (Naissant → Solide →
+  Indéfectible → Légendaire).
+
+Badges affichés sur `/ville`, `/villes` (panneau détail) et
+`/jumelages`. Seuils choisis par Claude Code, contestables — ordre de
+grandeur cohérent avec les quotas existants (3-5 actions/jour/joueur).
+
+**Testé.** `tests/unit/popularite.test.ts` (6 tests) et
+`tests/unit/jumelages.test.ts` (3 tests), parité des trois fonctions de
+palier. `tests/e2e/jalon22-paliers-visites-influence-jumelages.spec.ts`
+(3 tests) : régression RLS sur les deux nouvelles fonctions de comptage
+(client authentifié réel, pas service_role) ; cumul exact des jours de
+bonus pour `jours_bonus_jumelages_ville()` (et absence d'un jumelage
+"en_attente" dans le résultat) ; affichage des badges sur `/villes`.
+Typecheck, lint et suite unitaire complète (127 tests) vérifiés verts.
+Suite e2e pas encore relancée — migration `0033` pas encore
+envoyée/appliquée au moment de l'écriture.
+
 ---
 
 ## §5. i18n
@@ -2651,7 +3460,8 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     proposition en attente : −1 % et plafond de 3 % de pertes/jour toutes
     causes confondues (sans lien avec ce système, applicable dès
     maintenant si Adrien le souhaite pour l'antiville existante — à
-    confirmer séparément).
+    confirmer séparément). **[Résolu — validé par Adrien le 26/09/2026
+    (`docs/A-INTEGRER.md` §18), codé aux Jalons 17-20, voir §4.]**
 17. **"Bulletin municipal" (journal d'événements) et lien de partage
     personnalisé** — présents dans la maquette du Jalon 7 comme "clins
     d'œil", mais demanderaient chacun une vraie fonctionnalité qui
@@ -2686,6 +3496,8 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     continue de grandir mais le niveau reste Métropole au-delà de
     100 000. → **À trancher par Adrien** ; toucherait `SEUILS_NIVEAU` et
     la fonction SQL `population_vers_niveau()` (nouvelle migration).
+    **[Résolu — validé par Adrien le 26/09/2026, câblé le 28/09/2026
+    (migration `0031`), voir §4 "Niveau Mégapole".]**
 21. **Bibliothèque de bâtiments et packs de thèmes**
     (`docs/BATIMENTS-ET-PACKS.md`, proposition du 24/09/2026). En attente
     des réponses d'Adrien aux 4 questions de son §7 (thèmes prioritaires,
@@ -2696,7 +3508,16 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     `docs/SYSTEME-DEVELOPPEMENT.md` §6 bis). Proposition en réflexion :
     effets unitaires faibles, cumul des attaques de la journée, plafond de
     10 %/jour, paliers visibles. Ajouté à `ROADMAP.md` comme jalon **à
-    placer par Adrien**. Pas de code d'ici là.
+    placer par Adrien**. Pas de code d'ici là. **[Partiellement résolu —
+    cette grille (effet unitaire faible, cumul du jour, plafond, paliers
+    visibles) est appliquée à AntiVille depuis le Jalon 18 (§4), à la
+    guerre entre pays depuis le Jalon 21 (§4, 28/09/2026), et à
+    visites/influence/jumelages depuis le Jalon 22 (§4, 28/09/2026 —
+    sous forme de paliers visibles seulement, sans nouveau plafond,
+    puisque ce sont des effets positifs déjà plafonnés par joueur).
+    **Ce point est maintenant entièrement résolu** : AntiVille, guerre,
+    visites, influence et jumelages ont tous été revus sur cette
+    grille.]**
 23. **Titre de gouverneur de région ?** (idée à valider,
     `docs/CLASSEMENTS.md` §2 et §6 question 2) — badge et historique pour
     la ville n°1 d'une région, sur le modèle du président du pays, sans
@@ -2802,3 +3623,31 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     oubli. → **À trancher par Adrien** : le rythme des immeubles/tours
     doit-il lui aussi être repensé en "logements", ou son rythme actuel
     (mesuré en étages) reste-t-il satisfaisant tel quel ?
+34. **Gratte-ciel figés en crise Énergie (Jalon 18, docs/SYSTEME-DEVELOPPEMENT.md
+    §4).** "Les gratte-ciel arrêtent de monter" en crise Énergie n'est
+    pas implémenté — nécessiterait un nouvel état persistant (un
+    "population gelée pour les tours", mise à jour uniquement quand
+    l'Énergie n'est pas en crise) pour un effet purement visuel ; jugé
+    disproportionné pour ce jalon. → **À trancher par Adrien** : vaut-il
+    le coût d'implémentation, ou peut-on laisser les tours continuer de
+    monter même en crise Énergie (l'effet réel — risque de
+    manifestation ×2 — reste lui bien appliqué) ?
+35. **Fumée 3D (palier Émeutes) et notification du pays (palier Crise),
+    Jalon 18, docs/SYSTEME-DEVELOPPEMENT.md §6bis.** Pas d'infra de
+    notification pays pour l'instant (pas de boîte de réception, pas de
+    page dédiée) ; l'effet 3D "fumée visible" nécessiterait de toucher
+    le générateur de ville pour un affichage temporaire. Les paliers
+    eux-mêmes sont bien calculés et visibles (badge + bulletin), seuls
+    ces deux effets d'accompagnement manquent. → **À trancher par
+    Adrien** : à construire maintenant, ou repoussé à un futur jalon
+    (ex. quand une vraie page pays avec notifications existera) ?
+36. **Monuments d'influence (docs/A-INTEGRER.md §19, 27/09/2026).**
+    Bâtiments spéciaux (statues, fontaines, arcs...) débloqués
+    automatiquement par paliers d'influence RECORD (`influence_max`,
+    nouveau champ, jamais décroissant — même principe que
+    `population_max`), 16 paliers proposés de 10 à 1 000 000, purement
+    cosmétique. Rangé dans `ROADMAP.md` au Jalon 20 (mégaprojets/
+    technologies), à la discrétion de Claude Code selon la note
+    d'Adrien. → **Chiffres des paliers et liste des bâtiments à
+    ajuster avec les villes de test**, comme d'habitude — pas encore
+    codé.
