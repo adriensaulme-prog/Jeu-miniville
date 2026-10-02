@@ -36,7 +36,7 @@ export const FS = /* glsl */ `
   uniform sampler2D uShadow;
   uniform sampler2D uAO;
   uniform vec3 uSunDir, uSunColor, uSkyTop, uSkyHorizon, uGround, uViewDir, uFog;
-  uniform float uAmbient, uExposure, uNight, uAOExt, uCityR;
+  uniform float uAmbient, uExposure, uNight, uAOExt, uCityR, uFogR;
   out vec4 outColor;
 
   float h12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -329,7 +329,7 @@ export const FS = /* glsl */ `
     col = aces(col * uExposure);
     col = pow(col, vec3(1. / 2.2));
     float d = length(P.xz);
-    col = mix(col, uFog, smoothstep(uCityR + 80., uCityR + 650., d) * .92);
+    col = mix(col, uFog, smoothstep(uFogR + 80., uFogR + 650., d) * .92);
     outColor = vec4(col, 1.);
   }
 `;

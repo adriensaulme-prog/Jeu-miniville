@@ -347,7 +347,8 @@ export const dictionaries = {
     "bulletin.guerre": "Perte de population due au conflit en cours",
 
     "monument.titre": "Monuments",
-    "monument.prochain": "Prochain monument",
+    "monument.voir": "Voir où il est",
+    "monument.influence": "d'influence",
     "monument.type.borne_commemorative": "Borne commémorative",
     "monument.type.banc_public": "Banc public gravé",
     "monument.type.fontaine_simple": "Fontaine simple",
@@ -739,7 +740,8 @@ export const dictionaries = {
     "bulletin.guerre": "Population lost to the ongoing conflict",
 
     "monument.titre": "Monuments",
-    "monument.prochain": "Next monument",
+    "monument.voir": "Show me where",
+    "monument.influence": "influence",
     "monument.type.borne_commemorative": "Commemorative marker",
     "monument.type.banc_public": "Engraved public bench",
     "monument.type.fontaine_simple": "Simple fountain",

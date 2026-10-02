@@ -545,7 +545,7 @@ export default async function VillesPage({
                   paliersDebloques={nbTechnologiesDebloquees3D}
                   pointsRecherche={pointsRecherche3D}
                 />
-                <Monuments locale={locale} paliersDebloques={nbMonumentsDebloques3D} influenceMax={c.influence_max} />
+                <Monuments locale={locale} cleVille={c.id} paliersDebloques={nbMonumentsDebloques3D} influenceMax={c.influence_max} />
 
                 <div className="actions">
                   <div className="act">

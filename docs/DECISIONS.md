@@ -3651,6 +3651,105 @@ appliquée au moment de l'écriture.
 
 ---
 
+### Catalogue des monuments + « voir où il est » + secteurs fixes hors de la ville (A-INTEGRER §25, sous-jalon 25a) — 02/10/2026
+
+**Demande d'Adrien** (`docs/A-INTEGRER.md` §25) : « tout est mélangé
+actuellement, d'ailleurs je ne vois pas les bâtiments pour chaque ».
+Deux chantiers : (1) zonage des blocs, (2) rendre repérable ce que le
+joueur débloque. **Découpage choisi par Adrien : deux sous-jalons,
+visibilité d'abord (25a, ci-dessous), zonage des blocs ensuite (25b, pas
+commencé, décisions à prendre avec lui avant de coder).**
+
+**Fait (25a), sans migration SQL.**
+- *Catalogue* : le panneau Monuments de `/ville` (et de `/villes`) liste
+  maintenant les **16 paliers**, repliable (`Monuments · 5/16`) : ✓ pour
+  les débloqués, 🔒 pour les autres avec leur seuil d'influence (le
+  prochain montre aussi la progression `300 / 500`). Avant, seuls les
+  débloqués et le prochain étaient listés.
+- *« Voir où il est »* : un bouton par monument débloqué. La caméra 3D
+  s'y rend en ~0,9 s (courbe douce, zoom ramené à 0,8 si on était plus
+  loin) et un **repère lumineux** (anneau qui pulse + colonne ambrée)
+  y reste 10 s en s'effaçant. Adrien avait suggéré de commencer par un
+  simple repère sans bouger la caméra ; le trajet de caméra s'est avéré
+  peu coûteux (le contrôleur de scène a déjà un état de caméra), donc
+  les deux sont livrés d'emblée. Toute action du joueur sur la scène
+  pendant le trajet reprend aussitôt la main. Sur mobile le panneau
+  flottant se replie pour ne pas cacher la cible. Le contrôleur de scène
+  expose `allerA(x, z)` (via `useSceneVille()`), le bouton est un
+  composant client (`BoutonVoirOu`) dans un panneau resté serveur.
+- *Secteurs fixes* (`src/lib/ville3d/emplacements.ts`, fonctions pures
+  partagées par le rendu et le panneau — donc jamais de décalage entre
+  « où il est » et où il est vraiment) : Énergie, mégaprojets et
+  monuments ont chacun un **secteur de 60° identique pour toutes les
+  villes** (axes +x, +z, −x ; l'axe −z reste libre), à partir d'une
+  **ceinture fixe à 450 m** (norme du max, comme le rayon de ville).
+  Mégaprojets : grille 3 colonnes × rangées de 60 m ; monuments : grille
+  4 × 4, rangée de 55 m, les paliers hauts plus loin ; Énergie : hasard
+  stable dans le secteur, 0 à 250 m au-delà de la ceinture. Pas de
+  boussole affichée (la caméra tourne) : c'est « voir où il est » qui
+  guide.
+
+**Défauts trouvés en chemin (corrigés).**
+- *Les monuments étaient à l'intérieur de la ville* : placés à 200 +
+  15 × palier m en distance euclidienne, donc à 141 m seulement du
+  centre sur une diagonale — sous la ville dès « Ville » (rayon 168).
+  Rien ne les écartait. La ceinture (450 m) est au-delà du rayon de la
+  ville au plafond de rendu (400 m à 250 000 habitants), vérifié par
+  test.
+- *Les mégaprojets pouvaient atterrir à des dizaines de km* : distance
+  220 + 90 × palier, jusqu'à 16 000 m pour une ville à 9 millions
+  (palier 180), hors du sol dessiné (±4000 m). Grille bornée à 39 cases.
+- *Le maillage entier de la ville était écarté dès que l'origine sortait
+  du champ de la caméra* : la géométrie utilise des attributs
+  personnalisés (`aPos`…), Three.js ne peut donc pas calculer la sphère
+  englobante et croit la ville réduite à l'origine. Invisible tant que le
+  pan était borné à `cityR + 150`. `frustumCulled = false` sur les deux
+  meshes. Trouvé en regardant la capture du premier « voir où il est »
+  (fond uni).
+- Le brouillard de distance démarrait à `cityR + 80` : un monument à
+  450 m aurait été dans la brume pour un hameau (rayon 168). Nouveau
+  `uFogR = max(cityR, 440)` — le haze lointain d'un petit village recule
+  un peu, changement purement visuel.
+
+**Effets de bord assumés.**
+- Les installations d'Énergie, mégaprojets et monuments **déjà dessinés
+  changent de place une fois** (ancien angle aléatoire sur 360°, nouveau
+  secteur). Ils ne bougeront plus ensuite. Point 5 du §25 le demandait
+  (« emplacement plus prévisible ») ; sans migration de données on ne
+  peut pas faire autrement qu'un déplacement unique.
+- Le pan manuel de la caméra va maintenant jusqu'à 1100 m du centre
+  (avant : rayon de ville + 150), pour que le joueur puisse aussi aller
+  voir à la main.
+- Les monuments eux-mêmes restent minuscules (2 à 6 m de haut, socle de
+  2 à 4 m ; le bloc fait 64 m) — décision de la bibliothèque de
+  modèles, non touchée ici. Le repère lumineux sert justement à les
+  retrouver. Les agrandir, ou leur donner une silhouette plus haute, est
+  à décider avec Adrien.
+- Ombres : la passe d'ombres n'est plus refaite à chaque image mais
+  seulement quand la géométrie, le rayon ou la direction du soleil
+  changent (nécessaire : le repère pulsant redessine la scène en continu
+  pendant 10 s ; sans cela chaque image refaisait la passe d'ombres de
+  toute la ville).
+
+**Pas fait (volontairement).** « Voir où il est » pour les mégaprojets,
+les installations d'Énergie et les technologies (§25 : « à étendre si
+Adrien le souhaite plus tard »). Les positions existent déjà
+(`emplacementMegaprojet`, `emplacementEnergie`), c'est un bouton à
+ajouter à leurs panneaux.
+
+**Testé.** `tests/unit/ville3dEmplacements.test.ts` (7) : ceinture
+au-delà de la ville au plafond de rendu ; chaque famille reste dans son
+secteur et hors de la ville ; jamais deux monuments (ou mégaprojets) à
+moins de 40 m ; position stable (ne dépend que de la ville et du
+palier) ; paliers hauts plus loin ; la géométrie change quand on
+débloque un monument. `tests/e2e/catalogue-monuments-voir-ou.spec.ts` :
+16 lignes, 5 débloquées / 11 verrouillées avec seuils, 5 boutons, et le
+clic envoie à la scène exactement l'emplacement attendu (lu sur
+`canvas[data-repere]`). Capture vérifiée à l'œil : anneau + colonne sur
+l'obélisque, sol et décor affichés après correction du culling.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

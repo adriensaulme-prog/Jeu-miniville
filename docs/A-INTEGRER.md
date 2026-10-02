@@ -122,8 +122,26 @@ journal existant, puis ce fichier peut être supprimé.*
 > périphérie à mesure que la ville grandit, plus un vrai catalogue
 > débloqué/à débloquer sur `/ville` avec un bouton pour repérer un
 > bâtiment dans la vue 3D. Gros chantier, détail complet dans la
-> section. Ce fichier peut être supprimé quand Adrien aura répondu aux
-> questions restantes et que les jalons de la Phase 6 seront terminés.
+> section. **État : 25a (catalogue + « voir où il est » + secteurs
+> fixes hors de la ville) codé le 02/10/2026 ; 25b (zonage des blocs)
+> en attente d'Adrien.**
+> **§26 (propositions d'amélioration de Claude chat, 02/10/2026,
+> toutes validées par Adrien) : nouveau** — journal mondial (cahier
+> §22), notifications de rivalité (cahier §23), page de ville
+> partageable/viralité (cahier §24), amis et suivi (cahier §25),
+> découverte des petites villes neuves sur `/villes`, et un parcours de
+> découverte pour les nouveaux joueurs. Six chantiers distincts, non
+> priorisés entre eux.
+> **§27 (plafond de visites à 8, feedback de visite + choix immédiat,
+> bouton règles du jeu, 02/10/2026) : nouveau** — trois demandes
+> ponctuelles d'Adrien, détail dans la section.
+> **§28 (fichier APK pour tester avec des amis, 02/10/2026) :
+> nouveau** — emballer la PWA existante (Jalon 15) en TWA pour obtenir
+> un .apk installable, utile pour les tests fermés désormais EXIGÉS par
+> le Play Store (12 testeurs pendant 14 jours) avant toute mise en
+> production. Ce fichier peut être supprimé quand Adrien aura répondu
+> aux questions restantes et que les jalons de la Phase 6 seront
+> terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -1292,3 +1310,238 @@ elle-même). Une version plus simple pourrait démarrer par un indicateur
 visuel (surlignage/clignotement) placé sur le bâtiment visé sans
 bouger la caméra, à faire évoluer vers un vrai "aller à" ensuite si
 besoin.
+
+**Traité en partie le 02/10/2026 (Claude Code) — sous-jalon 25a**
+(découpage choisi avec Adrien : visibilité d'abord, zonage ensuite) :
+catalogue des 16 monuments sur `/ville` et `/villes`, bouton « Voir où
+il est » (caméra + repère lumineux, ni migration ni dépense) et secteurs
+fixes hors de la ville pour Énergie / mégaprojets / monuments (point 5).
+Détail, défauts trouvés en chemin (dont des monuments qui étaient à
+l'intérieur de la ville) et choix dans `DECISIONS.md` §4. **Reste à
+faire (25b) : le zonage des blocs (points 1 à 4), à décider avec
+Adrien avant de coder** — il touche `assigner_vocations_blocs()` et
+l'ordre d'ouverture, donc probablement une migration. Extension du
+« voir où il est » aux mégaprojets/technologies/Énergie : non demandée
+pour l'instant.
+
+---
+
+## 26. Propositions d'amélioration de Claude chat, toutes validées par Adrien (02/10/2026)
+
+Adrien a demandé des pistes d'amélioration. Six propositions ont été
+faites (trois reprennent des sections du cahier des charges jamais
+construites, une reprend une ambition déjà notée dans `ROADMAP.md`,
+deux sont des idées nouvelles de Claude chat) — **toutes validées par
+Adrien** (« ajoute tout ça »), mais non priorisées entre elles : à
+Adrien/Claude Code de choisir l'ordre.
+
+### A. Journal mondial (cahier des charges §22)
+
+Un fil qui recense les événements importants à l'échelle du jeu entier
+(pas une seule ville) : nouveaux présidents, guerres déclenchées/
+terminées, alliances adoptées, technologies débloquées, grands
+changements de classement. Le bulletin municipal (`BulletinMunicipal.tsx`,
+déjà construit) fait l'équivalent à l'échelle d'UNE ville ; le journal
+mondial est la même idée à l'échelle du jeu — probablement une nouvelle
+page ou une nouvelle section d'accueil, alimentée par les mêmes types
+d'événements déjà trackés (`city_events`, conflits, votes, mandats)
+mais agrégés tous pays confondus plutôt que filtrés par ville.
+
+### B. Notifications de rivalité (cahier des charges §23)
+
+Le cahier des charges donne des exemples précis de notifications
+attendues : « tu viens de perdre ta place #1 », « tu es maintenant
+président », « ton pays entre en rivalité avec l'Allemagne », « ton
+pays vient de débloquer une technologie », « ton pays est en train de
+perdre la guerre », « ton rival vient de te dépasser ». Toutes ces
+situations sont déjà détectables côté serveur (classements, mandats,
+conflits, technologies) — le travail est de les transformer en
+notifications poussées vers le joueur plutôt que des informations qu'il
+ne voit que s'il va consulter la bonne page. Prévoir au minimum un
+centre de notifications in-app (liste consultable) ; les notifications
+push navigateur (le service worker du Jalon 15 existe déjà, PWA
+installable) sont une suite naturelle mais un chantier à part (gestion
+des permissions, abonnement, backend d'envoi) — à ne pas sous-estimer
+niveau effort.
+
+### C. Page de ville partageable / viralité (cahier des charges §24)
+
+Chaque ville doit avoir une page partageable publiquement, sans
+connexion (lecture seule) : « le joueur doit pouvoir partager des
+événements : passage #1, accession à la présidence, victoire
+internationale, appel à la mobilisation, etc. » Les liens de partage
+doivent renvoyer directement vers la ville ou l'événement concerné.
+Techniquement, c'est en grande partie une page de lecture des données
+déjà publiques (`cities_lecture_publique` et consorts existent déjà en
+RLS) — le travail principal est l'habillage (une page présentable même
+pour quelqu'un qui n'a jamais ouvert le jeu) et la génération de liens
+ciblés vers un événement précis plutôt que juste la ville en général.
+Prérequis naturel pour D (Amis et suivi).
+
+### D. Amis et suivi (cahier des charges §25)
+
+« Les joueurs peuvent suivre leurs amis, consulter leurs villes et voir
+leurs classements. Les relations sociales doivent rester simples. »
+Une liste de villes suivies par joueur (table simple, pas de système
+d'amitié réciproque à construire si le cahier ne le demande pas
+explicitement — à confirmer au moment de spécifier ce jalon), avec un
+accès rapide depuis cette liste plutôt que de chercher dans `/villes`.
+S'appuie naturellement sur C (une ville suivie s'afficherait un peu
+comme sa page partageable, mais pour un joueur connecté).
+
+### E. Découverte des petites villes neuves sur `/villes`
+
+Idée de Claude chat, pas dans le cahier des charges : `/villes` est
+trié par population décroissante depuis le Jalon 2 (choix d'Adrien à
+l'époque, plutôt qu'un bouton "ville au hasard") — une ville neuve est
+donc systématiquement en bas de liste, quasiment invisible, ce qui
+rend plus difficile pour elle de recevoir ses premières visites (le
+problème concret vécu par Adrien lui-même en tout début de test : « 1
+habitant depuis plusieurs jours »). Proposition : ajouter un moyen de
+remettre en avant les villes qui ont besoin de visites — par exemple un
+tri alternatif "villes récentes" ou "villes peu visitées récemment", ou
+une petite sélection mise en avant quelque part sur `/villes` ou
+l'accueil. Détail exact (quel tri, où l'afficher) à spécifier avec
+Adrien quand ce chantier est pris.
+
+### F. Parcours de découverte pour les nouveaux joueurs
+
+Idée de Claude chat, pas dans le cahier des charges : avec 7 activités,
+des jauges, des monuments, des mégaprojets, la guerre, etc. déjà
+construits, un nouveau joueur arrive aujourd'hui sans aucun guide
+progressif. Proposition : un petit parcours de découverte au tout
+début (quelques indications contextuelles plutôt qu'un mur de règles
+d'un coup) pour réduire le risque d'abandon avant que la boucle de jeu
+soit comprise. Portée exacte (combien d'étapes, quels écrans couvrir)
+à spécifier avec Adrien quand ce chantier est pris.
+
+---
+
+## 27. Plafond de visites à 8, feedback de visite + choix immédiat, bouton règles du jeu (demande d'Adrien, 02/10/2026)
+
+### A. Plafond de visites quotidien : 3 → 8
+
+**Demande d'Adrien** : pouvoir faire 8 visites par jour sur une même
+ville au lieu de 3 actuellement.
+
+**Où c'est dans le code** : le plafond est un `3` écrit en dur dans
+`visiter_ville()` (`if v_nb_aujourdhui >= 3 then ... using errcode =
+'P0019'`), dans sa définition la plus récente
+(`supabase/migrations/0030_jalon20_monuments.sql`). Ce même littéral
+`3` apparaît aussi dans plusieurs migrations antérieures qui
+redéfinissaient la fonction à chaque jalon (0022, 0023, 0024, 0025,
+0028) — sans effet aujourd'hui puisque seule la dernière définition
+compte, mais ça vaut le coup que Claude Code en profite pour centraliser
+ce chiffre dans une seule constante plutôt que de le dupliquer une
+fois de plus dans la prochaine migration qui touche à cette fonction.
+Aucun texte visible par le joueur ne mentionne explicitement "3"
+(l'erreur P0019 est absorbée silencieusement côté client,
+`src/app/villes/actions.ts`) — changer uniquement le chiffre dans la
+fonction SQL suffit, pas de traduction à toucher.
+
+**Ce qui ne change pas** : le délai d'une heure entre deux visites de la
+même ville par le même joueur (P0018) n'est pas concerné par cette
+demande — avec 8 visites max et 1h de délai minimum, une ville ne peut
+de toute façon pas recevoir plus de 8 visites du même joueur en 24h,
+cohérent.
+
+### B. Feedback de visite : "+1 visite" puis les choix d'activité tout de suite en dessous
+
+**Demande d'Adrien** : quand on visite une ville, afficher "+1 visite"
+clairement, et juste en dessous, les propositions de choix d'activité à
+faire — directement, sans action supplémentaire.
+
+**État actuel** (vérifié dans `VisiteAutomatique.tsx` et
+`ChoisirActivite.tsx`) :
+- `VisiteAutomatique` affiche aujourd'hui un message centré sur le
+  gain de population réel ("Visite comptée ! +X habitant(s)." ou un
+  message "sans gain" si la crise du Résidentiel a empêché le gain,
+  voir Jalon 18) — pas de mention explicite d'un compteur de visite en
+  tant que tel.
+- `ChoisirActivite` affiche l'activité déjà tirée au sort/choisie, avec
+  un bouton "changer" qu'il faut cliquer pour faire apparaître la
+  liste des activités disponibles — les propositions de choix sont
+  donc cachées par défaut, pas montrées "tout de suite en dessous"
+  comme le souhaite Adrien.
+
+**À faire** :
+1. Ajouter un message "+1 visite" (distinct du message de gain de
+   population actuel, qui reste utile et peut être affiché juste à
+   côté ou en dessous — une visite compte même quand le gain de
+   population est nul à cause d'une crise).
+2. Juste en dessous de ce message, afficher directement la liste des
+   activités disponibles à choisir (le contenu actuellement caché
+   derrière le bouton "changer"), sans action supplémentaire requise —
+   le bouton "changer" ne garde de sens que pour revenir consulter ce
+   choix plus tard dans la fenêtre de grâce de 5 minutes, après avoir
+   quitté puis rouvert la page, tant que le choix n'est pas verrouillé
+   (§20 B, `visites.activite_verrouillee`).
+
+### C. Bouton discret avec les règles du jeu
+
+**Demande d'Adrien** : un bouton discret donnant accès aux règles du
+jeu.
+
+**État actuel** : aucune page ni composant "règles" n'existe
+aujourd'hui dans le code (vérifié par recherche dans `src/`) — tout ce
+qui explique une mécanique au joueur est aujourd'hui dispersé au fil
+des pages (jauges, bulletin municipal, panneau Monuments, etc.), sans
+vue d'ensemble consultable à la demande.
+
+**À faire** : une page ou un panneau "Règles du jeu", accessible via un
+bouton/lien discret (emplacement laissé à l'appréciation de Claude
+Code — par exemple dans la barre de navigation ou en pied de page),
+expliquant les mécaniques principales déjà en place : visites et
+plafonds, influence, actions AntiVille, jumelages, les 7 activités et
+leurs effets, manifestations, mégaprojets, technologies, monuments
+d'influence, pays et ressources nationales, décisions diplomatiques et
+guerre. Vu le volume, une v1 peut raisonnablement ne couvrir que le
+cœur de boucle (visites, activités, influence, AntiVille) et compléter
+le reste par la suite — à étoffer au même rythme que les jalons déjà
+livrés plutôt que de tout rédiger d'un coup. Contenu à écrire en
+français ET anglais dès cette première version (règle i18n immédiate,
+`DECISIONS.md` §1 point 5). Peut servir de brique de départ pour le
+parcours de découverte des nouveaux joueurs proposé en §26 F, sans
+attendre que ce chantier-là soit pris.
+
+---
+
+## 28. Fichier APK pour tester avec des amis avant le Play Store (demande d'Adrien, revenue le 02/10/2026)
+
+**Contexte** : Adrien avait demandé fin septembre s'il était possible
+de générer un `.apk` pour tester avec des amis avant le Play Store.
+Réponse donnée à l'oral à l'époque mais jamais écrite ici pour Claude
+Code — corrigé maintenant, d'autant plus utile puisque les règles du
+Play Store rendent ce test **obligatoire**, pas juste pratique (12 testeurs pendant 14 jours
+consécutifs avant toute mise en production — détail donné à Adrien en
+conversation, pas une tâche de code, donc pas répété ici).
+
+**Ce qui existe déjà** : la PWA installable du Jalon 15 (manifest,
+service worker, mode hors-ligne minimal) — c'est la base nécessaire,
+rien à refaire de ce côté.
+
+**À faire** : empaqueter cette PWA en TWA (Trusted Web Activity) pour
+obtenir un `.apk`/`.aab` installable sur Android, avec Bubblewrap (outil
+officiel Google, gratuit, ligne de commande) ou PWABuilder (service web
+équivalent, gratuit) :
+1. Générer le projet Android à partir de l'URL de la PWA en production
+   (Bubblewrap ou PWABuilder).
+2. Publier un fichier `assetlinks.json` sur le domaine du jeu, pour que
+   Android associe l'app installée au site (sans ça, l'app s'ouvre dans
+   un onglet de navigateur visible au lieu d'une vraie app plein
+   écran).
+3. Garder précieusement la **clé de signature** générée à cette étape
+   (le keystore) : la même clé doit signer toutes les versions futures,
+   y compris celle envoyée au Play Store plus tard — la perdre
+   obligerait à republier sous une identité d'app différente.
+4. Adrien installe l'APK généré directement sur son téléphone et ceux
+   de ses amis testeurs (pas besoin du Play Store pour ça : "installer
+   depuis une source inconnue" suffit), ou le distribue via un lien de
+   téléchargement direct.
+
+**Coût** : aucun à cette étape (Bubblewrap/PWABuilder sont gratuits,
+pas de compte développeur nécessaire juste pour générer et installer un
+APK en direct) — le compte développeur Google (25 $, unique) n'est
+nécessaire qu'à l'étape suivante, la mise en ligne sur le Play Store,
+et sera, comme toujours, soumis à l'accord explicite d'Adrien avant
+toute dépense.

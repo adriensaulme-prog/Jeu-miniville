@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
+import { EVENEMENT_REDUIRE_PANNEAU } from "./BoutonVoirOu";
 
 const CLE_SESSION = "jeu-miniville-panneau-reduit";
 
@@ -36,6 +37,13 @@ export function PanneauFlottant({
     } catch {
       // sessionStorage indisponible (navigation privée, etc.) : reste ouvert.
     }
+  }, []);
+
+  // « Voir où il est » (§25) : replie le panneau (sans le mémoriser) pour dégager la vue 3D.
+  useEffect(() => {
+    const reduire = () => setReduit(true);
+    window.addEventListener(EVENEMENT_REDUIRE_PANNEAU, reduire);
+    return () => window.removeEventListener(EVENEMENT_REDUIRE_PANNEAU, reduire);
   }, []);
 
   function basculer() {

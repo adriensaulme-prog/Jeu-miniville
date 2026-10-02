@@ -322,7 +322,11 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 30/09/2026. **Chantier "système de
+*Dernière mise à jour : 02/10/2026. **A-INTEGRER §25, sous-jalon 25a
+codé** (catalogue des 16 monuments, « voir où il est », secteurs fixes
+hors de la ville pour Énergie/mégaprojets/monuments, sans migration) ;
+**25b (zonage des blocs : gratte-ciels au centre, maisons en périphérie)
+reste à décider avec Adrien.** Précédemment (30/09/2026) : **Chantier "système de
 développement des villes" (Jalons 17 à 20, validé par Adrien dans
 A-INTEGRER.md §18) terminé côté code** : les 3 sous-jalons du Jalon 20
 (mégaprojets `0028`, technologies `0029`, monuments d'influence `0030`)

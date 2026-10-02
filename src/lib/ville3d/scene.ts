@@ -15,6 +15,7 @@
 import * as THREE from "three";
 import { bakeAO, dimensionsAO } from "./ao";
 import { CITY_R_MIN } from "./constantes";
+import { RAYON_BROUILLARD_MIN } from "./emplacements";
 import { generate, type ResultatGeneration, type VocationsBlocs } from "./generer";
 import type { MegaprojetConstruit, MonumentDebloque } from "./terrain";
 import { FS, SFS, SVS, VS } from "./shaders";
@@ -183,6 +184,13 @@ export interface ControleurSceneVille {
   definirVille(params: ParametresVille): void;
   /** Date à utiliser pour la position du soleil ; par défaut l'instant présent, réévalué à chaque frame si non fourni. */
   definirDate(date: Date | null): void;
+  /**
+   * « Voir où il est » (docs/A-INTEGRER.md §25) : amène en douceur la
+   * caméra sur le point (x, z) du monde et y pose un repère lumineux
+   * (anneau + colonne) qui pulse puis s'efface. Toute action du joueur sur
+   * la scène pendant le trajet reprend aussitôt la main.
+   */
+  allerA(x: number, z: number): void;
   dispose(): void;
 }
 
@@ -233,6 +241,9 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     uNight: { value: 0 },
     uAOExt: { value: dimensionsAO(CITY_R_MIN).ext },
     uCityR: { value: CITY_R_MIN },
+    // Le brouillard de distance démarre au-delà de la ceinture des
+    // monuments/mégaprojets/Énergie (emplacements.ts), même pour un hameau.
+    uFogR: { value: Math.max(CITY_R_MIN, RAYON_BROUILLARD_MIN) },
   };
 
   const material = new THREE.RawShaderMaterial({
@@ -267,6 +278,34 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
 
   let seedActuelle: string | null = null;
 
+  // Ombres : la passe est coûteuse et ne dépend que de la géométrie et de la
+  // direction du soleil. Pendant un trajet de caméra ou un repère qui pulse
+  // (rendu à chaque image), on ne la refait que si l'une des deux a changé.
+  let versionGeometrie = 0;
+  let cleOmbres = "";
+
+  // « Voir où il est » : trajet de caméra + repère lumineux.
+  interface TrajetCamera {
+    t0: number;
+    duree: number;
+    de: { panX: number; panZ: number; zoom: number };
+    vers: { panX: number; panZ: number; zoom: number };
+  }
+  let trajet: TrajetCamera | null = null;
+  let repere: { x: number; z: number; t0: number } | null = null;
+  const DUREE_TRAJET_MS = 900;
+  const DUREE_REPERE_MS = 10_000;
+  const anneau = new THREE.Mesh(
+    new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  const colonne = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.4, 1.4, 160, 16, 1, true).translate(0, 80, 0),
+    new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  );
+  const groupeRepere = new THREE.Group();
+  groupeRepere.add(anneau, colonne);
+
   function reconstruire(params: ParametresVille) {
     pays = params.pays;
     const res = generate(
@@ -295,8 +334,15 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     }
     const geometry = versGeometrie(res);
     mesh = new THREE.Mesh(geometry, material);
+    // Pas d'attribut « position » (aPos/aNormal… personnalisés) : Three.js ne
+    // sait pas calculer la sphère englobante et croit la ville réduite à
+    // l'origine. Dès que l'origine sort du champ de la caméra (pan vers un
+    // monument à 450 m du centre), toute la scène était écartée. Le
+    // culling ne sert à rien ici (un seul mesh, toujours visible).
+    mesh.frustumCulled = false;
     scene.add(mesh);
     shadowMesh = new THREE.Mesh(geometry, shadowMaterial);
+    shadowMesh.frustumCulled = false;
 
     const carte = bakeAO(res.ao, res.glow, cityR);
     uniforms.uAO.value.dispose();
@@ -305,6 +351,8 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     uniforms.uAO.value = tex;
     uniforms.uAOExt.value = carte.ext;
     uniforms.uCityR.value = cityR;
+    uniforms.uFogR.value = Math.max(cityR, RAYON_BROUILLARD_MIN);
+    versionGeometrie++;
   }
 
   function resize() {
@@ -349,7 +397,9 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     lightCamera.updateProjectionMatrix();
     uniforms.uLightVP.value.multiplyMatrices(lightCamera.projectionMatrix, lightCamera.matrixWorldInverse);
 
-    if (shadowMesh) {
+    const cleOmbresActuelle = `${versionGeometrie}|${cityR}|${L.sun[0].toFixed(4)},${L.sun[1].toFixed(4)},${L.sun[2].toFixed(4)}`;
+    if (shadowMesh && cleOmbresActuelle !== cleOmbres) {
+      cleOmbres = cleOmbresActuelle;
       const prevAutoClear = renderer.autoClear;
       renderer.autoClear = true;
       renderer.setRenderTarget(shadowTarget);
@@ -357,6 +407,16 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       renderer.render(shadowMesh, lightCamera);
       renderer.setRenderTarget(null);
       renderer.autoClear = prevAutoClear;
+    }
+
+    const maintenant = performance.now();
+    if (trajet) {
+      const t = Math.min(1, (maintenant - trajet.t0) / trajet.duree);
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      etatCamera.panX = trajet.de.panX + (trajet.vers.panX - trajet.de.panX) * e;
+      etatCamera.panZ = trajet.de.panZ + (trajet.vers.panZ - trajet.de.panZ) * e;
+      etatCamera.zoom = trajet.de.zoom + (trajet.vers.zoom - trajet.de.zoom) * e;
+      if (t >= 1) trajet = null;
     }
 
     // Caméra principale, orthographique, orbitale autour d'une cible.
@@ -398,6 +458,26 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     renderer.setClearColor(new THREE.Color(L.fog[0], L.fog[1], L.fog[2]), 1);
     renderer.clear(true, true, false);
     if (mesh) renderer.render(mesh, camera);
+
+    if (repere) {
+      const age = maintenant - repere.t0;
+      if (age >= DUREE_REPERE_MS) {
+        repere = null;
+      } else {
+        // Pulsation ~1,2 s ; s'efface sur les 2 dernières secondes ; taille
+        // proportionnelle au zoom pour rester repérable dézoomé.
+        const pulse = (age % 1200) / 1200;
+        const fondu = Math.min(1, (DUREE_REPERE_MS - age) / 2000);
+        const echelle = Math.max(1, etatCamera.zoom * 1.4);
+        groupeRepere.position.set(repere.x, 0.2, repere.z);
+        anneau.scale.setScalar((6 + pulse * 14) * echelle);
+        (anneau.material as THREE.MeshBasicMaterial).opacity = (1 - pulse) * fondu;
+        colonne.scale.set(echelle, 1, echelle);
+        (colonne.material as THREE.MeshBasicMaterial).opacity = 0.3 * fondu;
+        renderer.render(groupeRepere, camera);
+      }
+    }
+    if (trajet || repere) schedule();
   }
 
   let frameQueued = false;
@@ -426,13 +506,14 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
     takeCamera();
     const azR = (etatCamera.az * Math.PI) / 180;
     const k = (etatCamera.zoom * 0.42) / Math.max(1, canvas.clientHeight / 4);
-    const limite = cityR + 150;
+    const limite = Math.max(cityR + 150, 1100); // jusqu'aux monuments / mégaprojets / Énergie (emplacements.ts)
     const borne = (v: number) => Math.max(-limite, Math.min(limite, v));
     etatCamera.panX = borne(etatCamera.panX - (Math.cos(azR) * dx + Math.sin(azR) * dy) * k);
     etatCamera.panZ = borne(etatCamera.panZ - (-Math.sin(azR) * dx + Math.cos(azR) * dy) * k);
   }
 
   const onPointerDown = (e: PointerEvent) => {
+    trajet = null;
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, shift: e.shiftKey || e.button === 2 });
     if (pointers.size === 2) {
@@ -479,6 +560,7 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
   };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
+    trajet = null;
     takeCamera();
     etatCamera.zoom = Math.max(0.35, Math.min(4.5, etatCamera.zoom * Math.exp(e.deltaY * 0.0012)));
     schedule();
@@ -509,6 +591,19 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       dateForcee = date;
       schedule();
     },
+    allerA(x: number, z: number) {
+      takeCamera();
+      trajet = {
+        t0: performance.now(),
+        duree: DUREE_TRAJET_MS,
+        de: { panX: etatCamera.panX, panZ: etatCamera.panZ, zoom: etatCamera.zoom },
+        vers: { panX: x, panZ: z, zoom: Math.min(etatCamera.zoom, 0.8) },
+      };
+      repere = { x, z, t0: performance.now() };
+      // Lisible par les tests e2e (la caméra n'a pas d'autre trace dans le DOM).
+      canvas.dataset.repere = `${Math.round(x)},${Math.round(z)}`;
+      schedule();
+    },
     dispose() {
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
@@ -520,6 +615,10 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       if (heureInterval) clearInterval(heureInterval);
       mesh?.geometry.dispose();
       shadowTarget.dispose();
+      anneau.geometry.dispose();
+      (anneau.material as THREE.Material).dispose();
+      colonne.geometry.dispose();
+      (colonne.material as THREE.Material).dispose();
       material.dispose();
       shadowMaterial.dispose();
       uniforms.uAO.value.dispose();

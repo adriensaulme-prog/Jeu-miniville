@@ -36,6 +36,7 @@ import {
   type VocationQuartier,
 } from "./quartiers";
 import { buildCentraleEnergie, buildEolienne, buildPanneauSolaire } from "./energie";
+import { emplacementCentrale, emplacementEnergie, emplacementMegaprojet, emplacementMonument } from "./emplacements";
 import { buildMegaprojet } from "./megaprojets";
 import { buildMonument } from "./monuments";
 import { niveauPourPopulation } from "@/lib/game/niveauVille";
@@ -499,72 +500,51 @@ export function buildCountryside(g: Geo, key: string, ao: TamponAO[], cityR: num
  * Énergie, hors de la ville (§7) : éoliennes et panneaux solaires en
  * nombre proportionnel à l'élan de l'activité, puis une centrale
  * au-delà d'un seuil. Emplacements fixes par ville (un générateur par
- * indice, comme les forêts de buildCountryside()) : une installation
- * déjà visible ne se déplace jamais quand l'élan grandit, et une
- * position avalée par la ville en grandissant est simplement sautée.
+ * indice) dans le secteur d'Énergie (emplacements.ts, §25) : une
+ * installation déjà visible ne se déplace jamais quand l'élan grandit, et
+ * la ceinture est au-delà de la ville au plafond de rendu : rien n'est
+ * jamais avalé.
  */
-export function buildEnergieCampagne(g: Geo, key: string, ao: TamponAO[], cityR: number, elan: number) {
+export function buildEnergieCampagne(g: Geo, key: string, ao: TamponAO[], elan: number) {
   const n = Math.max(0, Math.min(ENERGIE_MAX_INSTALLATIONS, Math.floor(elan / ENERGIE_PAR_INSTALLATION)));
   for (let k = 0; k < n; k++) {
-    const r = rngFrom(key + "|energie|" + k);
-    const a = r() * Math.PI * 2,
-      dist = rr(r, 220, 1500);
-    const x = Math.cos(a) * dist,
-      z = Math.sin(a) * dist;
-    if (Math.max(Math.abs(x), Math.abs(z)) < cityR + 20) continue;
+    const { x, z } = emplacementEnergie(key, k);
+    const r = rngFrom(key + "|energie|type|" + k);
     const seed = Math.floor(r() * 900) + 50;
     if (r() < 0.55) buildEolienne(g, x, z, r, ao, seed);
     else buildPanneauSolaire(g, x, z, r, ao, seed);
   }
   if (elan >= ENERGIE_SEUIL_CENTRALE) {
-    const r = rngFrom(key + "|energie|centrale");
-    const a = r() * Math.PI * 2,
-      dist = rr(r, 220, 1500);
-    const x = Math.cos(a) * dist,
-      z = Math.sin(a) * dist;
-    if (Math.max(Math.abs(x), Math.abs(z)) >= cityR + 20) {
-      buildCentraleEnergie(g, x, z, r, ao, Math.floor(r() * 900) + 50);
-    }
+    const { x, z } = emplacementCentrale(key);
+    const r = rngFrom(key + "|energie|centrale|type");
+    buildCentraleEnergie(g, x, z, r, ao, Math.floor(r() * 900) + 50);
   }
 }
 
 /**
- * Mégaprojets construits, juste à l'extérieur de la ville (§6 : "un
- * bâtiment unique apparaît", sans emplacement précisé) — un
- * générateur par palier, comme les installations d'Énergie, mais à une
- * distance qui dépend du PALIER, jamais du rayon actuel de la ville
- * (qui grandit avec la population) : sinon un mégaprojet déjà construit
- * s'éloignerait du centre à chaque rendu suivant, au lieu de rester
- * fixe. Les paliers plus élevés (villes plus grandes) sont donc plus
- * loin par construction, sans jamais recalculer par rapport à cityR.
+ * Mégaprojets construits, dans leur secteur (emplacements.ts, §25) : une
+ * case de grille par palier, jamais relative au rayon courant de la ville
+ * (qui grandit avec la population) : un mégaprojet déjà construit ne
+ * bouge plus.
  */
 export function buildMegaprojetsCampagne(g: Geo, key: string, ao: TamponAO[], megaprojets: MegaprojetConstruit[]) {
   for (const m of megaprojets) {
-    const r = rngFrom(key + "|megaprojet|" + m.palier);
-    const a = r() * Math.PI * 2,
-      dist = 220 + m.palier * 90 + rr(r, 0, 40);
-    const x = Math.cos(a) * dist,
-      z = Math.sin(a) * dist;
+    const { x, z } = emplacementMegaprojet(key, m.palier);
+    const r = rngFrom(key + "|megaprojet|type|" + m.palier);
     buildMegaprojet(g, x, z, m.type, m.activite, m.palier, r, ao, Math.floor(r() * 900) + 50);
   }
 }
 
 /**
- * Monuments d'influence débloqués (Jalon 20 3/3, docs/A-INTEGRER.md
- * §19) : "près du croisement central... zone symbolique" (§19) — plus
- * proches du centre que les mégaprojets (des repères modestes, pas des
- * bâtiments civiques), mais toujours juste à l'extérieur de la ville
- * pour ne jamais chevaucher un bloc (même limite pratique que les
- * mégaprojets, distance fixe par palier — jamais relative au rayon
- * courant, pour qu'un monument déjà débloqué ne se déplace jamais).
+ * Monuments d'influence débloqués (Jalon 20 3/3, docs/A-INTEGRER.md §19),
+ * dans leur secteur (emplacements.ts, §25) : une case de grille par
+ * palier, les paliers hauts plus loin ; position indépendante du rayon
+ * courant de la ville, un monument débloqué ne se déplace jamais.
  */
 export function buildMonumentsCampagne(g: Geo, key: string, ao: TamponAO[], monuments: MonumentDebloque[]) {
   for (const m of monuments) {
-    const r = rngFrom(key + "|monument|" + m.palier);
-    const a = r() * Math.PI * 2,
-      dist = 200 + m.palier * 15 + rr(r, 0, 15);
-    const x = Math.cos(a) * dist,
-      z = Math.sin(a) * dist;
+    const { x, z } = emplacementMonument(key, m.palier);
+    const r = rngFrom(key + "|monument|type|" + m.palier);
     buildMonument(g, x, z, m.type, m.palier, ao, Math.floor(r() * 900) + 50);
   }
 }

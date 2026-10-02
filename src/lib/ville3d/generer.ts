@@ -9,6 +9,7 @@
  */
 
 import { rngFrom } from "./aleatoire";
+import { cleDe } from "./emplacements";
 import { BS, CITY_R_MIN, COL, MAT, PLAFOND_RENDU_POPULATION, T, blockX0, openAtK, towerAtK } from "./constantes";
 import { flat, Geo } from "./geometrie";
 import type { TamponAO } from "./mobilier";
@@ -45,7 +46,6 @@ export interface ResultatGeneration {
   stats: Stats & { cityR: number };
 }
 
-const cleDe = (name: string) => (name || "").trim().toLowerCase() || "ville";
 
 /**
  * Ordre d'ouverture des blocs d'une ville et seuils de chacun, à une
@@ -151,7 +151,7 @@ export function generate(
   if (tech.drones) buildDrones(g, key, cityR);
   buildCountryside(g, key, ao, cityR);
   buildCountryRoads(g, key, ao, cityR);
-  buildEnergieCampagne(g, key, ao, cityR, elanEnergie);
+  buildEnergieCampagne(g, key, ao, elanEnergie);
   buildMegaprojetsCampagne(g, key, ao, megaprojets);
   buildMonumentsCampagne(g, key, ao, monuments);
   stats.next = ev.filter((t) => t > C).reduce((m, t) => Math.min(m, t), Infinity);

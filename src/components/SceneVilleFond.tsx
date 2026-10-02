@@ -22,6 +22,8 @@ import type { ControleurSceneVille, ParametresVille } from "@/lib/ville3d/scene"
 interface ContexteScene {
   definirVille(params: ParametresVille): void;
   definirDate(date: Date | null): void;
+  /** « Voir où il est » (A-INTEGRER §25) : trajet de caméra + repère lumineux, sans effet tant que la 3D n'est pas prête. */
+  allerA(x: number, z: number): void;
 }
 
 const SceneVilleContext = createContext<ContexteScene | null>(null);
@@ -54,6 +56,9 @@ export function SceneVilleFond({ children }: { children: React.ReactNode }) {
     definirDate(date) {
       dateForceeRef.current = date;
       controleurRef.current?.definirDate(date);
+    },
+    allerA(x, z) {
+      controleurRef.current?.allerA(x, z);
     },
   };
 

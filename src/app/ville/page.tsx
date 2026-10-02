@@ -412,7 +412,7 @@ export default async function VillePage() {
           chantiers={etatMegaprojets}
         />
         <Technologies locale={locale} paliersDebloques={nbTechnologiesDebloquees ?? 0} pointsRecherche={pointsRecherche} />
-        <Monuments locale={locale} paliersDebloques={nbMonumentsDebloquesVille} influenceMax={ville.influence_max} />
+        <Monuments locale={locale} cleVille={ville.id} paliersDebloques={nbMonumentsDebloquesVille} influenceMax={ville.influence_max} />
         <div className="act">
           <span className="h3">{traduire(locale, "villes.visiter")}</span>
           <p>
