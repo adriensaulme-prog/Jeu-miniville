@@ -14,12 +14,29 @@ import { MODELES_IMMEUBLES, MODELES_MAISONS, MODELES_TOURS } from "@/lib/ville3d
  * sommets, une seule lumière directionnelle) : ce n'est pas la scène du
  * jeu (shaders/ombres/occlusion de scene.ts), juste assez pour juger
  * des formes, proportions et couleurs.
+ *
+ * Un SEUL WebGLRenderer pour toute la page (docs/A-INTEGRER.md §22) : la
+ * première version en créait un par vignette (15+ contextes WebGL
+ * simultanés), au-delà de la limite des navigateurs — les contextes en
+ * trop étaient perdus en silence (vignettes blanches ou partielles).
+ * Chaque modèle est maintenant rendu à tour de rôle sur ce renderer
+ * partagé, puis recopié dans le canvas 2D de sa vignette.
  */
 
 interface Fiche {
   id: string;
   construire: (...args: never[]) => unknown;
 }
+
+type TypeFamille = "maison" | "immeuble" | "tour";
+
+interface Entree {
+  fiche: Fiche;
+  type: TypeFamille;
+  taille: [number, number, number, number];
+}
+
+const TAILLE_VIGNETTE = 220;
 
 function versGeometrieSimple(g: Geo): THREE.BufferGeometry {
   const n = g.n;
@@ -48,142 +65,171 @@ function versGeometrieSimple(g: Geo): THREE.BufferGeometry {
   return geometry;
 }
 
-type TypeFamille = "maison" | "immeuble" | "tour";
+function construireGeometrie({ fiche, type, taille }: Entree): THREE.BufferGeometry {
+  const geo = new Geo();
+  const r = rngFrom("showroom|" + fiche.id);
+  // Tours montrées terminées (F = cap), pas en chantier : c'est la silhouette finale qu'on veut juger.
+  const args =
+    type === "tour"
+      ? [taille as unknown as never, "+z", 24, 24, r, [], 1]
+      : type === "immeuble"
+        ? [taille as unknown as never, "-z", 5, r, [], 1]
+        : [taille as unknown as never, "-z", r, [], 1];
+  (fiche.construire as (...a: unknown[]) => unknown)(geo, ...(args as unknown[]));
+  return versGeometrieSimple(geo);
+}
 
-function Vignette({
-  fiche,
-  nuit,
-  taille,
-  type,
-}: {
-  fiche: Fiche;
-  nuit: boolean;
-  taille: [number, number, number, number];
-  type: TypeFamille;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const geo = new Geo();
-    const r = rngFrom("showroom|" + fiche.id);
-    const args =
-      type === "tour"
-        ? [taille as unknown as never, "+z", 14, 24, r, [], 1]
-        : type === "immeuble"
-          ? [taille as unknown as never, "-z", 4, r, [], 1]
-          : [taille as unknown as never, "-z", r, [], 1];
-    (fiche.construire as (...a: unknown[]) => unknown)(geo, ...(args as unknown[]));
-    const geometry = versGeometrieSimple(geo);
-
-    const w = canvas.clientWidth || 220,
-      h = canvas.clientHeight || 220;
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(w, h, false);
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(nuit ? "#0b1530" : "#bcd8ef");
-
-    // Cadrage sur la vraie boîte englobante du modèle construit (pas sur
-    // la seule emprise au sol) : une tour de 20 étages ne tiendrait pas
-    // dans un cadrage pensé pour une maison d'un étage.
-    const sphere = geometry.boundingSphere ?? new THREE.Sphere();
-    const centre = sphere.center;
-    const rayon = Math.max(sphere.radius, 4);
-    const extent = rayon * 1.05;
-    const camera = new THREE.OrthographicCamera(-extent, extent, extent, -extent, 0.1, rayon * 10 + 50);
-    const dist = rayon * 2.4;
-    camera.position.set(centre.x + dist * 0.62, centre.y + dist * 0.92, centre.z + dist * 0.62);
-    camera.lookAt(centre);
-
-    const ambient = new THREE.AmbientLight(0xffffff, nuit ? 0.35 : 0.75);
-    scene.add(ambient);
-    const soleil = new THREE.DirectionalLight(0xffffff, nuit ? 0.25 : 1.1);
-    soleil.position.set(centre.x + rayon * 2, centre.y + rayon * 3, centre.z + rayon);
-    scene.add(soleil);
-
-    const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02 });
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-
-    let frame = 0;
-    let anim = 0;
-    const tick = () => {
-      anim += 0.006;
-      mesh.rotation.y = anim;
-      renderer.render(scene, camera);
-      frame = requestAnimationFrame(tick);
-    };
-    tick();
-
-    return () => {
-      cancelAnimationFrame(frame);
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-    };
-    // taille est une constante par vignette (jamais rappelée avec une autre valeur).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fiche, nuit, type]);
-
+function Vignette({ id, canvasRef }: { id: string; canvasRef: (el: HTMLCanvasElement | null) => void }) {
   return (
     <div className="showroom-vignette">
-      <canvas ref={canvasRef} style={{ width: "100%", height: 220, display: "block", borderRadius: 8 }} />
-      <p style={{ textAlign: "center", fontFamily: "monospace", fontSize: 13, margin: "4px 0" }}>{fiche.id}</p>
+      <canvas
+        ref={canvasRef}
+        width={TAILLE_VIGNETTE * 2}
+        height={TAILLE_VIGNETTE * 2}
+        style={{ width: "100%", height: TAILLE_VIGNETTE, display: "block", borderRadius: 8, background: "#bcd8ef" }}
+      />
+      <p style={{ textAlign: "center", fontFamily: "monospace", fontSize: 13, margin: "4px 0" }}>{id}</p>
     </div>
   );
 }
 
 function Section({
   titre,
-  fiches,
-  taille,
-  type,
-  nuit,
+  entrees,
+  enregistrer,
 }: {
   titre: string;
-  fiches: readonly Fiche[];
-  taille: [number, number, number, number];
-  type: TypeFamille;
-  nuit: boolean;
+  entrees: Entree[];
+  enregistrer: (id: string, el: HTMLCanvasElement | null) => void;
 }) {
   return (
     <section style={{ marginBottom: 32 }}>
       <h2 style={{ fontFamily: "sans-serif" }}>
-        {titre} ({fiches.length})
+        {titre} ({entrees.length})
       </h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-        {fiches.map((f) => (
-          <Vignette key={f.id} fiche={f} nuit={nuit} taille={taille} type={type} />
+        {entrees.map((e) => (
+          <Vignette key={e.fiche.id} id={e.fiche.id} canvasRef={(el) => enregistrer(e.fiche.id, el)} />
         ))}
       </div>
     </section>
   );
 }
 
+const ENTREES_MAISONS: Entree[] = MODELES_MAISONS.map((fiche) => ({
+  fiche,
+  type: "maison",
+  taille: [0, 0, 14.5, 14.5],
+}));
+const ENTREES_IMMEUBLES: Entree[] = MODELES_IMMEUBLES.map((fiche) => ({
+  fiche,
+  type: "immeuble",
+  taille: [0, 0, 14.5, 14.5],
+}));
+const ENTREES_TOURS: Entree[] = MODELES_TOURS.map((fiche) => ({
+  fiche,
+  type: "tour",
+  taille: [0, 0, 29, 29],
+}));
+const TOUTES_LES_ENTREES = [...ENTREES_MAISONS, ...ENTREES_IMMEUBLES, ...ENTREES_TOURS];
+
 export function ShowroomClient() {
   const [nuit, setNuit] = useState(false);
+  const [angle, setAngle] = useState(35);
+  const canvasParId = useRef(new Map<string, HTMLCanvasElement>());
+  const enregistrer = (id: string, el: HTMLCanvasElement | null) => {
+    if (el) canvasParId.current.set(id, el);
+    else canvasParId.current.delete(id);
+  };
+
+  useEffect(() => {
+    // Un seul renderer, un seul contexte WebGL, pour toute la page.
+    const taillePx = TAILLE_VIGNETTE * 2;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(taillePx, taillePx, false);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(nuit ? "#0b1530" : "#bcd8ef");
+    scene.add(new THREE.AmbientLight(0xffffff, nuit ? 0.35 : 0.75));
+    const soleil = new THREE.DirectionalLight(0xffffff, nuit ? 0.25 : 1.1);
+    scene.add(soleil);
+    // DoubleSide obligatoire : la géométrie de geometrie.ts a des quads
+    // horizontaux (toits, sols) enroulés face vers le bas, comme la vraie
+    // scène (scene.ts, "side: THREE.DoubleSide"). En FrontSide, murs et
+    // toits disparaissaient et il ne restait que des fragments.
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+    });
+
+    const geometries: THREE.BufferGeometry[] = [];
+    for (const entree of TOUTES_LES_ENTREES) {
+      const cible = canvasParId.current.get(entree.fiche.id);
+      const ctx = cible?.getContext("2d");
+      if (!cible || !ctx) continue;
+
+      const geometry = construireGeometrie(entree);
+      geometries.push(geometry);
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      // Cadrage sur la vraie boîte englobante du modèle construit : une tour
+      // de 20 étages ne tient pas dans un cadrage pensé pour une maison.
+      const sphere = geometry.boundingSphere ?? new THREE.Sphere();
+      const rayon = Math.max(sphere.radius, 4);
+      const extent = rayon * 1.05;
+      const camera = new THREE.OrthographicCamera(-extent, extent, extent, -extent, 0.1, rayon * 10 + 50);
+      const a = (angle * Math.PI) / 180;
+      const dist = rayon * 2.4;
+      camera.position.set(
+        sphere.center.x + Math.sin(a) * dist * 0.88,
+        sphere.center.y + dist * 0.92,
+        sphere.center.z + Math.cos(a) * dist * 0.88
+      );
+      camera.lookAt(sphere.center);
+      soleil.position.set(sphere.center.x + rayon * 2, sphere.center.y + rayon * 3, sphere.center.z + rayon);
+
+      renderer.render(scene, camera);
+      ctx.clearRect(0, 0, cible.width, cible.height);
+      ctx.drawImage(renderer.domElement, 0, 0, cible.width, cible.height);
+
+      scene.remove(mesh);
+    }
+
+    return () => {
+      for (const g of geometries) g.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+    };
+  }, [nuit, angle]);
+
   return (
     <div
       className="screen"
       style={{ padding: 24, background: nuit ? "#12141a" : "#f4f2ec", minHeight: "100vh", pointerEvents: "auto" }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
         <h1 style={{ fontFamily: "sans-serif" }}>Showroom — bibliothèque de bâtiments</h1>
         <button onClick={() => setNuit((n) => !n)} style={{ padding: "6px 14px", cursor: "pointer" }}>
           {nuit ? "☀️ Jour" : "🌙 Nuit"}
         </button>
+        <label style={{ fontFamily: "sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
+          Rotation
+          <input type="range" min={0} max={360} value={angle} onChange={(e) => setAngle(Number(e.target.value))} />
+        </label>
       </div>
       <p style={{ fontFamily: "sans-serif", maxWidth: 700 }}>
         Outil de développement, jamais dans le jeu publié (docs/BATIMENTS-ET-PACKS.md §2). Rendu simplifié (couleurs de
-        sommets, une seule lumière) — pas la scène finale du jeu, juste de quoi valider formes et proportions.
+        sommets, une seule lumière) — pas la scène finale du jeu, juste de quoi valider formes et proportions. Le
+        curseur de rotation est un outil de maquette, pas une fonction du jeu.
       </p>
-      <Section titre="Maisons" fiches={MODELES_MAISONS} taille={[0, 0, 14.5, 14.5]} type="maison" nuit={nuit} />
-      <Section titre="Immeubles" fiches={MODELES_IMMEUBLES} taille={[0, 0, 14.5, 14.5]} type="immeuble" nuit={nuit} />
-      <Section titre="Tours" fiches={MODELES_TOURS} taille={[0, 0, 29, 29]} type="tour" nuit={nuit} />
+      <Section titre="Maisons" entrees={ENTREES_MAISONS} enregistrer={enregistrer} />
+      <Section titre="Immeubles" entrees={ENTREES_IMMEUBLES} enregistrer={enregistrer} />
+      <Section titre="Tours" entrees={ENTREES_TOURS} enregistrer={enregistrer} />
     </div>
   );
 }

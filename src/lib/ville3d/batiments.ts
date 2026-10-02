@@ -1001,7 +1001,8 @@ function construireImmeubleHaussmannien(
     m: MAT.APART,
     front,
     frontM: MAT.APART_FRONT,
-    top: false,
+    topM: MAT.FLATROOF,
+    topC: zincC,
     seed,
     base: y0,
   });

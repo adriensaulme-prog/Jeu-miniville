@@ -1027,3 +1027,19 @@ ne gère ni les échecs de création de contexte ni l'événement
    unique de `scene.ts`) — si oui, la richesse visuelle des modèles
    eux-mêmes n'a pas encore pu être jugée par Adrien, il faudra
    redemander son avis une fois le showroom réparé.
+
+**Traité le 02/10/2026 (Claude Code)** : cause confirmée en deux temps.
+(1) Un `WebGLRenderer` par vignette (15+ contextes) : remplacé par UN
+seul renderer partagé, chaque modèle rendu à tour de rôle puis recopié
+dans un canvas 2D (`src/app/dev/showroom/ShowroomClient.tsx`). (2) Une
+fois toutes les vignettes affichées, il restait des fragments : le
+matériau du showroom était à une seule face alors que la géométrie du
+jeu a des toits/sols enroulés vers le bas (la vraie scène utilise
+`DoubleSide`, `scene.ts`) — corrigé. Les tours sont désormais montrées
+terminées (pas en chantier) et un curseur de rotation (outil de maquette
+uniquement) a été ajouté. Le rendu dans une vraie ville (`/ville`,
+`/villes`, accueil) n'était pas touché : vérifié correct plus tôt.
+Le showroom a aussi révélé un vrai défaut : un trou dans le toit de
+`immeuble-haussmannien` (dessus de la façade non fermé), corrigé.
+Rendu simplifié : pas de textures de fenêtres dans le showroom, donc
+les façades y paraissent unies — normal, ce n'est pas la scène du jeu.
