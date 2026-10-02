@@ -3938,6 +3938,58 @@ exécution complète de la migration puis `notify pgrst, 'reload schema'`.
 
 ---
 
+### Parcours de découverte des nouveaux joueurs (A-INTEGRER §26 F) — 02/10/2026
+
+**Contexte.** Proposition F du §26 (idée de Claude chat, validée par
+Adrien) : avec 7 activités, des jauges, des monuments, des mégaprojets,
+la guerre… un nouveau joueur arrive sans aucun guide progressif. Le §26
+laissait « combien d'étapes, quels écrans » à spécifier : choix de Claude
+Code ci-dessous, tous réglables.
+
+**Fait.**
+- *Une carte non bloquante* (`GuideDecouverte`), en haut au centre sous la
+  barre (en haut pleine largeur sur mobile, où les panneaux sont en bas),
+  **5 étapes courtes, une idée chacune** : (1) sa ville, (2) visiter —
+  avec lien vers « Villes », (3) choisir une activité après une visite,
+  (4) agir sur les autres (influence, jumelage, AntiVille), (5) le pays et
+  les règles — avec lien vers « Règles ». Boutons « Suivant » /
+  « Passer le guide » (« Terminer » à la dernière).
+- *Qui le voit* : les comptes **créés il y a moins de 14 jours**
+  (`estNouveauJoueur`, lu sur `user.created_at` dans `Nav`), sur les
+  écrans du jeu seulement (Ma ville, Villes, Jumelages, Classement,
+  Palmarès, Pays) — jamais sur l'accueil, la connexion, la création de
+  ville, les écrans de rattrapage ni les règles.
+- *Mémoire* : **localStorage** (`jeu-miniville-guide` : numéro d'étape ou
+  `fini`), donc **aucune migration** et aucune donnée serveur. Conséquence
+  assumée : par appareil — un joueur qui change de téléphone revoit le
+  guide, et vider le navigateur le relance. La progression suit le joueur
+  d'une page à l'autre et survit au rechargement.
+- *Revoir le guide* : bouton en bas de la page `/regles` (remet à
+  l'étape 1 et renvoie sur « Ma ville »). C'est aussi la seule façon pour
+  un compte de plus de 14 jours de le lire.
+- Textes **FR + EN** dans le dictionnaire.
+- `playwright.config.ts` marque le guide « fini » par défaut pour tous
+  les tests (comptes neufs => la carte recouvrirait les écrans testés) ;
+  `guide-decouverte.spec.ts` repart d'un navigateur vierge.
+
+**Pas fait (volontairement).** Pas de pointage d'éléments précis de
+l'écran (« regarde ce bouton »), pas de blocage tant qu'une étape n'est
+pas accomplie, pas de détection de l'action réelle du joueur (la carte
+avance au clic sur « Suivant », pas quand il visite vraiment). Une v2
+pourrait suivre les actions réelles (première visite, premier choix
+d'activité) si Adrien juge ce guide trop passif. Pas de test e2e d'un
+compte « ancien » : on ne peut pas antidater `auth.users` via l'API,
+l'ancienneté est couverte en test unitaire.
+
+**Testé.** `tests/unit/guide.test.ts` (3) : textes FR + EN de chaque étape,
+écrans concernés, fenêtre de 14 jours. `tests/e2e/guide-decouverte.spec.ts`
+(1 scénario complet) : pas de carte sur la connexion ; étape 1/5 à la
+première arrivée sur Ma ville ; progression conservée après un changement
+de page et un rechargement ; Terminer définitif ; Revoir le guide ;
+Passer définitif. Captures vérifiées à l'œil, desktop et mobile (390 px).
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

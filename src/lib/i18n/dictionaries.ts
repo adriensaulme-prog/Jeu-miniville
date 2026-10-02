@@ -82,6 +82,22 @@ export const dictionaries = {
     "villes.dejaVisitee": "Indisponible pour l'instant",
     "villes.revisiterDans": "Revisiter dans",
     "visite.plusUne": "+1 visite",
+    "guide.titre": "Guide de démarrage",
+    "guide.etape1": "Bienvenue ! Voici ta ville : elle grandit quand les autres joueurs la visitent, et quand tu visites la leur.",
+    "guide.etape2":
+      "Ouvre l'onglet Villes et choisis une ville : au bout de quelques secondes, ta visite est comptée toute seule (+1 pour elle).",
+    "guide.etape3":
+      "Juste après une visite, choisis une activité : elle fait monter les jauges de la ville visitée (Commerce, Industrie, Loisirs…).",
+    "guide.etape4":
+      "Sur la page d'une ville, tu peux aussi l'influencer, te jumeler avec elle… ou lui jouer des tours (AntiVille). Tes quotas du jour sont affichés.",
+    "guide.etape5":
+      "Ton pays compte aussi : l'onglet Pays te laisse voter et peser sur le monde. Toutes les règles sont dans « Règles », en haut.",
+    "guide.lienVilles": "Aller aux Villes",
+    "guide.lienRegles": "Lire les règles",
+    "guide.suivant": "Suivant",
+    "guide.passer": "Passer le guide",
+    "guide.terminer": "Terminer",
+    "guide.revoir": "Revoir le guide de démarrage",
     "regles.titre": "Règles du jeu",
     "regles.intro": "L'essentiel pour bien démarrer. Les autres chapitres arrivent au fil des versions.",
     "nav.regles": "Règles",
@@ -484,6 +500,22 @@ export const dictionaries = {
     "villes.dejaVisitee": "Not available right now",
     "villes.revisiterDans": "Revisit in",
     "visite.plusUne": "+1 visit",
+    "guide.titre": "Getting started",
+    "guide.etape1": "Welcome! This is your city: it grows when other players visit it, and when you visit theirs.",
+    "guide.etape2":
+      "Open the Cities tab and pick a city: after a few seconds, your visit is counted automatically (+1 for it).",
+    "guide.etape3":
+      "Right after a visit, pick an activity: it raises the gauges of the visited city (Commerce, Industry, Leisure…).",
+    "guide.etape4":
+      "On a city's page you can also influence it, twin with it… or play tricks on it (AntiCity). Your daily quotas are shown.",
+    "guide.etape5":
+      "Your country matters too: the Country tab lets you vote and weigh on the world. All the rules are under “Rules”, at the top.",
+    "guide.lienVilles": "Go to Cities",
+    "guide.lienRegles": "Read the rules",
+    "guide.suivant": "Next",
+    "guide.passer": "Skip the guide",
+    "guide.terminer": "Finish",
+    "guide.revoir": "Replay the getting-started guide",
     "regles.titre": "Game rules",
     "regles.intro": "The essentials to get started. More chapters will come with later versions.",
     "nav.regles": "Rules",

@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { deconnexion } from "@/lib/supabase/auth-actions";
 import { LangSwitcher } from "./LangSwitcher";
 import { NavTabs } from "./NavTabs";
+import { GuideDecouverte } from "./GuideDecouverte";
+import { estNouveauJoueur } from "@/lib/game/guide";
 
 export async function Nav() {
   const locale = await getLocale();
@@ -35,6 +37,7 @@ export async function Nav() {
         </div>
       </header>
       {user ? <NavTabs locale={locale} className="tabbar" tabClassName="tab" /> : null}
+      {user ? <GuideDecouverte locale={locale} nouveauJoueur={estNouveauJoueur(user.created_at)} /> : null}
     </>
   );
 }

@@ -1432,6 +1432,12 @@ d'un coup) pour réduire le risque d'abandon avant que la boucle de jeu
 soit comprise. Portée exacte (combien d'étapes, quels écrans couvrir)
 à spécifier avec Adrien quand ce chantier est pris.
 
+**Traité le 02/10/2026 (Claude Code), deuxième des six chantiers du
+§26** : guide de démarrage en 5 étapes (carte non bloquante, comptes de
+moins de 14 jours, mémoire locale, « Revoir le guide » sur `/regles`),
+sans migration — détail et choix dans `DECISIONS.md` §4 « Parcours de
+découverte des nouveaux joueurs ».
+
 ---
 
 ## 27. Plafond de visites à 8, feedback de visite + choix immédiat, bouton règles du jeu (demande d'Adrien, 02/10/2026)

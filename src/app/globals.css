@@ -406,6 +406,46 @@ body {
   line-height: 1.45;
   color: var(--muted);
 }
+.guide {
+  position: fixed;
+  z-index: 6;
+  top: calc(var(--topbar) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100% - 32px));
+  box-sizing: border-box;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--focus);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.guide p {
+  margin: 0;
+}
+.guide-etape {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.guide-texte {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.guide-lien {
+  font-size: 13.5px;
+  color: var(--focus);
+}
+.guide-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .center-card.regles {
   width: min(720px, calc(100% - 32px));
   margin: 72px auto 96px;

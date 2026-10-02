@@ -30,6 +30,16 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://localhost:3000",
+    // Le guide de démarrage (A-INTEGRER §26 F) s'affiche aux comptes récents,
+    // donc à tous les comptes de test : on le marque « fini » par défaut pour
+    // qu'il ne recouvre pas les écrans testés (tests/e2e/guide-decouverte.spec.ts
+    // le réactive explicitement).
+    storageState: {
+      cookies: [],
+      origins: [
+        { origin: "http://localhost:3000", localStorage: [{ name: "jeu-miniville-guide", value: "fini" }] },
+      ],
+    },
     trace: "on-first-retry",
   },
   webServer: {

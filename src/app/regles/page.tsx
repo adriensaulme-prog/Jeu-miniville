@@ -1,5 +1,6 @@
 import { getLocale, traduire } from "@/lib/i18n";
 import { SECTIONS_REGLES } from "@/lib/game/regles";
+import { RevoirGuide } from "@/components/RevoirGuide";
 
 /**
  * Règles du jeu (docs/A-INTEGRER.md §27 C) — page publique, lisible sans
@@ -21,6 +22,9 @@ export default async function ReglesPage() {
             ))}
           </section>
         ))}
+        <div>
+          <RevoirGuide locale={locale} />
+        </div>
       </article>
     </main>
   );
