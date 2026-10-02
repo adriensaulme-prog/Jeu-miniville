@@ -30,9 +30,9 @@ async function creerCompteAvecVille(prefixe: string) {
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: "FR",
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
   });
   if (erreurVille) {
     throw new Error(`Impossible de créer la ville de ${prefixe} : ${erreurVille.message}`);
@@ -120,8 +120,17 @@ test.describe("Bibliothèque de bâtiments (4/4) — thème Haussmannien", () =>
       await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
       await expect(page.locator("select[name=theme]")).toHaveValue("haussmannien");
 
-      const { data: ville } = await supabaseAdmin.from("cities").select("theme").eq("id", maire.villeId).single();
-      expect(ville?.theme).toBe("haussmannien");
+      // L'URL ne change pas (même page) : l'action serveur peut encore
+      // tourner quand on arrive ici, on attend donc la valeur en base.
+      await expect
+        .poll(
+          async () => {
+            const { data } = await supabaseAdmin.from("cities").select("theme").eq("id", maire.villeId).single();
+            return data?.theme;
+          },
+          { timeout: 15_000 }
+        )
+        .toBe("haussmannien");
     } finally {
       await supprimerCompte(maire.userId);
     }

@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { traduire, type DictionaryKey, type Locale } from "@/lib/i18n/dictionaries";
 import { useSceneVille } from "@/components/SceneVilleFond";
+import { IndicationDisponibilite } from "@/components/ChampNom";
+import { PSEUDO_MAX, VILLE_MAX } from "@/lib/game/nomsUniques";
 import { creerVille, type EtatCreationVille } from "./actions";
 
 type Pays = { id: string; nom: string };
@@ -30,6 +32,7 @@ export function CreerVilleForm({
   regions: Region[];
 }) {
   const [etat, action] = useActionState<EtatCreationVille, FormData>(creerVille, null);
+  const [pseudo, setPseudo] = useState("");
   const [nomVille, setNomVille] = useState("");
   const [paysChoisi, setPaysChoisi] = useState("");
   const { definirVille } = useSceneVille();
@@ -46,7 +49,16 @@ export function CreerVilleForm({
     <form action={action} className="field">
       <div className="field">
         <label htmlFor="pseudo">{traduire(locale, "creationVille.pseudo")}</label>
-        <input id="pseudo" name="pseudo" required maxLength={40} className="input" />
+        <input
+          id="pseudo"
+          name="pseudo"
+          required
+          maxLength={PSEUDO_MAX}
+          className="input"
+          value={pseudo}
+          onChange={(e) => setPseudo(e.target.value)}
+        />
+        <IndicationDisponibilite locale={locale} type="pseudo" valeur={pseudo} />
       </div>
       <div className="field">
         <label htmlFor="nomVille">{traduire(locale, "creationVille.nomVille")}</label>
@@ -55,12 +67,13 @@ export function CreerVilleForm({
             id="nomVille"
             name="nomVille"
             required
-            maxLength={40}
+            maxLength={VILLE_MAX}
             value={nomVille}
             onChange={(e) => setNomVille(e.target.value)}
             placeholder={traduire(locale, "creationVille.nomVille")}
           />
         </div>
+        <IndicationDisponibilite locale={locale} type="ville" valeur={nomVille} />
       </div>
       <div className="field">
         <label htmlFor="countryId">{traduire(locale, "creationVille.pays")}</label>

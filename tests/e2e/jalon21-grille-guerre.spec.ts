@@ -35,9 +35,9 @@ async function creerCompteAvecVille(prefixe: string, paysId: string, population 
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: paysId,
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
     p_region_id: null,
   });
   if (erreurVille) {
@@ -264,7 +264,7 @@ test.describe("Jalon 21 — grille effet unitaire/cumul/plafond/paliers appliqu�
 
   test("la page /pays affiche le palier visible et les journées gagnées d'un conflit en cours", async ({ page }) => {
     test.setTimeout(90_000);
-    const presidente = await creerCompteAvecVille("j21-ui-pres", "IE", 9_000_000);
+    const presidente = await creerCompteAvecVille("j21-ui-pres", "IE", 400_000);
     try {
       await supabaseAdmin.rpc("verifier_president", { p_country_id: "IE" });
       const { error: erreurConflit } = await supabaseAdmin.from("conflits").insert({

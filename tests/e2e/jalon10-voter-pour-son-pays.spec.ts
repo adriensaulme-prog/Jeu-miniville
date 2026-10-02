@@ -34,9 +34,9 @@ async function creerCompteAvecVille(prefixe: string, paysId = "FR", regionId = "
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: paysId,
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
     p_region_id: regionId,
   });
   if (erreurVille) {

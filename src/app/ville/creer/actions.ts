@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { validerNomVille, validerPseudo } from "@/lib/game/nomsUniques";
 
 export type EtatCreationVille = { erreur: string } | null;
 
@@ -35,6 +36,13 @@ export async function creerVille(
     return { erreur: "creationVille.erreurChamps" };
   }
 
+  // Règles de format (longueur, noms réservés, mots interdits) : voir
+  // src/lib/game/nomsUniques.ts. L'unicité, elle, est garantie par la base.
+  const erreurFormat = validerPseudo(pseudo) ?? validerNomVille(nomVille);
+  if (erreurFormat) {
+    return { erreur: `nom.erreur.${erreurFormat}` };
+  }
+
   const { error } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: user.id,
     p_pseudo: pseudo,
@@ -49,6 +57,8 @@ export async function creerVille(
     if (error.code === "23505") {
       redirect("/ville");
     }
+    if (error.code === "P0027") return { erreur: "nom.erreur.pseudoPris" };
+    if (error.code === "P0028") return { erreur: "nom.erreur.villePris" };
     return { erreur: "creationVille.erreurGenerique" };
   }
 

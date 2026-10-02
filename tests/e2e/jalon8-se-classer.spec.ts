@@ -43,9 +43,9 @@ async function creerCompteAvecVille(
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: paysId,
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
     p_region_id: regionId,
   });
   if (erreurVille) {
@@ -190,10 +190,10 @@ test.describe("Jalon 8 — se classer", () => {
     // population que le joueur qui va se connecter : sert à vérifier
     // l'ordre relatif sans dépendre du contenu exact des autres villes
     // (de test ou réelles) déjà en base.
-    const moi = await creerCompteAvecVille("classement-moi", "FR", "fr-idf", 5_000_000);
-    const memeRegionPlusPetite = await creerCompteAvecVille("classement-idf-petite", "FR", "fr-idf", 1_000_000);
-    const memePaysAutreRegion = await creerCompteAvecVille("classement-fr-bretagne", "FR", "fr-bre", 4_000_000);
-    const autrePays = await creerCompteAvecVille("classement-allemagne", "DE", "de-by", 9_000_000);
+    const moi = await creerCompteAvecVille("classement-moi", "FR", "fr-idf", 600_000);
+    const memeRegionPlusPetite = await creerCompteAvecVille("classement-idf-petite", "FR", "fr-idf", 300_000);
+    const memePaysAutreRegion = await creerCompteAvecVille("classement-fr-bretagne", "FR", "fr-bre", 500_000);
+    const autrePays = await creerCompteAvecVille("classement-allemagne", "DE", "de-by", 700_000);
 
     try {
       await connecter(page, moi.email, moi.motDePasse);
@@ -204,7 +204,7 @@ test.describe("Jalon 8 — se classer", () => {
       const rangDans = async (filtreColonne: "country_id" | "region_id" | null, valeur: string | null) => {
         let requete = supabaseAdmin.from("cities").select("id", { count: "exact", head: true });
         if (filtreColonne) requete = requete.eq(filtreColonne, valeur!);
-        const { count } = await requete.gt("population", 5_000_000);
+        const { count } = await requete.gt("population", 600_000);
         return (count ?? 0) + 1;
       };
       const rangMondial = await rangDans(null, null);

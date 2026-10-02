@@ -32,9 +32,9 @@ async function creerCompteAvecVille(prefixe: string, paysId: string, regionId: s
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: paysId,
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
     p_region_id: regionId,
   });
   if (erreurVille) {
@@ -74,7 +74,7 @@ test.describe("Jalon 9 ter — la carte du pays", () => {
     // habituels sur un serveur qui vient de démarrer (même cause que
     // Jalon 9, 10 et 11, voir DECISIONS.md §4).
     test.setTimeout(90_000);
-    const joueur = await creerCompteAvecVille("carte-fr", "FR", "fr-bre", 9_000_000);
+    const joueur = await creerCompteAvecVille("carte-fr", "FR", "fr-bre", 400_000);
     try {
       await connecter(page, joueur.email, joueur.motDePasse);
       await expect(page).toHaveURL(/\/ville$/, { timeout: 40_000 });

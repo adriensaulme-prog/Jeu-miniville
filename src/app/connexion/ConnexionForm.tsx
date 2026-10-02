@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
@@ -17,15 +17,26 @@ export function ConnexionForm({
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  // Le bouton reste désactivé tant que React n'a pas hydraté le
+  // formulaire : un clic trop précoce (test automatisé, connexion très
+  // lente) lancerait une soumission native au lieu de envoyer(), et la
+  // page se rechargerait sans connecter personne. Playwright attend
+  // qu'un bouton soit actif avant de cliquer.
+  const [pret, setPret] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const motDePasseRef = useRef<HTMLInputElement>(null);
+  useEffect(() => setPret(true), []);
 
   async function envoyer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErreur(null);
     setEnCours(true);
 
+    // Valeurs lues dans le DOM (pas seulement dans l'état) : une saisie
+    // faite avant l'hydratation n'a jamais déclenché onChange.
     const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: motDePasse,
+      email: emailRef.current?.value ?? email,
+      password: motDePasseRef.current?.value ?? motDePasse,
     });
 
     setEnCours(false);
@@ -45,6 +56,7 @@ export function ConnexionForm({
         <label htmlFor="connexionEmail">{traduire(locale, "connexion.email")}</label>
         <input
           id="connexionEmail"
+          ref={emailRef}
           className="input"
           type="email"
           required
@@ -57,6 +69,7 @@ export function ConnexionForm({
         <label htmlFor="connexionMotDePasse">{traduire(locale, "connexion.motDePasse")}</label>
         <input
           id="connexionMotDePasse"
+          ref={motDePasseRef}
           className="input"
           type="password"
           required
@@ -66,7 +79,7 @@ export function ConnexionForm({
         />
       </div>
       {erreur ? <p className="note" style={{ color: "var(--bad)" }}>{erreur}</p> : null}
-      <button type="submit" disabled={enCours} className="btn primary block">
+      <button type="submit" disabled={enCours || !pret} className="btn primary block">
         {traduire(locale, "connexion.bouton")}
       </button>
     </form>

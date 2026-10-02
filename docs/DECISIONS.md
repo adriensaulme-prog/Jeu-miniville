@@ -3448,6 +3448,72 @@ encore envoyée/appliquée au moment de l'écriture.
 
 ---
 
+### Noms uniques (pseudos et villes) + fiabilisation de la suite e2e — 02/10/2026
+
+**Noms uniques** (`docs/A-INTEGRER.md` §8, règle ferme d'Adrien du
+24/09/2026, oubliée depuis le Jalon 8 — §10 point 26 ; même histoire que
+le niveau Mégapole : validée, jamais codée). Migration `0035` :
+`nom_normalise()` (minuscules, sans accents, uniquement a-z0-9),
+colonnes générées `users.pseudo_normalise` / `cities.nom_normalise`,
+index uniques, `nom_disponible()` ("✓ disponible / ✗ déjà pris" à la
+saisie), `renommer_pseudo()` / `renommer_ville()`, `creer_ville()`
+redéfinie (erreurs dédiées **P0027** pseudo pris, **P0028** nom de ville
+pris). Doublons existants : le plus ancien garde le nom, les autres sont
+marqués `*_a_changer` (exclus de l'index) et passent par l'écran de
+rattrapage `/ville/noms` à leur prochaine page de jeu
+(`exigerRegionChoisie()` étendue). Création : indication de disponibilité
+sous les champs, pseudo limité à 20 caractères, noms réservés et mots
+interdits refusés (`src/lib/game/nomsUniques.ts`).
+
+*Écarts assumés avec la lettre du §8, à contester si besoin* : (1) pas
+d'extension `unaccent` (non IMMUABLE donc inutilisable dans une colonne
+générée indexée, et son schéma varie selon le projet Supabase) — une
+translittération explicite des lettres latines accentuées la remplace,
+vérifiée identique en SQL et en TypeScript par un test de parité ; (2)
+les règles de FORMAT (3-20 caractères, réservés, interdits) sont
+appliquées dans l'application, pas dans `creer_ville()`, que les specs
+et scripts appellent directement — seule l'UNICITÉ est garantie par la
+base. Pas de test « retirer l'index fait échouer » (pas d'accès psql) :
+les assertions de collision échouent d'elles-mêmes sans l'index.
+
+*Correctif découvert en chemin* : la contrainte `cities_niveau_check`
+(migration 0001) plafonnait encore `niveau` à 5, la migration `0031`
+(Mégapole, niveau 6) ne l'ayant jamais élargie — toute ville à 250 000
+habitants ou plus faisait échouer sa mise à jour. Le journal e2e
+affichait ce message depuis des jours sans que je le relève. Corrigé
+dans `0035`.
+
+**Fiabilisation de la suite e2e** — la « flakiness de connexion »
+invoquée à chaque run depuis le Jalon 6bis n'en était pas une, et je
+l'avais écartée trop vite (y compris dans les entrées précédentes
+d'aujourd'hui). Causes réelles, toutes corrigées : (a) `/ville` enchaîne
+**~26 appels Supabase séquentiels** (31 pour `/villes`) à 100-400 ms
+chacun — plusieurs secondes de rendu, donc le `toHaveURL` de 5 s tombait
+; délai d'assertion porté à 20 s et de test à 60 s (`playwright.config.ts`)
+**en attendant de paralléliser ces appels** (tâche proposée à part, vraie
+amélioration pour les joueurs) ; (b) serveur de dev lancé à froid :
+préchauffage des pages (`tests/e2e/prechauffage.ts`) ; (c) des villes de
+test à **9 000 000 d'habitants** (près de 1 800 blocs à générer côté
+navigateur — le point ouvert §10 n°19 « plafond de rendu » n'est donc pas
+théorique) bloquaient la page ; ramenées à 400 000 ; (d) formulaire de
+connexion : clic possible avant l'hydratation de React (bouton désactivé
+jusque-là, valeurs lues dans le DOM) ; (e) helper de délai anti-rafale
+reculé de 2 s pile (la limite) à 10 s ; (f) `getByText("1")` par
+sous-chaîne qui matchait le rang « 31 » ; (g) lecture en base avant la
+fin d'une action serveur (attente active). Les specs créent maintenant
+leurs comptes avec un suffixe aléatoire (sinon un compte oublié par un
+run raté bloquerait le suivant). Résultat : de 12 échecs + 14 non
+exécutés à 98 verts sur 99 (le dernier, un test à correspondance par
+sous-chaîne, corrigé depuis).
+
+**Testé.** `tests/unit/nomsUniques.test.ts` (9 tests) ;
+`tests/e2e/noms-uniques.spec.ts` (7 tests : parité SQL/TypeScript,
+collisions casse/accent/tiret/espace, création simultanée, disponibilité,
+renommage, seed sans collision). Pas encore lancés : migration `0035`
+pas encore appliquée au moment de l'écriture.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -3787,7 +3853,9 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     Question encore ouverte pour Adrien (`docs/CLASSEMENTS.md` §6,
     question 4 — la question 3 est tranchée, l'absence de classement des
     attaquants) : d'autres classements annexes en tête ?
-26. **Noms uniques (pseudos et villes) pas encore faits.**
+26. **Noms uniques (pseudos et villes)** — **[Codé le 02/10/2026,
+    migration `0035`, voir §4 ; en attente d'application par Adrien.]**
+    Ancien texte : pas encore faits.
     `docs/A-INTEGRER.md` §8 demandait cette règle **dans le Jalon 8**
     ("qui touche déjà l'écran de création"), mais le contenu réel de ce
     jalon a été fixé par `docs/CLASSEMENTS.md` (régions + classements)

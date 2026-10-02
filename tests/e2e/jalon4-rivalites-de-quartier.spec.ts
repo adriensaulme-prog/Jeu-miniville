@@ -35,9 +35,9 @@ async function creerCompteAvecVille(prefixe: string) {
 
   const { data: ville, error: erreurVille } = await supabaseAdmin.rpc("creer_ville", {
     p_owner_id: userId,
-    p_pseudo: prefixe,
+    p_pseudo: `${prefixe}-${Math.random().toString(36).slice(2, 6)}`,
     p_country_id: "FR",
-    p_nom_ville: `${prefixe}-ville`,
+    p_nom_ville: `${prefixe}-ville-${Math.random().toString(36).slice(2, 6)}`,
   });
   if (erreurVille) {
     throw new Error(`Impossible de créer la ville de ${prefixe} : ${erreurVille.message}`);
@@ -57,7 +57,7 @@ async function supprimerCompte(userId: string) {
 async function debloquerDelaiAntiVille(attaquantId: string) {
   await supabaseAdmin
     .from("actions_antiville")
-    .update({ created_at: new Date(Date.now() - 2000).toISOString() })
+    .update({ created_at: new Date(Date.now() - 10_000).toISOString() })
     .eq("attaquant_id", attaquantId);
 }
 

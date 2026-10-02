@@ -64,8 +64,12 @@ test.describe("Jalon 1 — naître quelque part", () => {
     // fois, voir DECISIONS.md §4, Jalon 7bis).
     await expect(page).toHaveURL(/\/ville\/creer$/, { timeout: 20_000 });
 
-    await page.getByLabel("Ton pseudo").fill("Testeur");
-    await page.getByLabel("Nom de ta ville").fill("Testopolis");
+    // Noms uniques (migration 0035) : suffixe aléatoire, sinon un compte oublié par un
+    // run précédent bloquerait celui-ci.
+    const suffixe = Math.random().toString(36).slice(2, 6);
+    const nomDeVille = `Testopolis${suffixe}`;
+    await page.getByLabel("Ton pseudo").fill(`Testeur${suffixe}`);
+    await page.getByLabel("Nom de ta ville").fill(nomDeVille);
     await page.getByLabel("Pays").selectOption({ label: "France" });
     // Le sélecteur de région n'apparaît qu'une fois un pays choisi
     // (Jalon 8, CreerVilleForm.tsx) — voir tests/e2e/jalon8-se-classer.spec.ts
@@ -74,7 +78,7 @@ test.describe("Jalon 1 — naître quelque part", () => {
     await page.getByRole("button", { name: "Fonder ma ville" }).click();
 
     await expect(page).toHaveURL(/\/ville$/);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Testopolis");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(nomDeVille);
     // Ancré en début de texte : la ligne de région ("Région :
     // Île-de-France ·", Jalon 8) contient aussi "France ·" en sous-chaîne.
     await expect(page.getByText(/^France · \d{2}:\d{2}/)).toBeVisible();
