@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { getLocale, traduire } from "@/lib/i18n";
 import type { DictionaryKey } from "@/lib/i18n/dictionaries";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
@@ -9,25 +7,11 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { exigerRegionChoisie } from "@/lib/supabase/gardes";
 import { debutSemaineIso } from "@/lib/game/semaineIso";
 import { palierGuerre } from "@/lib/game/conflits";
-import { CartePays, type CarteRegionDonnees, type MarqueurVille } from "./CartePays";
 import { SelecteurPays } from "./SelecteurPays";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { voterPays, proposerDecisionDiplomatique, soutenirDecisionDiplomatique } from "./actions";
 
 const TAILLE_TOP = 10;
-
-/** Carte pré-générée (scripts/generer-cartes-pays.mjs, Jalon 9 ter) —
- * absente pour ~16 très petits territoires (hors couverture des
- * données sources) : page.tsx retombe alors sur une simple vignette,
- * comme prévu par docs/CARTE-DU-PAYS.md §2 pour "les petits pays". */
-async function chargerCarte(countryId: string): Promise<{ viewBox: string; regions: CarteRegionDonnees[] } | null> {
-  try {
-    const contenu = await readFile(path.join(process.cwd(), "src/data/cartes", `${countryId}.json`), "utf8");
-    return JSON.parse(contenu);
-  } catch {
-    return null;
-  }
-}
 
 type StatsPays = {
   nb_villes: number;
@@ -82,6 +66,25 @@ type ConflitPays = {
   jours_gagnes_attaquant: number;
   jours_gagnes_defenseur: number;
   cout_ressources: Partial<Record<Categorie, number>>;
+};
+
+type StatutSemaine = "paix" | "guerre" | "allie";
+type LigneHistorique = {
+  semaine: string;
+  vote_categorie: Categorie | null;
+  vote_nb: number | null;
+  decision_categorie: CategorieDiplomatie | null;
+  decision_cible: string | null;
+  decision_adoptee: boolean | null;
+  decision_pour: number | null;
+  decision_contre: number | null;
+  conflit_id: string | null;
+  conflit_role: "attaquant" | "defenseur" | null;
+  conflit_adversaire: string | null;
+  conflit_statut: StatutConflit | null;
+  conflit_resultat: ResultatConflit | null;
+  pertes_pays: number | null;
+  pertes_adversaire: number | null;
 };
 
 type MandatBrut = {
@@ -152,65 +155,6 @@ export default async function PaysPage({
     fin: m.fin,
   }));
   const mandatActuel = mandats.find((m) => m.fin === null) ?? null;
-
-  // Carte du pays (Jalon 9 ter) : population par région (couleur),
-  // ville la plus peuplée de chaque région ("couronne"), et régions de
-  // "ma ville" / de la présidente pour les pastilles.
-  const carte = await chargerCarte(countryId);
-  const { data: toutesLesVillesBrutes } = await supabase
-    .from("cities")
-    .select("id, nom, population, region_id")
-    .eq("country_id", countryId);
-  type VilleRegion = { id: string; nom: string; population: number; region_id: string | null };
-  const toutesLesVilles = (toutesLesVillesBrutes ?? []) as VilleRegion[];
-
-  const populationParRegion: Record<string, number> = {};
-  const meilleureVilleParRegion = new Map<string, VilleRegion>();
-  for (const v of toutesLesVilles) {
-    if (!v.region_id) continue;
-    populationParRegion[v.region_id] = (populationParRegion[v.region_id] ?? 0) + v.population;
-    const meilleure = meilleureVilleParRegion.get(v.region_id);
-    if (!meilleure || v.population > meilleure.population) meilleureVilleParRegion.set(v.region_id, v);
-  }
-  const populationMaxRegion = Math.max(0, ...Object.values(populationParRegion));
-
-  const marqueurParRegion = new Map<string, MarqueurVille>();
-  for (const [regionId, v] of meilleureVilleParRegion) {
-    marqueurParRegion.set(regionId, {
-      regionId,
-      villeId: v.id,
-      nom: v.nom,
-      estMoi: false,
-      estPresident: false,
-      estPremiereDeRegion: true,
-    });
-  }
-  if (mandatActuel) {
-    const villePresidente = toutesLesVilles.find((v) => v.id === mandatActuel.villeId);
-    if (villePresidente?.region_id) {
-      const existant = marqueurParRegion.get(villePresidente.region_id);
-      marqueurParRegion.set(villePresidente.region_id, {
-        regionId: villePresidente.region_id,
-        villeId: existant?.villeId ?? villePresidente.id,
-        nom: existant?.nom ?? villePresidente.nom,
-        estMoi: existant?.estMoi ?? false,
-        estPresident: true,
-        estPremiereDeRegion: true,
-      });
-    }
-  }
-  if (countryId === maVille.country_id && maVille.region_id) {
-    const existant = marqueurParRegion.get(maVille.region_id);
-    marqueurParRegion.set(maVille.region_id, {
-      regionId: maVille.region_id,
-      villeId: existant?.villeId ?? maVille.id,
-      nom: existant?.nom ?? maVille.nom,
-      estMoi: true,
-      estPresident: existant?.estPresident ?? false,
-      estPremiereDeRegion: existant?.estPremiereDeRegion ?? false,
-    });
-  }
-  const marqueurs = [...marqueurParRegion.values()];
 
   const { data: statsBrutes, error: erreurStats } = await supabase.rpc("stats_pays", {
     p_country_id: countryId,
@@ -296,21 +240,25 @@ export default async function PaysPage({
     ? palierGuerre(Math.max(conflit.jours_gagnes_attaquant, conflit.jours_gagnes_defenseur))
     : null;
 
+  // Refonte de l'onglet Pays (docs/A-INTEGRER.md §23) : statut de la
+  // semaine + historique hebdomadaire, calculés à la demande
+  // (migration 0036, pas de table de synthèse).
+  const { data: statutBrut } = await supabase.rpc("statut_pays_semaine", { p_country_id: countryId });
+  const statutLigne = (Array.isArray(statutBrut) ? statutBrut[0] : statutBrut) as
+    | { statut: StatutSemaine; pays_lie: string | null }
+    | undefined;
+  const statutSemaine: StatutSemaine = statutLigne?.statut ?? "paix";
+  const nomDe = (id: string | null) => (id ? ((listePays ?? []).find((p) => p.id === id)?.nom ?? id) : "");
+  const nomPaysLie = nomDe(statutLigne?.pays_lie ?? null);
+
+  const { data: historiqueBrut } = await supabase.rpc("historique_pays", {
+    p_country_id: countryId,
+    p_nb_semaines: 12,
+  });
+  const historique = (historiqueBrut ?? []) as LigneHistorique[];
+
   return (
     <main className="screen" aria-label={traduire(locale, "pays.eyebrow")}>
-      {carte ? (
-        <CartePays
-          viewBox={carte.viewBox}
-          regions={carte.regions}
-          populationParRegion={populationParRegion}
-          populationMaxRegion={populationMaxRegion}
-          marqueurs={marqueurs}
-        />
-      ) : (
-        <div className="carte-pays carte-pays-vignette" aria-hidden="true">
-          <span>{nomPaysAffiche}</span>
-        </div>
-      )}
       <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
           <span className="eyebrow">{traduire(locale, "pays.eyebrow")}</span>
@@ -318,6 +266,12 @@ export default async function PaysPage({
         <h1 className="sign">
           <span>{nomPaysAffiche}</span>
         </h1>
+        <p className="note">
+          <span className={`badge ${statutSemaine === "guerre" ? "warn" : statutSemaine === "allie" ? "good" : ""}`}>
+            {traduire(locale, `pays.statut.${statutSemaine}`)}
+            {statutSemaine !== "paix" && nomPaysLie ? ` · ${nomPaysLie}` : ""}
+          </span>
+        </p>
 
         <div className="row">
           <SelecteurPays locale={locale} paysActuel={countryId} pays={(listePays ?? []) as { id: string; nom: string }[]} />
@@ -581,6 +535,65 @@ export default async function PaysPage({
             </div>
           ))}
         </div>
+
+        <div className="head-row">
+          <h2 className="h3">{traduire(locale, "pays.historique.titre")}</h2>
+        </div>
+        {historique.length === 0 ? (
+          <p className="empty">{traduire(locale, "pays.historique.aucun")}</p>
+        ) : (
+          <ol className="list">
+            {historique.map((h, i) => {
+              const issue =
+                h.conflit_resultat === null
+                  ? "enCours"
+                  : h.conflit_resultat === "egalite"
+                    ? "egalite"
+                    : h.conflit_resultat === h.conflit_role
+                      ? "victoire"
+                      : "defaite";
+              return (
+                <li key={`${h.semaine}-${h.conflit_id ?? i}`}>
+                  <div className="card">
+                    <div className="spread">
+                      <span className="h3">
+                        {traduire(locale, "pays.historique.semaineDu")}{" "}
+                        {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(h.semaine))}
+                      </span>
+                    </div>
+                    {h.vote_categorie ? (
+                      <p className="note">
+                        {traduire(locale, "pays.historique.vote")} :{" "}
+                        <b>{traduire(locale, LABEL_CATEGORIE[h.vote_categorie])}</b> ({h.vote_nb})
+                      </p>
+                    ) : null}
+                    {h.decision_categorie ? (
+                      <p className="note">
+                        {traduire(locale, "pays.historique.decision")} :{" "}
+                        <b>
+                          {traduire(locale, LABEL_DIPLOMATIE[h.decision_categorie])} · {nomDe(h.decision_cible)}
+                        </b>{" "}
+                        — {traduire(locale, h.decision_adoptee ? "pays.historique.adoptee" : "pays.historique.rejetee")} (
+                        {h.decision_pour} {traduire(locale, "pays.diplomatie.pour").toLowerCase()} /{" "}
+                        {h.decision_contre} {traduire(locale, "pays.diplomatie.contre").toLowerCase()})
+                      </p>
+                    ) : null}
+                    {h.conflit_id && h.conflit_role ? (
+                      <p className="note">
+                        {traduire(locale, "pays.historique.conflit")} {traduire(locale, "pays.conflit.contre")}{" "}
+                        <b>{nomDe(h.conflit_adversaire)}</b> ({traduire(locale, `pays.historique.role.${h.conflit_role}`)}) :{" "}
+                        <b>{traduire(locale, `pays.historique.issue.${issue}`)}</b>
+                        {" · "}
+                        {traduire(locale, "pays.historique.pertes")} {new Intl.NumberFormat(locale).format(h.pertes_pays ?? 0)} /{" "}
+                        {new Intl.NumberFormat(locale).format(h.pertes_adversaire ?? 0)}
+                      </p>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
 
         <div className="head-row">
           <h2 className="h3">{traduire(locale, "pays.president.historique")}</h2>

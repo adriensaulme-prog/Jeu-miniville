@@ -109,9 +109,14 @@ journal existant, puis ce fichier peut être supprimé.*
 > la carte du pays (Jalon 9 ter) ; la remplacer par un statut
 > diplomatique de la semaine (paix/guerre/allié) et un historique
 > hebdomadaire complet (diplomatie + vote de ressource + résultat de
-> conflit). Nouvelle table de synthèse probablement nécessaire. Ce
-> fichier peut être supprimé quand Adrien aura répondu aux questions
-> restantes et que les jalons de la Phase 6 seront terminés.
+> conflit). Nouvelle table de synthèse probablement nécessaire.
+> **§24 (guerres équilibrées entre pays, 02/10/2026) : nouveau** —
+> `effort_national()` compare aujourd'hui une SOMME d'activité par
+> pays, ce qui écrase mécaniquement les petits pays. Adrien a choisi de
+> passer à une MOYENNE par ville/joueur, pour une guerre équitable
+> indépendamment de la taille du pays. Ce fichier peut être supprimé
+> quand Adrien aura répondu aux questions restantes et que les jalons
+> de la Phase 6 seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -1104,3 +1109,61 @@ conflit éventuel) est probablement nécessaire, à moins que Claude Code
 trouve plus simple de recalculer l'historique à la demande à partir
 des tables existantes (semaine par semaine, en remontant dans le
 temps) — à évaluer selon le volume de données déjà accumulé.
+
+**Traité le 02/10/2026 (Claude Code)** : retrait de la carte, statut de
+la semaine et historique hebdomadaire faits (migration `0036`, pas de
+table de synthèse, calcul à la demande) — détail et interprétations à
+contester dans `DECISIONS.md` §4 "Refonte de l'onglet Pays". En attente
+d'application de la migration par Adrien.
+
+---
+
+## 24. Équilibrer les guerres entre pays : effort national à la moyenne par ville, pas à la somme (demande d'Adrien, 02/10/2026)
+
+**Constat (Claude chat, en lisant `supabase/migrations/0017` et `0032`)** :
+`effort_national(p_country_id)` additionne aujourd'hui l'activité 7
+jours (`activite_7j_de`) de **toutes** les villes du pays, plus
+`floor(sqrt(somme des ressources nationales))`. C'est une SOMME, pas
+une moyenne — documentée comme un choix assumé mais "contestable" dans
+la migration 0017 elle-même ("un pays plus grand ou plus actif produit
+naturellement plus d'effort"). Conséquence concrète : un pays de 50
+villes écrase mécaniquement un pays de 2 villes dans
+`resoudre_conflits_en_cours()` (comparaison quotidienne
+`effort_attaquant > floor(effort_defenseur * 1.5)`), même si les 2
+villes du petit pays sont individuellement bien plus actives — le bonus
+défensif de +50 % ne corrige en rien un tel écart de taille.
+
+**Demande d'Adrien** : prendre en compte le nombre de joueurs par pays
+dans le mécanisme de guerre, pour éviter des guerres déséquilibrées.
+Après explication du problème exact, Adrien choisit l'option la plus
+radicale : **une vraie moyenne par ville**, pour une équité totale —
+la taille du pays ne doit plus donner aucun avantage mécanique en
+guerre, seule l'implication réelle des joueurs doit compter.
+
+**Changement demandé dans `effort_national()`** : remplacer la somme
+d'activité par la **moyenne** d'activité par ville du pays
+(`sum(activite_7j_de) / nombre de villes du pays`), et calculer le
+terme ressources de la même façon **par habitant** plutôt que sur le
+total du pays (`floor(sqrt(somme des ressources / nombre de villes))`,
+au lieu de `floor(sqrt(somme des ressources))` sur le total) — pour
+rester cohérent avec le choix de la moyenne sur les deux composantes de
+la formule, pas seulement sur l'activité. Prévoir le cas d'un pays sans
+aucune ville (division par zéro → effort 0, comme le `coalesce(...,
+0)` déjà en place).
+
+**Ce qui ne change pas** : le reste du mécanisme de guerre (bonus
+défensif ×1,5, perte de population quotidienne de 0,1 % plafonnée à
+5 % par ville sur 7 jours, paliers visibles `palierGuerre()`, Jalon 21)
+n'est pas remis en cause — seule l'agrégation par pays dans
+`effort_national()` change. Comme cette fonction est aussi utilisée
+pour afficher l'état d'un conflit en cours sur `/pays`
+(`conflit.effort_attaquant`/`effort_defenseur`), les chiffres affichés
+changeront d'échelle (des moyennes, pas des totaux) — à adapter dans
+l'affichage si besoin (ex. libellé "effort moyen par ville" plutôt que
+"effort").
+
+**Option écartée par Adrien** : atténuer l'avantage de taille sans
+l'annuler (diviser par la racine carrée du nombre de villes plutôt que
+par le nombre de villes lui-même) — gardée en mémoire si jamais la
+moyenne pure s'avère trop punitive pour les grands pays une fois testée
+avec les villes de test.

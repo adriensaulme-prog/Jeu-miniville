@@ -3546,6 +3546,66 @@ vérifié** : avec la constante neutralisée, les deux tests échouent
 
 ---
 
+### Refonte de l'onglet Pays (A-INTEGRER §23) — 02/10/2026
+
+**Demande d'Adrien** (`docs/A-INTEGRER.md` §23) : retirer la carte du
+pays (Jalon 9 ter, qui était pourtant sa propre demande du 25/09 —
+revirement assumé après usage), afficher à la place le **statut de la
+semaine** et un **historique hebdomadaire** complet. Migration `0036`.
+
+**Fait.** `/pays` n'a plus de carte : `CartePays.tsx` supprimé, ainsi
+que tout ce qui ne servait qu'elle dans la page (chargement du JSON de
+carte, population par région, marqueurs) et la spec e2e du Jalon 9 ter
+(`jalon9ter-carte-du-pays.spec.ts`, qui testait la carte). En haut de
+page, un badge de statut : *En paix* / *En guerre · pays adverse* /
+*Alliance · pays allié* (`statut_pays_semaine()` : un conflit en cours
+l'emporte ; sinon une alliance adoptée la semaine dernière, par ce pays
+ou par un pays qui le vise ; sinon paix — les décisions sont résolues en
+fin de semaine, d'où « adoptée la semaine dernière »). Historique
+(`historique_pays()`, 12 dernières semaines, plus récente d'abord, semaine
+courante exclue) : par semaine, la **ressource votée** (catégorie la plus
+votée, égalité départagée dans l'ordre industrie/techno/culture/
+commerce), la **décision diplomatique** de CE pays (catégorie, pays visé,
+adoptée ou rejetée, pour/contre) et le **conflit** commencé cette semaine-là
+(rôle attaquant/défenseur, adversaire, victoire/défaite/égalité, pertes de
+population de chaque camp, sommées depuis `city_events`, Jalon 21).
+
+**Choix laissé à Claude Code par le §23 : pas de table de synthèse.**
+Tout est déjà conservé avec sa semaine (propositions/résultats
+diplomatiques, conflits, `city_events`, `votes_pays`) et le volume est
+minuscule : recalculer à la demande évite une deuxième source de vérité
+qui pourrait diverger. Fonctions `security definer` (`votes_pays` n'est
+lisible que par son auteur). À revisiter seulement si l'historique
+devenait lent (des années de semaines).
+
+*Interprétations de Claude Code, à contester* : (1) un conflit est
+rattaché à la semaine de son **début** (donc la semaine suivant la
+décision de rivalité qui l'a déclenché), pas à celle du vote — c'est la
+semaine où l'on s'est réellement battu ; (2) l'historique d'un pays
+montre ses *propres* propositions diplomatiques, pas celles que d'autres
+pays lui adressent (sauf via le conflit qui en découle) ; (3) « paix » et
+« embargo » adoptés n'ont pas de badge propre (seulement les trois états
+demandés : paix par défaut).
+
+**À savoir** : le canvas 3D de fond ne « disparaît » pas avec la carte
+— comme sur les autres pages sans ville (classement, palmarès), la scène
+partagée du layout montre la ville d'accueil derrière le panneau. Les
+données de carte (`src/data/cartes`, ~930 Ko) et le script qui les génère
+(`scripts/generer-cartes-pays.mjs`) ne servent plus à rien : **laissés en
+place** pour que ce soit Adrien qui décide de les supprimer (pas de
+poids dans le paquet client, ces fichiers n'étaient lus que côté serveur).
+§10 point 28 (détails laissés de côté de la carte) est devenu sans objet.
+
+**Testé.** `tests/e2e/refonte-pays-historique.spec.ts` (3 tests) :
+`historique_pays()` (vote gagnant, décision, conflit, pertes par camp
+côté attaquant ET côté défenseur, semaine courante exclue),
+`statut_pays_semaine()` (paix par défaut, alliance des deux côtés,
+guerre prioritaire), et la page `/pays` (badge, historique, plus de
+carte). Typecheck et lint verts. Pas encore lancés : migration `0036`
+pas encore appliquée au moment de l'écriture.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
