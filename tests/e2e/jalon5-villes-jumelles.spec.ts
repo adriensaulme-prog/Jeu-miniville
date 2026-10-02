@@ -113,6 +113,15 @@ test.describe("Jalon 5 — villes jumelles", () => {
       await rendreActif(a.userId, tierce.villeId);
       await rendreActif(b.userId, tierce.villeId);
 
+      // Population juste AVANT la réclamation du bonus : A a pu gagner une
+      // auto-visite de sa propre ville en ouvrant /ville (Jalon 13 ter, ~2,5 s
+      // après le chargement) selon la vitesse du serveur — cette course n'est
+      // pas ce que ce test vérifie, seul le delta du bonus compte.
+      const populationAvant = async (villeId: string) =>
+        (await supabaseAdmin.from("cities").select("population").eq("id", villeId).single()).data!.population as number;
+      const popAAvant = await populationAvant(a.villeId);
+      const popBAvant = await populationAvant(b.villeId);
+
       await page.goto("/jumelages");
       await expect(page.getByText(b.villeNom)).toBeVisible();
       await expect(page.getByText("Bonus de jumelage accordé aujourd'hui à")).toBeVisible();
@@ -127,13 +136,9 @@ test.describe("Jalon 5 — villes jumelles", () => {
         .select("population")
         .eq("id", b.villeId)
         .single();
-      // A : 1 (naissance) + 1 (bonus de jumelage) = 2.
-      expect(villeAApres?.population).toBe(2);
-      // B : 1 (naissance) + 1 (visite automatique de A en ouvrant sa
-      // page pour proposer le jumelage, Jalon 13 ter — ouvrir une page
-      // de ville compte désormais toujours comme une visite) + 1
-      // (bonus de jumelage) = 3.
-      expect(villeBApres?.population).toBe(3);
+      // Bonus de jumelage : +1 pour chaque ville, rien de plus.
+      expect(villeAApres?.population).toBe(popAAvant + 1);
+      expect(villeBApres?.population).toBe(popBAvant + 1);
 
       // Rappeler le bonus le même jour ne doit rien redonner (idempotent).
       const { data: rappel } = await supabaseAdmin.rpc("reclamer_bonus_jumelages", {
@@ -146,7 +151,7 @@ test.describe("Jalon 5 — villes jumelles", () => {
         .select("population")
         .eq("id", a.villeId)
         .single();
-      expect(villeAApresRappel?.population).toBe(2);
+      expect(villeAApresRappel?.population).toBe(popAAvant + 1);
     } finally {
       await supprimerCompte(a.userId);
       await supprimerCompte(b.userId);

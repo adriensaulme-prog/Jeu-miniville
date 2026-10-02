@@ -123,8 +123,8 @@ journal existant, puis ce fichier peut être supprimé.*
 > débloqué/à débloquer sur `/ville` avec un bouton pour repérer un
 > bâtiment dans la vue 3D. Gros chantier, détail complet dans la
 > section. **État : 25a (catalogue + « voir où il est » + secteurs
-> fixes hors de la ville) codé le 02/10/2026 ; 25b (zonage des blocs)
-> en attente d'Adrien.**
+> fixes hors de la ville) et 25b (zonage des blocs par secteur, migration
+> `0038`) codés le 02/10/2026.**
 > **§26 (propositions d'amélioration de Claude chat, 02/10/2026,
 > toutes validées par Adrien) : nouveau** — journal mondial (cahier
 > §22), notifications de rivalité (cahier §23), page de ville
@@ -1311,7 +1311,15 @@ visuel (surlignage/clignotement) placé sur le bâtiment visé sans
 bouger la caméra, à faire évoluer vers un vrai "aller à" ensuite si
 besoin.
 
-**Traité en partie le 02/10/2026 (Claude Code) — sous-jalon 25a**
+**Sous-jalon 25b traité le 02/10/2026 (Claude Code)** : zonage « par
+secteur » choisi par Adrien (cœur résidentiel de 5 blocs, un secteur
+d'angle par activité, migration `0038`, blocs existants non déplacés,
+pas de gratte-ciel au-delà de la 24ᵉ case pour les blocs zonés) — détail
+dans `DECISIONS.md` §4 « Zonage des quartiers ». **Le §25 est donc traité
+en entier** (25a + 25b), sauf l'extension facultative du « voir où il
+est » aux mégaprojets, technologies et Énergie.
+
+**Sous-jalon 25a traité le 02/10/2026 (Claude Code) — sous-jalon 25a**
 (découpage choisi avec Adrien : visibilité d'abord, zonage ensuite) :
 catalogue des 16 monuments sur `/ville` et `/villes`, bouton « Voir où
 il est » (caméra + repère lumineux, ni migration ni dépense) et secteurs

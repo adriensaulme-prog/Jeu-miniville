@@ -9,7 +9,7 @@ import { palierVisites, palierInfluence, type PalierPopularite, type PalierRenom
 import { palierJumelage } from "@/lib/game/jumelages";
 import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
 import { typeMonument } from "@/lib/game/monuments";
-import type { VocationsBlocs } from "@/lib/ville3d/generer";
+import { premierRangZone, type VocationsBlocs } from "@/lib/ville3d/generer";
 import type { VocationQuartier } from "@/lib/ville3d/quartiers";
 import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
 import { createSupabaseServerClient } from "@/lib/supabase/server-session";
@@ -290,14 +290,16 @@ export default async function VillesPage({
   // ouverts et élan de l'Énergie, pour la ville affichée en 3D (celle du
   // panneau détail si une ville est sélectionnée, sinon "Ma ville").
   let vocations3D: VocationsBlocs = new Map();
+  let zonageDepuisRang3D: number | undefined;
   let elanEnergie3D = 0;
   if (villeAffichee3D) {
     await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: villeAffichee3D.id });
     const { data: blocsBruts } = await supabase
       .from("city_blocks")
-      .select("rang, vocation")
+      .select("rang, vocation, zonee")
       .eq("ville_id", villeAffichee3D.id);
     vocations3D = new Map((blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier]));
+    zonageDepuisRang3D = premierRangZone((blocsBruts ?? []) as { rang: number; zonee: boolean }[]);
     const jauges3D =
       villeSelectionnee && villeAffichee3D.id === villeSelectionnee.id
         ? jauges
@@ -395,6 +397,7 @@ export default async function VillesPage({
           nbTechnologies={nbTechnologiesDebloquees3D}
           monuments={monumentsDebloques3D}
           theme={villeAffichee3D.theme}
+          zonageDepuisRang={zonageDepuisRang3D}
         />
       ) : null}
 

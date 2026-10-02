@@ -19,7 +19,7 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
-async function creerCompteAvecVille(prefixe: string, paysId = "FR", regionId = "fr-idf") {
+async function creerCompteAvecVille(prefixe: string, paysId = "FR", regionId: string | null = "fr-idf") {
   const email = `${prefixe}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   const motDePasse = "mot-de-passe-test-e2e";
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -61,15 +61,18 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 9 — naissance d'un pays", () => {
   test("stats_pays agrège exactement la population et l'influence des villes du pays", async () => {
-    const paysUnique = "DE"; // les villes de test allemandes ont des populations connues, isolées via influencer_ville ci-dessous
+    // Pays réservé à ce test (aucun autre spec ne crée de ville en IT) : avec
+    // deux workers, un pays partagé comme DE (jalon8, jalon13) voyait son
+    // nombre de villes bouger entre l'instantané et la lecture.
+    const paysUnique = "IT";
     // Instantané pris AVANT toute création de compte : nb_villes et
     // population_totale doivent inclure les deux nouvelles villes créées
     // juste après, pas seulement l'action d'influence.
     const { data: avant } = await supabaseAdmin.rpc("stats_pays", { p_country_id: paysUnique });
     const statsAvant = Array.isArray(avant) ? avant[0] : avant;
 
-    const a = await creerCompteAvecVille("pays-agg-a", paysUnique, "de-by");
-    const b = await creerCompteAvecVille("pays-agg-b", paysUnique, "de-by");
+    const a = await creerCompteAvecVille("pays-agg-a", paysUnique, null);
+    const b = await creerCompteAvecVille("pays-agg-b", paysUnique, null);
     try {
       // +1 influence sur A (via B), population des deux villes inchangée
       // depuis leur création (1 chacune) : delta connu et isolé de tout

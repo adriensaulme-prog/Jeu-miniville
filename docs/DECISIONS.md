@@ -3750,6 +3750,91 @@ l'obélisque, sol et décor affichés après correction du culling.
 
 ---
 
+### Zonage des quartiers « par secteur » (A-INTEGRER §25, sous-jalon 25b) — 02/10/2026
+
+**Demande d'Adrien** (`docs/A-INTEGRER.md` §25 points 1 à 4) : les blocs
+sont mélangés (un commerce au rang 2, du résidentiel au rang 40) parce
+que la position d'un bloc est fixée avant de connaître sa vocation ;
+il veut les gratte-ciels au centre et les maisons repoussées en
+périphérie. **Arbitrage d'Adrien** : « quartiers par secteur » (avec une
+petite migration, `0038`) plutôt que « cœur + anneau » ou « ne rien
+changer ».
+
+**Contrainte découverte en simulant** (sur la vraie géométrie, avant de
+coder) : une ville grandit du centre vers l'extérieur et un bloc ouvert
+ne bouge jamais, donc un anneau parfait (tours, puis commerces, puis
+maisons) est impossible — les maisons de l'anneau extérieur devraient
+exister avant les commerces du milieu. Un « cœur + anneau » donnait un
+gradient à peine visible ; les secteurs d'angle donnent des quartiers
+lisibles et ne dépendent pas de l'ordre de croissance.
+
+**Fait.**
+- *Règle de choix de la vocation inchangée* (résidentiel ≥ moitié, puis
+  activité la plus en retard) : la migration `0038` recrée
+  `assigner_vocations_blocs()` à l'identique aux deux `insert` près et
+  ajoute `city_blocks.zonee` (`false` par défaut).
+- *Position rejouée côté client* (`src/lib/ville3d/zonage.ts` +
+  `planifierBlocs()`), rang après rang, à partir de la suite des
+  vocations lue en base. Le rang reste l'ordre d'ouverture (inchangé en
+  base) ; ce qui change, c'est la case occupée :
+  - **cœur** : les 5 cases les plus centrales sont réservées au
+    résidentiel (→ gratte-ciels) ;
+  - **résidentiel** hors cœur : case libre la plus proche dans la moitié
+    d'angle ≥ 180° ;
+  - **activités** : case libre la plus proche (hors cœur) dans son
+    secteur de 36° dans la moitié d'angle 0–180°, dans l'ordre
+    commerce, industrie, loisirs, recherche, services ; si le secteur
+    n'a plus de case, la plus proche hors cœur.
+- *Stabilité* : le choix du rang r ne dépend que des rangs déjà placés
+  et d'une fenêtre de candidats de taille fixe (r + 24 cases) — jamais de
+  la taille actuelle de la ville : une ville qui grandit ne déplace
+  jamais un bloc ouvert (même piège que la liste de candidats variable
+  qui aurait déplacé un bloc quand elle s'allongeait).
+- *Portée* (§25 point 4) : les blocs déjà en base gardent `zonee =
+  false`, donc leur emplacement historique (rang = case). Seuls les
+  nouveaux blocs sont zonés. Le client reçoit `zonageDepuisRang` (le plus
+  petit rang zoné, `premierRangZone()`), les rangs avant lui sont placés
+  comme avant.
+- *Gratte-ciels* : `towerAt` dépend maintenant de la case et non plus du
+  rang (identique pour les blocs historiques). Choix de Claude Code, le
+  §25 demandait des maisons « durablement » en périphérie : un bloc zoné
+  au-delà de la 24ᵉ case (`TOURS_CASE_MAX`) n'a jamais de gratte-ciel.
+  Pour les blocs historiques, rien ne change.
+- *Rendu* : `ev` (événements de croissance) est calculé par rang et non
+  plus par case ; `Bloc.openAt`/`gap` suivent le rang du bloc.
+
+**À savoir.**
+- *Orientation fixe* : la moitié résidentielle est toujours du même côté
+  pour toutes les villes (angle ≥ 180° dans le plan du générateur). Une
+  rotation propre à chaque ville est possible si Adrien trouve ça trop
+  uniforme.
+- *Cases vides pendant la croissance* : un secteur d'activité peut
+  rester vide un moment (aucun bloc de cette activité n'est encore
+  ouvert) : la case est alors une friche, comme avant pour les blocs à
+  venir.
+- *Effet sur les villes existantes* : aucun tant qu'elles n'ouvrent pas
+  de nouveau bloc ; ensuite leurs nouveaux blocs sont zonés, les anciens
+  restent mélangés. La page `/ville` d'une ville historique devient
+  donc progressivement « mi-ancienne, mi-zonée ».
+- *Migration non appliquée = ville tout en résidentiel* : `/ville` et
+  `/villes` sélectionnent la nouvelle colonne ; sans `0038` la requête
+  échoue et la ville retombe sur le résidentiel par défaut (même
+  dégradation que pour toute migration manquante).
+
+**Testé.** `tests/unit/ville3dZonage.test.ts` (8) : ville historique
+inchangée ; cœur résidentiel et > 75 % des activités dans leur secteur
+(3 graines) ; jamais deux blocs sur la même case ; croissance sans
+déplacement ni changement de seuil ; placement du rang r indépendant des
+vocations suivantes ; zonage partiel (les 12 premières cases comme avant) ;
+pas de gratte-ciel au-delà de la case 24 pour les blocs zonés ;
+`premierRangZone`. Sabotage : zonage neutralisé => 2 tests échouent.
+`tests/e2e/zonage-quartiers.spec.ts` (3) : blocs historiques intacts et
+nouveaux zonés, ville neuve entièrement zonée avec la règle de vocation
+inchangée, `/ville` s'affiche. `jalon19-quartiers.spec.ts` inchangé et
+vert.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

@@ -10,7 +10,20 @@
 
 import { rngFrom } from "./aleatoire";
 import { cleDe } from "./emplacements";
-import { BS, CITY_R_MIN, COL, MAT, PLAFOND_RENDU_POPULATION, T, blockX0, openAtK, towerAtK } from "./constantes";
+import {
+  BS,
+  CITY_R_MIN,
+  COL,
+  MAT,
+  PLAFOND_RENDU_POPULATION,
+  T,
+  TOWER_AFTER_OPEN,
+  TOWER_FROM,
+  TOWER_STAGGER,
+  blockX0,
+  openAtK,
+} from "./constantes";
+import { TOURS_CASE_MAX, choisirCase } from "./zonage";
 import { flat, Geo } from "./geometrie";
 import type { TamponAO } from "./mobilier";
 import {
@@ -39,6 +52,19 @@ import { technologiesDepuisPalier, type TechnologiesVille } from "@/lib/game/tec
  * jalon). */
 export type VocationsBlocs = ReadonlyMap<number, VocationQuartier>;
 
+/**
+ * Premier rang né avec le zonage (A-INTEGRER §25, sous-jalon 25b) : le
+ * plus petit `rang` dont `zonee` est vrai, ou undefined si aucun (ville
+ * historique, ou aucune donnée) — tout ce qui précède garde l'emplacement
+ * historique. Le marqueur est monotone (la migration 0038 pose false sur
+ * l'existant, les nouveaux blocs reçoivent true).
+ */
+export function premierRangZone(blocs: readonly { rang: number; zonee?: boolean | null }[]): number | undefined {
+  let min: number | undefined;
+  for (const b of blocs) if (b.zonee && (min === undefined || b.rang < min)) min = b.rang;
+  return min;
+}
+
 export interface ResultatGeneration {
   g: Geo;
   ao: TamponAO[];
@@ -55,7 +81,8 @@ export interface ResultatGeneration {
 export function planifierBlocs(
   name: string,
   C: number,
-  vocations?: VocationsBlocs
+  vocations?: VocationsBlocs,
+  zonageDepuisRang?: number
 ): { blocks: Bloc[]; K: number } {
   const key = cleDe(name);
   // Nombre de blocs ouverts à ce stade, puis candidats en anneaux autour
@@ -85,16 +112,39 @@ export function planifierBlocs(
     }
   blocks.sort((a, b) => a.d - b.d || a.bi - b.bi || a.bj - b.bj);
   blocks.length = Math.min(blocks.length, K + 24);
-  blocks.forEach((b, k) => {
-    b.openAt = openAtK(k);
-    b.gap = openAtK(k + 1) - b.openAt;
-    b.towerAt = towerAtK(k);
-    b.active = Crendu >= b.openAt;
-    // Jalon 19 : vocation fixée par rang une fois pour toutes (§7) —
-    // le rang k ici correspond exactement au rang stocké en base
-    // (city_blocks.rang), puisque cet ordre (distance au centre + aléa
-    // stable par ville) ne dépend que de la graine, jamais de C.
-    b.vocation = vocations?.get(k) ?? "residentiel";
+
+  // Case (index dans l'ordre de distance) occupée par chaque rang. Jalon
+  // 19 : la vocation est fixée par rang une fois pour toutes (§7), le rang
+  // est celui de city_blocks.rang (ordre d'ouverture). Avant le zonage
+  // (§25), rang = case : un bloc s'ouvrait à la case suivante. Pour les
+  // rangs nés avec le zonage, la case est rejouée rang après rang
+  // (zonage.ts) selon la vocation du bloc.
+  const debutZonage = zonageDepuisRang ?? Infinity;
+  const libre = blocks.map(() => true);
+  const caseDuRang: number[] = [];
+  const rangDeLaCase: number[] = blocks.map(() => -1);
+  for (let rang = 0; rang < K; rang++) {
+    const voc = vocations?.get(rang) ?? "residentiel";
+    const s = rang < debutZonage ? rang : choisirCase(blocks, libre, rang, voc);
+    libre[s] = false;
+    caseDuRang[rang] = s;
+    rangDeLaCase[s] = rang;
+  }
+  blocks.forEach((b, s) => {
+    const rang = rangDeLaCase[s];
+    // Case encore vide : pas de rang, on garde l'ancien décompte par case
+    // (jamais actif, rien ne le lit).
+    const r = rang >= 0 ? rang : s;
+    b.openAt = openAtK(r);
+    b.gap = openAtK(r + 1) - b.openAt;
+    b.active = rang >= 0 && Crendu >= b.openAt;
+    // Gratte-ciel : plus la case est centrale, plus tôt. Un bloc zoné
+    // au-delà de TOURS_CASE_MAX n'en reçoit jamais (maisons en périphérie).
+    b.towerAt =
+      rang >= debutZonage && s >= TOURS_CASE_MAX
+        ? Infinity
+        : Math.max(TOWER_FROM + s * TOWER_STAGGER, b.openAt + TOWER_AFTER_OPEN);
+    b.vocation = rang >= 0 ? (vocations?.get(rang) ?? "residentiel") : "residentiel";
   });
   return { blocks, K };
 }
@@ -107,7 +157,8 @@ export function generate(
   megaprojets: MegaprojetConstruit[] = [],
   nbTechnologies = 0,
   monuments: MonumentDebloque[] = [],
-  theme = "classique"
+  theme = "classique",
+  zonageDepuisRang?: number
 ): ResultatGeneration {
   const key = cleDe(name);
   const g = new Geo();
@@ -118,10 +169,8 @@ export function generate(
   const tech: TechnologiesVille = technologiesDepuisPalier(nbTechnologies);
   flat(g, -4000, -4000, 4000, 4000, 0, COL.meadow, MAT.MEADOW);
 
-  const { blocks, K } = planifierBlocs(name, C, vocations);
-  blocks.forEach((b, k) => {
-    if (k <= K) ev.push(b.openAt);
-  });
+  const { blocks, K } = planifierBlocs(name, C, vocations, zonageDepuisRang);
+  for (let rang = 0; rang <= K; rang++) ev.push(openAtK(rang));
 
   const act = blocks.filter((b) => b.active);
   stats.active = act.length;

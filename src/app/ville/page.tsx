@@ -8,7 +8,7 @@ import { ACTIVITES, activitesDisponibles, type Activite } from "@/lib/game/activ
 import { palierAttaques } from "@/lib/game/antiville";
 import { palierVisites, palierInfluence } from "@/lib/game/popularite";
 import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
-import type { VocationsBlocs } from "@/lib/ville3d/generer";
+import { premierRangZone, type VocationsBlocs } from "@/lib/ville3d/generer";
 import type { VocationQuartier } from "@/lib/ville3d/quartiers";
 import { typeMonument } from "@/lib/game/monuments";
 import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
@@ -151,11 +151,13 @@ export default async function VillePage() {
   await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: ville.id });
   const { data: blocsBruts } = await supabase
     .from("city_blocks")
-    .select("rang, vocation")
+    .select("rang, vocation, zonee")
     .eq("ville_id", ville.id);
   const vocations: VocationsBlocs = new Map(
     (blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier])
   );
+  // Zonage des quartiers (§25, 25b) : à partir de quel rang les blocs suivent le zonage.
+  const zonageDepuisRang = premierRangZone((blocsBruts ?? []) as { rang: number; zonee: boolean }[]);
 
   // Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : construit les
   // mégaprojets financés (opportuniste, même logique qu'au-dessus) puis
@@ -307,6 +309,7 @@ export default async function VillePage() {
         nbTechnologies={nbTechnologiesDebloquees ?? 0}
         monuments={monumentsDebloques}
         theme={ville.theme}
+        zonageDepuisRang={zonageDepuisRang}
       />
       <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">

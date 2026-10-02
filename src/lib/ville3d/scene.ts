@@ -50,6 +50,8 @@ export interface ParametresVille {
   monuments?: MonumentDebloque[];
   /** Bibliothèque de bâtiments (4/4) : thème choisi par le maire (cities.theme), "classique" par défaut. */
   theme?: string;
+  /** Zonage des quartiers (A-INTEGRER §25, 25b) : premier rang né avec le zonage (voir premierRangZone()), absent = emplacements historiques. */
+  zonageDepuisRang?: number;
 }
 
 const L = (c: [number, number, number]): [number, number, number] => [
@@ -316,7 +318,8 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       params.megaprojets ?? [],
       params.nbTechnologies ?? 0,
       params.monuments ?? [],
-      params.theme ?? "classique"
+      params.theme ?? "classique",
+      params.zonageDepuisRang
     );
     stats = res.stats;
     cityR = res.stats.cityR;
