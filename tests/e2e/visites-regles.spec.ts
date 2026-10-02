@@ -88,7 +88,7 @@ test.describe("Visites (feedback + choix) et règles du jeu (A-INTEGRER §27)", 
 
   test("un lien discret « Règles » dans la barre du haut mène à la page, connecté ou non", async ({ page }) => {
     await page.goto("/");
-    await page.locator(".regles-lien").click();
+    await page.locator("a.regles-lien[href=\"/regles\"]").click();
     await expect(page).toHaveURL(/\/regles$/);
     await expect(page.getByRole("heading", { name: "Règles du jeu" })).toBeVisible({ timeout: 20_000 });
   });
