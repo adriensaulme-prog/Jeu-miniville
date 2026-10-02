@@ -23,7 +23,8 @@ import { BulletinMunicipal, type EvenementBulletin } from "@/components/Bulletin
 import { Megaprojets, type EtatMegaprojet } from "@/components/Megaprojets";
 import { Technologies } from "@/components/Technologies";
 import { Monuments } from "@/components/Monuments";
-import { definirRecommandation } from "@/app/villes/actions";
+import { definirRecommandation, definirTheme } from "@/app/villes/actions";
+import { THEMES } from "@/lib/game/themes";
 
 // Repli si le pays de la ville n'a pas encore de géo/fuseau renseignés
 // (quelques territoires ISO 3166-1 sur 250 — voir DECISIONS.md §4,
@@ -60,6 +61,7 @@ export default async function VillePage() {
     influence_max: number;
     activite: number;
     recommandation_activite: Activite | null;
+    theme: string;
     country_id: string;
     region_id: string | null;
     pays:
@@ -73,7 +75,7 @@ export default async function VillePage() {
   const { data, error: erreurVille } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, influence, influence_max, activite, recommandation_activite, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
+      `id, nom, population, population_max, influence, influence_max, activite, recommandation_activite, theme, country_id, region_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), region:regions(nom:${colonneNomPays})`
     )
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -304,6 +306,7 @@ export default async function VillePage() {
         megaprojets={megaprojetsConstruits}
         nbTechnologies={nbTechnologiesDebloquees ?? 0}
         monuments={monumentsDebloques}
+        theme={ville.theme}
       />
       <PanneauFlottant locale={locale} className="dock dock-float dock-left">
         <div className="head-row">
@@ -335,6 +338,22 @@ export default async function VillePage() {
           </label>
           <button className="btn small" type="submit">
             {traduire(locale, "activite.definirRecommandation")}
+          </button>
+        </form>
+        <form action={definirTheme} className="row">
+          <input type="hidden" name="villeId" value={ville.id} />
+          <label className="field" style={{ flex: 1 }}>
+            <span>{traduire(locale, "theme.titre")}</span>
+            <select name="theme" className="select" defaultValue={ville.theme}>
+              {THEMES.map((t) => (
+                <option key={t} value={t}>
+                  {traduire(locale, `theme.${t}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn small" type="submit">
+            {traduire(locale, "theme.appliquer")}
           </button>
         </form>
         <p className="note">

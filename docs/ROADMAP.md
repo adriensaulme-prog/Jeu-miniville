@@ -102,9 +102,20 @@ de vue du joueur — le titre dit ce qui change pour lui.
   (choix d'Adrien), contrairement à AntiVille/guerre. **Point 22 de
   `DECISIONS.md` §10 maintenant entièrement résolu** — migration
   `0033`.
-- [ ] **La bibliothèque de bâtiments** (puis thèmes et boutique).
-  Proposition `docs/BATIMENTS-ET-PACKS.md`, en attente des réponses
-  d'Adrien (`DECISIONS.md` §10 point 21).
+- [x] **Bibliothèque de bâtiments (catalogue, trois lots de modèles,
+  mobilier urbain, premier pack de thème Haussmannien).** Réponses
+  d'Adrien obtenues le 30/09/2026 (packs cosmétiques, pas de variante
+  par pays pour l'instant, thème Haussmannien prioritaire) — voir
+  `DECISIONS.md` §10 point 21, maintenant entièrement résolu.
+  Catalogue typé + sélection stable (`src/lib/ville3d/catalogue.ts`),
+  26 modèles de bâtiments (12 maisons/9 immeubles/5 tours), showroom de
+  développement (`/dev/showroom`), mobilier urbain (banc, fontaine,
+  abribus, kiosque), et `cities.theme` + pack "haussmannien" (partiel,
+  immeubles seulement) sélectionnable par le maire sur `/ville`
+  (migration `0034`) — voir `DECISIONS.md` §4. **Boutique/paiement
+  restent hors scope** (après le MVP, une fois le statut légal réglé —
+  `docs/BATIMENTS-ET-PACKS.md` §5-6) : le thème est libre d'accès pour
+  l'instant, aucune restriction de paiement.
 
 ## Phase 2 — Rivalités entre villes *(terminée)*
 
@@ -311,7 +322,7 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 28/09/2026. **Chantier "système de
+*Dernière mise à jour : 30/09/2026. **Chantier "système de
 développement des villes" (Jalons 17 à 20, validé par Adrien dans
 A-INTEGRER.md §18) terminé côté code** : les 3 sous-jalons du Jalon 20
 (mégaprojets `0028`, technologies `0029`, monuments d'influence `0030`)
@@ -324,13 +335,18 @@ effet unitaire faible/cumul du jour/plafond/paliers visibles pour la
 guerre entre pays (migration `0032`), puis paliers visibles seulement
 (sans nouveau plafond, effets positifs déjà limités par joueur) pour
 visites/influence/jumelages (migration `0033`). **`DECISIONS.md` §10
-point 22 maintenant entièrement résolu.** Reste la vérification
-manuelle d'Adrien sur l'ensemble du chantier. Toute la Phase 6 est
-maintenant cochée. MVP du cahier des charges §30 livré depuis le
-Jalon 15, vérification manuelle mobile/PC d'Adrien toujours en attente
-pour le considérer définitivement clos. Points encore ouverts :
-"habitants par habitation" pour les immeubles/tours (§10 point 33),
-gratte-ciel figés en crise Énergie et fumée 3D/notification pays (§10
-points 34-35). Prochaine étape non planifiée en détail — un seul
-chantier en attente du choix d'Adrien ("À placer" ci-dessus) : la
-bibliothèque de bâtiments (packs cosmétiques).*
+point 22 maintenant entièrement résolu.** **Bibliothèque de bâtiments
+(catalogue, 26 modèles de bâtiments, mobilier urbain, premier pack de
+thème Haussmannien) codée le 30/09/2026** — voir `DECISIONS.md` §4 et
+§10 point 21, maintenant entièrement résolu. Migration `0034` (la
+seule de tout ce chantier — le reste est purement front-end) en
+attente d'application par Adrien au moment de l'écriture. Reste la
+vérification manuelle d'Adrien sur l'ensemble du chantier. Toute la
+Phase 6 est maintenant cochée. MVP du
+cahier des charges §30 livré depuis le Jalon 15, vérification manuelle
+mobile/PC d'Adrien toujours en attente pour le considérer
+définitivement clos. Points encore ouverts : "habitants par
+habitation" pour les immeubles/tours (§10 point 33), gratte-ciel figés
+en crise Énergie et fumée 3D/notification pays (§10 points 34-35).
+Prochaine étape non planifiée en détail — la suite de la bibliothèque
+de bâtiments (reste des modèles, puis packs de thèmes et boutique).*

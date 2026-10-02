@@ -126,6 +126,43 @@ export async function definirRecommandation(formData: FormData) {
 }
 
 /**
+ * Le maire choisit le thème visuel de sa ville (bibliothèque de
+ * bâtiments 4/4, docs/BATIMENTS-ET-PACKS.md §4) — purement cosmétique,
+ * réservé au propriétaire (definir_theme_ville(), anti-triche côté
+ * SQL). Pas de restriction de paiement pour l'instant : la boutique
+ * n'existe pas encore (docs/DECISIONS.md §4, journal de ce jalon).
+ */
+export async function definirTheme(formData: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/connexion");
+  }
+
+  const villeId = String(formData.get("villeId") ?? "");
+  const theme = String(formData.get("theme") ?? "");
+  if (!villeId || !theme) {
+    return;
+  }
+
+  const { error } = await supabaseAdmin.rpc("definir_theme_ville", {
+    p_owner_id: user.id,
+    p_ville_id: villeId,
+    p_theme: theme,
+  });
+
+  if (error) {
+    console.error("definirTheme a échoué :", error.message);
+  }
+
+  revalidatePath("/ville");
+  revalidatePath("/villes");
+}
+
+/**
  * Le maire choisit un mégaprojet parmi les options du palier tout
  * juste débloqué (docs/SYSTEME-DEVELOPPEMENT.md §6, Jalon 20 1/3) —
  * réservé au propriétaire de la ville, un seul choix par palier,

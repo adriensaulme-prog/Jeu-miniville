@@ -298,6 +298,11 @@ export const dictionaries = {
     "activite.recommandationDefinie": "Recommandation mise à jour.",
     "activite.aucuneRecommandation": "Aucune",
 
+    "theme.titre": "Thème de la ville :",
+    "theme.appliquer": "Appliquer",
+    "theme.classique": "Classique",
+    "theme.haussmannien": "Haussmannien",
+
     "bulletin.titre": "Bulletin municipal",
     "bulletin.manifestation": "Manifestation contre le manque de",
     "bulletin.megaprojetConstruit": "Mégaprojet construit :",
@@ -648,6 +653,11 @@ export const dictionaries = {
     "activite.definirRecommandation": "Recommend to visitors",
     "activite.recommandationDefinie": "Recommendation updated.",
     "activite.aucuneRecommandation": "None",
+
+    "theme.titre": "City theme:",
+    "theme.appliquer": "Apply",
+    "theme.classique": "Classic",
+    "theme.haussmannien": "Haussmann",
 
     "bulletin.titre": "Municipal bulletin",
     "bulletin.manifestation": "Protest over the lack of",

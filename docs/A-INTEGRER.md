@@ -97,8 +97,15 @@ journal existant, puis ce fichier peut être supprimé.*
 > (Crise/Fragile/Équilibré/Point fort) en texte principal, le
 > pourcentage exact passant en info secondaire (attribut `title`,
 > infobulle au survol). Calcul, seuils et barre de progression
-> inchangés (pur affichage front-end, aucune migration). Ce fichier
-> peut être supprimé
+> inchangés (pur affichage front-end, aucune migration).
+> **§22 (bibliothèque de bâtiments, retour de test du 30/09/2026,
+> corrigé après capture d'écran) : nouveau** — pas un problème de
+> richesse visuelle comme d'abord compris : sur `/dev/showroom`, la
+> plupart des vignettes sont blanches ou ne montrent qu'un fragment du
+> bâtiment, pas de vraie forme. Cause probable identifiée par Claude
+> chat : 15 `WebGLRenderer` simultanés sur une seule page (un par
+> vignette) contre un seul dans la vraie scène du jeu (`scene.ts`) — à
+> vérifier/corriger par Claude Code. Ce fichier peut être supprimé
 > quand Adrien aura répondu aux questions restantes et que les jalons
 > de la Phase 6 seront terminés.
 
@@ -958,3 +965,65 @@ joueurs qui veulent le chiffre précis.
 **Portée** : pur affichage front-end. N'affecte ni `DECISIONS.md`
 (pas de nouveau point ouvert nécessaire, cette précision referme la
 question sans créer de point ouvert), ni `ROADMAP.md`.
+
+---
+
+---
+
+## 22. Bug de rendu sur le showroom de la bibliothèque de bâtiments (30/09/2026)
+
+**Contexte** : chantier en cours (pas encore un jalon numéroté),
+documenté dans `docs/recette-bibliotheque-batiments-1.md` — 12 nouveaux
+modèles (6 maisons, 4 immeubles... la recette parle de 7 immeubles
+selon la capture d'écran d'Adrien, à vérifier), testables sur
+`/dev/showroom`.
+
+**Ce qu'Adrien a d'abord signalé** : « j'ai les mêmes soucis que la
+dernière fois avec les nouveaux bâtiments créés », compris au départ
+comme un problème de richesse visuelle (comme pour les éoliennes/usines
+en §20 A). **Après capture d'écran du showroom, ce n'est pas ça** :
+Adrien précise « je ne vois pas vraiment le rendu en fait ».
+
+**Ce que montre la capture d'écran** : sur `/dev/showroom`, la plupart
+des vignettes n'affichent pas de bâtiment reconnaissable —
+`maison-pavillon`, `maison-chalet` et `maison-toit-plat` sont des
+rectangles blancs vides ; les autres (`maison-longere`, `maison-ville`,
+`maison-veranda`, `maison-mitoyenne`, `maison-mediterraneenne`,
+`maison-fermette`, et plusieurs immeubles) n'affichent qu'un minuscule
+fragment triangulaire (un bout de toit ?) dans un coin, sur fond bleu
+ciel uni — pas de bâtiment entier visible. Aucun message d'erreur
+visible dans l'interface.
+
+**Cause probable, identifiée en lisant le code** (`src/app/dev/showroom/ShowroomClient.tsx`) :
+ce composant crée **un `THREE.WebGLRenderer` distinct par vignette**
+(un par modèle affiché : 6 + 7 + 2 = 15 vignettes actuellement, chacune
+avec son propre canvas et son propre contexte WebGL). C'est très
+différent de la vraie scène du jeu (`src/lib/ville3d/scene.ts`), qui
+n'utilise qu'**un seul** `WebGLRenderer` pour toute la ville. Les
+navigateurs limitent le nombre de contextes WebGL actifs simultanément
+sur une page (souvent une quinzaine, parfois moins selon le
+matériel/les extensions) ; au-delà, les contextes en trop peuvent être
+silencieusement refusés ou perdus ("context lost"), ce qui donnerait
+exactement ce qu'on voit : certaines vignettes jamais rendues (blanc),
+d'autres perdues en cours de rendu (fragment seulement). Le code actuel
+ne gère ni les échecs de création de contexte ni l'événement
+`webglcontextlost` — rien ne s'affiche à la place d'une erreur.
+
+**À vérifier/corriger par Claude Code** :
+1. Confirmer la cause (regarder la console du navigateur pour des
+   messages du type "too many active WebGL contexts" ou
+   `webglcontextlost`, ou réduire temporairement le nombre de vignettes
+   affichées en même temps pour voir si ça corrige le problème).
+2. Corriger l'architecture du showroom pour éviter d'ouvrir 15 contextes
+   WebGL en parallèle — par exemple un seul renderer partagé entre
+   toutes les vignettes (une scène/caméra par vignette mais un seul
+   `WebGLRenderer.setViewport()` réutilisé), ou ne monter/rendre que les
+   vignettes visibles à l'écran (`IntersectionObserver`), ou au minimum
+   gérer proprement l'échec de création/la perte de contexte avec un
+   message visible plutôt qu'un rendu blanc silencieux.
+3. Vérifier ensuite si le problème est bien limité au showroom (outil
+   de dev) ou si les mêmes bâtiments s'affichent correctement dans une
+   vraie ville sur `/ville` ou `/villes` (qui utilisent le renderer
+   unique de `scene.ts`) — si oui, la richesse visuelle des modèles
+   eux-mêmes n'a pas encore pu être jugée par Adrien, il faudra
+   redemander son avis une fois le showroom réparé.

@@ -3211,6 +3211,243 @@ envoyée/appliquée au moment de l'écriture.
 
 ---
 
+### Jalon "Bibliothèque de bâtiments" (1/4 : catalogue + premiers modèles) — 30/09/2026
+
+**Suite du Jalon 22** : `docs/BATIMENTS-ET-PACKS.md`, §10 point 21 de
+ce document. Trois questions tranchées avec Adrien avant de coder
+(`AskUserQuestion`) : (1) packs purement cosmétiques — **oui** ; (2)
+variantes gratuites par pays — **non pour l'instant** ; (3) thème
+prioritaire pour le premier pack payant — **Haussmannien** (pas encore
+codé, seule l'infrastructure de packs existe — voir plus bas) ; (4)
+découpage du chantier — Adrien a choisi **"tout en une fois"** plutôt
+qu'un lot réduit à valider d'abord.
+
+**Portée réellement livrée dans cette passe, plus modeste que les
+"~30-40 modèles" du document** (décision de Claude Code, à signaler
+explicitement à Adrien — voir DECISIONS.md, convention habituelle de
+transparence sur les réductions de portée) : **6 maisons, 4 immeubles,
+2 tours**, plus l'infrastructure complète (catalogue typé, sélection
+stable, showroom, tests). Un rythme soutenable pour une seule passe
+sans dégrader la qualité/vérification de chaque modèle ; l'ajout d'un
+modèle de plus est maintenant juste une entrée de tableau, donc les
+prochains lots seront plus rapides. Mobilier urbain non repris en
+catalogue cette fois (arbres/voitures restent gérés par mobilier.ts).
+
+**Point technique tranché avec Adrien avant de coder** (`AskUserQuestion`) :
+le document demande qu'ajouter un modèle au catalogue ne change jamais
+l'apparence d'une ville déjà construite. Garantir ça à 100 % demanderait
+de mémoriser en base, une fois pour toutes, le modèle choisi par chaque
+parcelle — un coût d'écritures que le jeu n'a pas aujourd'hui. Adrien a
+confirmé qu'une ville peut changer d'apparence (cas des packs de
+thèmes, activables/désactivables librement) : choix retenu = **tirage
+par hachage stable** (fonction pure de la graine de ville + position de
+la parcelle + identifiant du modèle, insensible à l'ORDRE des modèles
+dans le tableau), sans nouvelle table. Limite assumée et documentée
+(`src/lib/ville3d/catalogue.ts`) : ajouter un nouveau modèle peut, de
+façon rare, faire basculer une parcelle déjà construite vers ce nouveau
+modèle — pas une garantie à 100 %, un compromis délibéré.
+
+**Un second risque de dérive, repéré en implémentant** (pas anticipé
+dans la question posée à Adrien, corrigé directement) : le niveau
+d'une ville n'est pas figé une fois une parcelle construite — si le
+tirage dépendait du niveau courant (`stadeMin`), une maison déjà posée
+changerait d'aspect dès que la ville franchit un seuil de niveau, le
+même défaut que la grille est censée éviter. Fixé en gardant
+`stadeMin` à 0 pour tous les modèles "classique" de cette passe (le
+champ reste dans l'infrastructure pour un futur pack premium à
+débloquer par niveau, juste inexploité pour l'instant).
+
+**Showroom** (`/dev/showroom`, outil de développement jamais lié
+depuis la navigation) : rendu Three.js simplifié (couleurs de sommets,
+une lumière), bascule jour/nuit, cadrage automatique sur la vraie boîte
+englobante de chaque modèle construit (une tour ne tient pas dans un
+cadrage pensé pour une maison). Pas la scène finale du jeu — juste de
+quoi valider formes et proportions d'un coup d'œil, comme demandé par
+le document (§2).
+
+**Vérifié dans le vrai rendu du jeu** (page d'accueil, population
+temporairement montée à 60 000 pour voir tours et immeubles, revenue à
+1200 après vérification) : variété visible de maisons, immeubles et
+tours, aucune erreur console, géométrie propre.
+
+**Testé.** `tests/unit/catalogue.test.ts` (11 tests) : déterminisme du
+tirage, insensibilité à l'ordre du tableau, répartition statistique
+proche des poids déclarés, filtre par niveau, repli du pack vers le
+classique, erreur explicite si aucun modèle disponible, limite de
+triangles par modèle (docs/BATIMENTS-ET-PACKS.md §2). Suite unitaire
+complète (129 tests), typecheck et lint vérifiés verts. Aucune
+migration pour ce jalon (purement front-end/génération 3D) — pas de
+recette à faire valider par Adrien côté base de données, juste le rendu
+visuel.
+
+---
+
+### Jalon "Bibliothèque de bâtiments" (2/4 : deuxième lot de modèles) — 30/09/2026
+
+**Suite immédiate du 1/4**, choix confirmé par Adrien (`AskUserQuestion` :
+continuer sur plus de modèles "classique" plutôt que démarrer le pack
+Haussmannien). Catalogue étendu de 12 à **20 modèles** : +3 maisons
+(mitoyenne, méditerranéenne, fermette → 9 au total), +3 immeubles
+(art déco, barre, loggias → 7 au total), +2 tours (béton brutaliste,
+flèche → 4 au total). Mobilier urbain toujours pas repris en catalogue
+(reste pour un prochain lot).
+
+Aucun nouveau choix de conception cette fois — même infrastructure,
+mêmes conventions (`stadeMin` à 0, pack "classique", `decorJardin()`
+partagé pour les maisons, `edicule()`/`chantierGratteCiel()`/
+`grueChantier()` partagés pour immeubles/tours). Les deux nouvelles
+tours réutilisent le même squelette chantier/grue que tour-verre —
+seul le fût final change (bandeaux de béton alternés pour tour-beton,
+fût étroit + flèche toujours présente, jamais d'héliport, pour
+tour-fleche).
+
+**Vérifié dans le vrai rendu du jeu** (page d'accueil, population
+temporairement montée à 60 000 pour voir les nouvelles tours, revenue
+à 1200 après vérification) et dans le showroom (`/dev/showroom`,
+20 modèles listés) : aucune erreur console, silhouettes distinctes.
+
+**Testé.** `tests/unit/catalogue.test.ts` couvre déjà tous les modèles
+du catalogue génériquement (boucle sur `MODELES_MAISONS`/
+`MODELES_IMMEUBLES`/`MODELES_TOURS`) — aucun nouveau test nécessaire,
+les 8 nouveaux modèles sont automatiquement couverts par la limite de
+triangles et les tests de détermisme/pondération. Suite unitaire
+complète (129 tests), typecheck et lint vérifiés verts. Suite e2e
+complète relancée pour confirmer l'absence de régression sur le rendu
+3D : 81 passés, 6 échecs — tous la même flakiness de connexion
+pré-existante déjà documentée plusieurs fois ce jour (redirection vers
+`/connexion` au lieu de `/ville`, répartie sur des jalons sans aucun
+rapport avec le rendu 3D comme les Jalons 1/3/4/5/8/9), pas une
+régression liée à ce jalon.
+
+---
+
+### Jalon "Bibliothèque de bâtiments" (3/4 : mobilier urbain) — 30/09/2026
+
+**Suite immédiate du 2/4**, dernière catégorie du document encore
+absente (`docs/BATIMENTS-ET-PACKS.md` §3 : "arbres, lampadaires,
+abribus, fontaines, kiosques, bancs, voitures variées"). Contrairement
+aux bâtiments (maisons/immeubles/tours), le mobilier urbain n'est **pas**
+assigné une fois pour toutes à une parcelle précise — ce sont des
+éléments dispersés dans le décor (trottoirs, parcs, cours), donc pas
+besoin du catalogue à sélection stable : ajoutés comme fonctions
+réutilisables dans `mobilier.ts` et placés via des tirages `r() < p`
+classiques (même convention que les arbres d'alignement déjà en place).
+
+**Ajouté** (`src/lib/ville3d/mobilier.ts`) : `banc()`, `fontaine()`
+(la fontaine de cour existait déjà en dur dans `buildCourtyard()`,
+extraite en fonction réutilisable et enrichie d'un jet d'eau),
+`abribus()`, `kiosque()`. Arbres (feuillu + conifère) et voitures (8
+couleurs) existaient déjà. Lampadaires restent une fonction locale à
+`buildBlock()` (pas de variante de forme pour l'instant — seulement la
+couleur selon la technologie LED, Jalon 20 2/3).
+
+**Câblé** : `buildPark()` place un banc (ou deux) systématiquement, un
+kiosque de temps en temps (30 %) à la place ; `buildCourtyard()`
+utilise `fontaine()` (même rendu qu'avant, code partagé) ;
+`buildBlock()` place un abribus sur un des 4 trottoirs, 40 % du temps.
+
+**Vérifié** : suite unitaire dédiée (`tests/unit/mobilierUrbain.test.ts`,
+5 tests — géométrie non vide, sans `NaN`, déterminisme) plutôt qu'une
+vérification visuelle seule (petits éléments, difficiles à distinguer
+à l'œil sur une capture de ville entière) ; suite `ville3dGenerer`/
+`ville3dCroissance` toujours vertes (déterminisme global de
+`generate()` préservé) ; vérifié aussi dans le vrai rendu du jeu, sans
+erreur console.
+
+---
+
+### Jalon "Bibliothèque de bâtiments" (4/4 pour les modèles de base : troisième lot) — 30/09/2026
+
+**Suite immédiate du 3/4**, décision de Claude Code de continuer sur le
+même chantier plutôt que de redemander à Adrien à chaque petit pas
+(le sens de "passe à la suite" répété plusieurs fois de suite sur ce
+chantier précis) — si ce n'est pas ce qu'il voulait, à corriger.
+Catalogue étendu de 20 à **26 modèles** : +3 maisons (duplex,
+split-level, cottage → 12 au total), +2 immeubles (gradins multiples,
+vitrée → 9 au total), +1 tour (obélisque, fût mince et uniforme sans
+palier → 5 au total). Se rapproche des ~30 modèles visés par
+`docs/BATIMENTS-ET-PACKS.md` §3 (bâtiments seuls, hors mobilier urbain
+déjà fait au 3/4).
+
+**Vérifié** : suite unitaire complète (134 tests, `catalogue.test.ts`
+couvre génériquement tous les modèles) ; typecheck et lint verts ;
+vérifié dans le vrai rendu du jeu (population 60 000, silhouettes
+distinctes visibles pour toutes les nouvelles tours, notamment
+tour-obélisque très reconnaissable — fût mince et uniforme au milieu
+des autres tours), aucune erreur console. Suite e2e complète relancée :
+75 passés, 10 échecs + 12 non exécutés — tous la même flakiness de
+connexion pré-existante (`toHaveURL(/\/ville$/)`, vérifié ligne par
+ligne dans les logs), y compris le test `jalon6bis-rendu-3d.spec.ts`
+qui teste le canvas WebGL : son échec est dû au même blocage de
+connexion AVANT même d'atteindre la vérification du canvas, pas à un
+problème de rendu 3D. Nombre d'échecs plus élevé que d'habitude ce
+jour-là, probablement lié à la charge de la machine (serveurs de
+développement et suites e2e enchaînés sans pause) plutôt qu'à une
+nouvelle cause — à surveiller si ça persiste.
+
+---
+
+### Jalon "Bibliothèque de bâtiments" (4/4 : premier pack de thème, Haussmannien) — 30/09/2026
+
+**Dernier morceau de ce chantier**, décision de Claude Code de
+poursuivre dans la même direction plutôt que de redemander à Adrien à
+chaque étape (voir aussi la note du 3/4 sur "passe à la suite" répété).
+Premier pack de thème payant du document (§4), choisi en priorité par
+Adrien le 30/09/2026 (AskUserQuestion). **Première migration de tout ce
+chantier** — tout le reste (catalogue, 3 lots de modèles, mobilier
+urbain) était purement front-end.
+
+**Portée assumée** (décision de Claude Code, à contester si besoin) :
+le document prévoit des packs PAYANTS (§5), mais la boutique elle-même
+est explicitement une étape ultérieure ("après le MVP, une fois le
+statut légal réglé" — §6 point 4). Comme aucun système de paiement
+n'existe encore, le thème Haussmannien est sélectionnable librement par
+n'importe quel joueur pour l'instant, sans colonne `joueur_packs` ni
+réservation aux comptes de test (le document proposait pourtant cette
+option à moindre coût — §5). La restriction viendra avec la boutique,
+pas avant : plus simple pour tester/juger le rendu maintenant, cohérent
+avec "pas de fausse promesse de paiement avant d'avoir vraiment un
+moyen de payer".
+
+**Pack partiel** (§2, "si un thème n'a pas de modèle pour une famille,
+le catalogue prend celui du pack Classique") : seuls les IMMEUBLES ont
+des modèles Haussmannien dédiés (`immeuble-haussmannien` — façade
+pierre claire, garde-corps en fer forgé filants, étage mansardé en zinc
+avec lucarne ; `immeuble-haussmannien-angle` — même archétype avec une
+tourelle d'angle arrondie). Maisons et tours retombent sur "classique"
+pour ce thème — choix délibéré : Haussmann est avant tout une
+architecture d'immeubles parisiens, pas de pavillons ni de
+gratte-ciel.
+
+**Fait** :
+- Migration `0034` : `cities.theme` (défaut `'classique'`, contrainte
+  `check`), `definir_theme_ville()` (security definer, maire
+  uniquement, même anti-triche que `definir_recommandation()`).
+- `theme` propagé sur toute la chaîne de rendu (déjà prévu dans
+  l'infrastructure du catalogue, `choisirModele(cle, modeles, niveau,
+  packActif)`) : `generate()` → `buildBlock()` → `buildHouse`/
+  `buildApart`/`buildTower` → `choisirModele()`. `ParametresVille.theme`
+  (scene.ts), `SincroniserScene`, `/ville` et `/villes` (le visiteur
+  voit le thème choisi par LE MAIRE de la ville regardée, pas le sien).
+- Sélecteur sur `/ville` (le maire uniquement) : un `<select>` +
+  bouton "Appliquer", même style que le sélecteur de recommandation
+  d'activité (Jalon 17).
+
+**Testé.** `tests/unit/catalogue.test.ts` étendu (4 nouveaux tests,
+15 au total) : le pack haussmannien fournit bien des modèles
+d'immeuble, un immeuble avec ce thème actif utilise toujours un modèle
+haussmannien, une maison/tour avec ce thème actif retombe toujours sur
+classique (aucun modèle disponible pour ces familles). Nouveau fichier
+e2e (`tests/e2e/jalon-bibliotheque-theme-haussmannien.spec.ts`, 2
+tests) : anti-triche de `definir_theme_ville()` (réservé au maire,
+thème invalide refusé, valeur par défaut `'classique'` vérifiée) ; page
+`/ville` permet de choisir le thème et la valeur est bien persistée en
+base. Suite unitaire complète (134 tests), typecheck et lint vérifiés
+verts. Suite e2e complète pas encore relancée — migration `0034` pas
+encore envoyée/appliquée au moment de l'écriture.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -3499,10 +3736,22 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     **[Résolu — validé par Adrien le 26/09/2026, câblé le 28/09/2026
     (migration `0031`), voir §4 "Niveau Mégapole".]**
 21. **Bibliothèque de bâtiments et packs de thèmes**
-    (`docs/BATIMENTS-ET-PACKS.md`, proposition du 24/09/2026). En attente
-    des réponses d'Adrien aux 4 questions de son §7 (thèmes prioritaires,
-    variantes par pays, packs uniquement cosmétiques, ordre par rapport
-    au Jalon 8). Aucun code avant validation.
+    (`docs/BATIMENTS-ET-PACKS.md`, proposition du 24/09/2026).
+    **Questions du §7 répondues par Adrien le 30/09/2026** : packs
+    cosmétiques uniquement (oui), variantes par pays (non pour
+    l'instant), thème prioritaire (Haussmannien), ordre (devenu sans
+    objet, le Jalon 8 est fait depuis longtemps). **Catalogue + showroom
+    + mobilier urbain
+    codés le 30/09/2026, trois lots de bâtiments le même jour : 12 maisons,
+    9 immeubles, 5 tours (26 au total, proche des ~30 visés), plus
+    banc/fontaine/abribus/kiosque**, voir §4. **Point maintenant
+    entièrement résolu** : premier pack de thème Haussmannien (partiel,
+    immeubles seulement) codé le 30/09/2026, migration `0034`,
+    sélectionnable librement par le maire sur `/ville` (pas de
+    restriction de paiement, la boutique reste une étape ultérieure —
+    §6 point 4 du document). Reste, si Adrien le souhaite un jour : plus
+    de modèles pour atteindre exactement les ~30 visés, d'autres packs
+    de thèmes (Méditerranée, Nordique, Japon...), la boutique elle-même.
 22. **Revoir les règles du jeu** (retour d'Adrien après le Jalon 4 :
     "−10 % de population, c'est exagéré" — `docs/A-INTEGRER.md` §3 et
     `docs/SYSTEME-DEVELOPPEMENT.md` §6 bis). Proposition en réflexion :

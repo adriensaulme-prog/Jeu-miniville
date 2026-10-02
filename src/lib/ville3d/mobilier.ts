@@ -76,6 +76,72 @@ export function car(g: Geo, x: number, z: number, alongX: boolean, r: RNG, y0?: 
   });
 }
 
+/** banc : dossier + assise + deux pieds, posé le long d'un trottoir (alongX = orienté le long de X). */
+export function banc(g: Geo, x: number, z: number, alongX: boolean, seed?: number) {
+  const c = hex("#5b4632"),
+    metalC = hex("#3b3e42");
+  const L = 1.6,
+    hl = L / 2;
+  const y = 0.15;
+  if (alongX) {
+    box(g, x - hl, y + 0.32, z - 0.02, x + hl, y + 0.44, z + 0.3, { c, m: MAT.PLAIN, seed });
+    box(g, x - hl, y + 0.44, z + 0.22, x + hl, y + 0.78, z + 0.3, { c, m: MAT.PLAIN, seed });
+    box(g, x - hl + 0.15, y, z - 0.02, x - hl + 0.22, y + 0.32, z + 0.3, { c: metalC, m: MAT.PLAIN });
+    box(g, x + hl - 0.22, y, z - 0.02, x + hl - 0.15, y + 0.32, z + 0.3, { c: metalC, m: MAT.PLAIN });
+  } else {
+    box(g, x - 0.02, y + 0.32, z - hl, x + 0.3, y + 0.44, z + hl, { c, m: MAT.PLAIN, seed });
+    box(g, x + 0.22, y + 0.44, z - hl, x + 0.3, y + 0.78, z + hl, { c, m: MAT.PLAIN, seed });
+    box(g, x - 0.02, y, z - hl + 0.15, x + 0.3, y + 0.32, z - hl + 0.22, { c: metalC, m: MAT.PLAIN });
+    box(g, x - 0.02, y, z + hl - 0.22, x + 0.3, y + 0.32, z + hl - 0.15, { c: metalC, m: MAT.PLAIN });
+  }
+}
+
+/** fontaine : bassin, eau, socle central — même forme que l'ancienne fontaine de buildCourtyard(), extraite en modèle réutilisable. */
+export function fontaine(g: Geo, cx: number, cz: number) {
+  cylinder(g, cx, 0.15, cz, 2.8, 0.55, 20, COL.stone, MAT.PLAIN, MAT.PLAIN, COL.stone);
+  cylinder(g, cx, 0.15, cz, 2.4, 0.5, 20, COL.water, MAT.PLAIN, MAT.WATER, COL.water);
+  cylinder(g, cx, 0.6, cz, 0.35, 1.2, 10, COL.stone, MAT.PLAIN, MAT.PLAIN, COL.stone);
+  // petit jet au sommet du socle.
+  cylinder(g, cx, 1.75, cz, 0.08, 0.5, 6, COL.water, MAT.WATER, MAT.WATER, COL.water);
+}
+
+/** abribus : poteau, auvent vitré, banc intégré — le long d'un trottoir. */
+export function abribus(g: Geo, x: number, z: number, alongX: boolean) {
+  const frameC = hex("#4a4f56"),
+    glassC = hex("#a9c4d6");
+  const w = 2.6,
+    d = 1.1,
+    h = 2.1;
+  const hw = w / 2;
+  if (alongX) {
+    box(g, x - hw, 0.15, z, x - hw + 0.08, h, z + d, { c: frameC, m: MAT.PLAIN });
+    box(g, x + hw - 0.08, 0.15, z, x + hw, h, z + d, { c: frameC, m: MAT.PLAIN });
+    box(g, x - hw, h, z - 0.15, x + hw, h + 0.1, z + d, { c: frameC, m: MAT.PLAIN });
+    box(g, x - hw + 0.1, 0.4, z + d - 0.06, x + hw - 0.1, h - 0.1, z + d, { c: glassC, m: MAT.DARKGLASS });
+    banc(g, x, z + d * 0.35, alongX);
+  } else {
+    box(g, x, 0.15, z - hw, x + d, h, z - hw + 0.08, { c: frameC, m: MAT.PLAIN });
+    box(g, x, 0.15, z + hw - 0.08, x + d, h, z + hw, { c: frameC, m: MAT.PLAIN });
+    box(g, x - 0.15, h, z - hw, x + d, h + 0.1, z + hw, { c: frameC, m: MAT.PLAIN });
+    box(g, x + d - 0.06, 0.4, z - hw + 0.1, x + d, h - 0.1, z + hw - 0.1, { c: glassC, m: MAT.DARKGLASS });
+    banc(g, x + d * 0.35, z, alongX);
+  }
+}
+
+/** kiosque : petit pavillon rond à toit pointu, dans un parc. */
+export function kiosque(g: Geo, cx: number, cz: number, r: RNG) {
+  const wallC = pick(r, [hex("#8a6b46"), hex("#6f8a63"), hex("#7a5a3e")]);
+  const roofC = shadeC(wallC, 0.75);
+  cylinder(g, cx, 0.15, cz, 2.2, 0.1, 12, COL.stone, MAT.PLAIN, MAT.PLAIN, COL.stone);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const px = cx + Math.cos(a) * 1.9,
+      pz = cz + Math.sin(a) * 1.9;
+    box(g, px - 0.09, 0.2, pz - 0.09, px + 0.09, 2.3, pz + 0.09, { c: wallC, m: MAT.TRUNK });
+  }
+  cylinder(g, cx, 2.3, cz, 2.4, 0.9, 10, roofC, MAT.TILES, null, null, 0);
+}
+
 export function crane(
   g: Geo,
   mx: number,

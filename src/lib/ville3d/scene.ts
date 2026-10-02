@@ -47,6 +47,8 @@ export interface ParametresVille {
   nbTechnologies?: number;
   /** Jalon 20 (3/3) : monuments d'influence déjà débloqués (table monuments). */
   monuments?: MonumentDebloque[];
+  /** Bibliothèque de bâtiments (4/4) : thème choisi par le maire (cities.theme), "classique" par défaut. */
+  theme?: string;
 }
 
 const L = (c: [number, number, number]): [number, number, number] => [
@@ -274,7 +276,8 @@ export function creerSceneVille(canvas: HTMLCanvasElement): ControleurSceneVille
       params.elanEnergie ?? 0,
       params.megaprojets ?? [],
       params.nbTechnologies ?? 0,
-      params.monuments ?? []
+      params.monuments ?? [],
+      params.theme ?? "classique"
     );
     stats = res.stats;
     cityR = res.stats.cityR;

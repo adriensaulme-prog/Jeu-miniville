@@ -25,7 +25,7 @@ import {
   hex,
 } from "./constantes";
 import { box, cylinder, flat, type Geo } from "./geometrie";
-import { car, conifer, tree, type TamponAO } from "./mobilier";
+import { abribus, banc, car, conifer, fontaine, kiosque, tree, type TamponAO } from "./mobilier";
 import { buildApart, buildHouse, buildTower, type Facade, type Rect } from "./batiments";
 import {
   buildCommerce,
@@ -38,6 +38,7 @@ import {
 import { buildCentraleEnergie, buildEolienne, buildPanneauSolaire } from "./energie";
 import { buildMegaprojet } from "./megaprojets";
 import { buildMonument } from "./monuments";
+import { niveauPourPopulation } from "@/lib/game/niveauVille";
 import type { TechnologiesVille } from "@/lib/game/technologies";
 
 export interface MegaprojetConstruit {
@@ -95,9 +96,7 @@ export function buildCourtyard(g: Geo, rect: Rect, r: RNG, ao: TamponAO[]) {
   flat(g, x0 + inset, z1 - inset - w, x1 - inset, z1 - inset, y, COL.paving, MAT.PAVING);
   flat(g, x0 + inset, z0 + inset + w, x0 + inset + w, z1 - inset - w, y, COL.paving, MAT.PAVING);
   flat(g, x1 - inset - w, z0 + inset + w, x1 - inset, z1 - inset - w, y, COL.paving, MAT.PAVING);
-  cylinder(g, cx, 0.15, cz, 2.8, 0.55, 20, COL.stone, MAT.PLAIN, MAT.PLAIN, COL.stone);
-  cylinder(g, cx, 0.15, cz, 2.4, 0.5, 20, COL.stone, MAT.PLAIN, MAT.WATER, COL.water);
-  cylinder(g, cx, 0.6, cz, 0.35, 1.2, 10, COL.stone, MAT.PLAIN, MAT.PLAIN, COL.stone);
+  fontaine(g, cx, cz);
   const pts: [number, number][] = [
     [x0 + 5, z0 + 5],
     [x1 - 5, z0 + 5],
@@ -124,7 +123,12 @@ export function buildPark(g: Geo, rect: Rect, r: RNG, ao: TamponAO[], vacant?: b
     if (Math.abs(tx - cx) < 2.2) continue;
     tree(g, tx, tz, 0.15, rr(r, 0.9, 1.25), r, ao);
   }
-  box(g, cx + 1.3, 0.15, cz - 1, cx + 1.8, 0.6, cz + 1, { c: hex("#7a5a3e"), m: MAT.TRUNK });
+  if (r() < 0.3) {
+    kiosque(g, cx, cz, r);
+  } else {
+    banc(g, cx + 1.55, cz, false);
+    if (r() < 0.5) banc(g, cx - 1.55, cz, false);
+  }
 }
 
 export function buildParking(g: Geo, rect: Rect, front: Facade, r: RNG, seed: number) {
@@ -211,11 +215,17 @@ export function buildBlock(
   stats: Stats,
   glow: { x: number; z: number }[],
   ev: number[],
-  tech: TechnologiesVille
+  tech: TechnologiesVille,
+  theme = "classique"
 ) {
   const r = rngFrom(key + "|bloc|" + b.bi + "," + b.bj);
   const bx0 = blockX0(b.bi),
     bz0 = blockX0(b.bj);
+  // Bibliothèque de bâtiments (jalon après le 22, docs/BATIMENTS-ET-PACKS.md
+  // §2) : niveau de la ville pour le filtre stadeMin du catalogue —
+  // actuellement sans effet (tous les modèles "classique" sont à
+  // stadeMin 0, voir batiments.ts), gardé pour un futur pack premium.
+  const niveauVille = niveauPourPopulation(Math.max(0, Math.floor(C)));
   const seed = Math.floor(r() * 900) + 50;
 
   box(g, bx0, 0, bz0, bx0 + BS, 0.15, bz0 + BS, { c: COL.lawn, m: MAT.PLAIN, topM: MAT.LAWN, topC: COL.lawn, seed });
@@ -266,6 +276,15 @@ export function buildBlock(
     lamp(bx0 + BS - 0.5, bz0 + t, 1.1, 0);
   }
 
+  // abribus, occasionnel, sur un des quatre trottoirs du bloc.
+  if (r() < 0.4) {
+    const cote = Math.floor(r() * 4);
+    if (cote === 0) abribus(g, bx0 + 29, bz0 + 2.2, true);
+    else if (cote === 1) abribus(g, bx0 + 29, bz0 + BS - 2.2, true);
+    else if (cote === 2) abribus(g, bx0 + 2.2, bz0 + 29, false);
+    else abribus(g, bx0 + BS - 2.2, bz0 + 29, false);
+  }
+
   // où va le gratte-ciel (un côté du bloc, 2x2 parcelles)
   const side = Math.floor(r() * 4);
   const towerSets: { lots: [number, number][]; inner: Facade }[] = [
@@ -306,7 +325,8 @@ export function buildBlock(
   const dCenter = Math.hypot(b.bi + 0.5, b.bj + 0.5);
   const cap = Math.max(14, Math.round(40 - dCenter * 8 + (r() * 4 - 2)));
   const jitter = Math.floor(r() * 3);
-  const lotRng = (lc: number, lr: number) => rngFrom(key + "|lot|" + b.bi + "," + b.bj + "|" + lc + "," + lr);
+  const lotCle = (lc: number, lr: number) => key + "|lot|" + b.bi + "," + b.bj + "|" + lc + "," + lr;
+  const lotRng = (lc: number, lr: number) => rngFrom(lotCle(lc, lr));
 
   // Jalon 19 (§7) : hors résidentiel, les emplacements "maisons" et
   // "immeubles" reçoivent le stade simple puis développé du quartier de
@@ -340,7 +360,7 @@ export function buildBlock(
       else if (build) {
         if (C >= at) build(g, rect, front, 0, lr_, ao, lotSeed);
         else buildPark(g, rect, lr_, ao, true);
-      } else if (C >= at) buildHouse(g, rect, front, lr_, ao, lotSeed);
+      } else if (C >= at) buildHouse(g, rect, front, lr_, ao, lotSeed, lotCle(lc, lr), niveauVille, theme);
       else buildPark(g, rect, lr_, ao, true);
     } else if (idx < 6) {
       const start = Math.max(APART_FROM, b.openAt + gap * (0.8 + 0.1 * (idx - 4)));
@@ -362,7 +382,7 @@ export function buildBlock(
         const fl = Math.min(7, 2 + Math.floor((C - start) / APART_FLOOR_EVERY)) - (lotSeed % 2);
         ev.push(start + (Math.floor((C - start) / APART_FLOOR_EVERY) + 1) * APART_FLOOR_EVERY);
         const floors = Math.max(2, fl);
-        buildApart(g, rect, front, floors, lr_, ao, lotSeed);
+        buildApart(g, rect, front, floors, lr_, ao, lotSeed, lotCle(lc, lr), niveauVille, theme);
         if (tech.panneauxSolairesToits || tech.toitsVegetalises) {
           decorTechToit(g, (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2, 0.15 + floors * 3.0, 10, 9, tech, lotSeed);
         }
@@ -402,7 +422,7 @@ export function buildBlock(
     if (C >= b.towerAt) {
       const F = Math.max(0, Math.min(cap, Math.floor((C - b.towerAt) / PER_FLOOR) + jitter));
       if (F < cap) ev.push(b.towerAt + (F - jitter + 1) * PER_FLOOR);
-      buildTower(g, trect, ts.inner, F, cap, lotRng(8, 8), ao, seed);
+      buildTower(g, trect, ts.inner, F, cap, lotRng(8, 8), ao, seed, lotCle(8, 8), niveauVille, theme);
       stats.maxFloors = Math.max(stats.maxFloors, F);
       stats.towers++;
     } else {

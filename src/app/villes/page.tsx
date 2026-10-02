@@ -46,6 +46,7 @@ type LigneVille = {
   influence_max: number;
   greve_jusqua: string | null;
   recommandation_activite: Activite | null;
+  theme: string;
   country_id: string;
   pays: { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null } | { nom: string; latitude: number | null; longitude: number | null; fuseau_horaire: string | null }[] | null;
   owner: { pseudo: string } | { pseudo: string }[] | null;
@@ -88,7 +89,7 @@ export default async function VillesPage({
   const { data, error: erreurListe } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
+      `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, theme, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
     )
     .order("population", { ascending: false });
   if (erreurListe) console.error("Chargement des villes a échoué :", erreurListe.message);
@@ -393,6 +394,7 @@ export default async function VillesPage({
           megaprojets={megaprojetsConstruits}
           nbTechnologies={nbTechnologiesDebloquees3D}
           monuments={monumentsDebloques3D}
+          theme={villeAffichee3D.theme}
         />
       ) : null}
 

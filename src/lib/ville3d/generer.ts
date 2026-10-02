@@ -103,7 +103,8 @@ export function generate(
   elanEnergie = 0,
   megaprojets: MegaprojetConstruit[] = [],
   nbTechnologies = 0,
-  monuments: MonumentDebloque[] = []
+  monuments: MonumentDebloque[] = [],
+  theme = "classique"
 ): ResultatGeneration {
   const key = cleDe(name);
   const g = new Geo();
@@ -140,7 +141,7 @@ export function generate(
 
   buildRoadsAndTraffic(g, act, key, Math.ceil(cityR / T));
   for (const b of blocks) {
-    if (b.active) buildBlock(g, b, C, key, ao, stats, glow, ev, tech);
+    if (b.active) buildBlock(g, b, C, key, ao, stats, glow, ev, tech, theme);
     else if (!horsVille(b)) buildIdleBlock(g, b, key, ao);
   }
   if (tech.tramway) buildTramway(g, key, cityR);

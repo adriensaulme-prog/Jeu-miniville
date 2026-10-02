@@ -12,10 +12,10 @@ import type { ParametresVille } from "@/lib/ville3d/scene";
  */
 export function SincroniserScene(props: ParametresVille) {
   const { definirVille } = useSceneVille();
-  const { seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments } = props;
+  const { seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments, theme } = props;
 
   useEffect(() => {
-    definirVille({ seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments });
+    definirVille({ seed, populationMax, pays, vocations, elanEnergie, megaprojets, nbTechnologies, monuments, theme });
     // definirVille est stable (issue du ref dans SceneVilleFond) : seules
     // les vraies données de la ville doivent redéclencher l'appel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,6 +30,7 @@ export function SincroniserScene(props: ParametresVille) {
     megaprojets,
     nbTechnologies,
     monuments,
+    theme,
   ]);
 
   return null;
