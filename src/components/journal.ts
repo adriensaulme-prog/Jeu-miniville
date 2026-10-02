@@ -13,6 +13,9 @@ export type TypeLigneJournal =
   | "president"
   | "president_acquis"
   | "president_perdu"
+  | "premier_mondial"
+  | "premier_mondial_acquis"
+  | "premier_mondial_perdu"
   | "guerre_declaree"
   | "guerre_terminee"
   | "alliance"
@@ -66,6 +69,20 @@ export function libelleJournal(
     case "president_perdu":
       return remplacer(
         t(l.autre_ville_nom && l.autre_ville_nom !== l.ville_nom ? "journal.presidentPerdu" : "journal.presidentPerduSans"),
+        v
+      );
+    case "premier_mondial":
+      if (!l.autre_ville_nom || l.autre_ville_nom === l.ville_nom) return null;
+      return remplacer(t("journal.premierMondial"), v);
+    case "premier_mondial_acquis":
+      return remplacer(t("journal.premierMondialAcquis"), v);
+    case "premier_mondial_perdu":
+      return remplacer(
+        t(
+          l.autre_ville_nom && l.autre_ville_nom !== l.ville_nom
+            ? "journal.premierMondialPerdu"
+            : "journal.premierMondialPerduSans"
+        ),
         v
       );
     case "guerre_declaree":

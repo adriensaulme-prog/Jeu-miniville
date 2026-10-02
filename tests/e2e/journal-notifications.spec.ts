@@ -159,6 +159,44 @@ test.describe("Journal mondial et notifications (A-INTEGRER §26 A/B)", () => {
     expect(lignes).not.toContain(`ev:${petit!.id}`); // petit monument : reste dans sa ville
   });
 
+  test("n°1 mondial (migration 0043) : journalisé une seule fois, annoncé au journal, gagné / perdu notifié aux deux propriétaires", async () => {
+    test.setTimeout(90_000);
+    // Population énorme (< 2^31) pour être, brièvement, la n°1 du monde ; la seconde la dépasse plus bas.
+    const premiere = await nouveau("jn-monde-a", "EE", 2_000_000_000);
+    const seconde = await nouveau("jn-monde-b", "EE");
+    try {
+      // La première devient n°1 (éventuellement après la ville n°1 d'avant : mandat précédent possible).
+      await supabaseAdmin.rpc("verifier_premier_mondial");
+      const mandatA = await supabaseAdmin.from("premiers_mondiaux").select("ville_id, fin").is("fin", null);
+      expect(mandatA.data).toHaveLength(1);
+      expect(mandatA.data![0].ville_id).toBe(premiere.villeId);
+      // Idempotent : un second appel ne change rien.
+      await supabaseAdmin.rpc("verifier_premier_mondial");
+      expect((await supabaseAdmin.from("premiers_mondiaux").select("id").is("fin", null)).data).toHaveLength(1);
+
+      // La seconde dépasse la première.
+      await supabaseAdmin.from("cities").update({ population: 2_100_000_000, population_max: 2_100_000_000 }).eq("id", seconde.villeId);
+      await supabaseAdmin.rpc("verifier_premier_mondial");
+      const ouverts = (await supabaseAdmin.from("premiers_mondiaux").select("ville_id").is("fin", null)).data!;
+      expect(ouverts).toEqual([{ ville_id: seconde.villeId }]);
+
+      const lignes = await journal();
+      const nouvelle = lignes.find((l) => l.type === "premier_mondial" && l.ville_id === seconde.villeId);
+      expect(nouvelle, "n°1 mondial dans le journal").toBeDefined();
+      expect(nouvelle!.autre_ville_nom).toBe(premiere.nom);
+
+      expect((await notifs(seconde.userId)).map((n) => n.type)).toContain("premier_mondial_acquis");
+      const perdu = (await notifs(premiere.userId)).find((n) => n.type === "premier_mondial_perdu");
+      expect(perdu?.autre_ville_nom).toBe(seconde.nom);
+    } finally {
+      // Hors du top mondial au plus vite : ces populations fausseraient les autres suites.
+      for (const v of [premiere, seconde]) {
+        await supabaseAdmin.from("cities").update({ population: 1, population_max: 1 }).eq("id", v.villeId);
+      }
+      await supabaseAdmin.rpc("verifier_premier_mondial");
+    }
+  });
+
   test("non lues : la pastille compte, la page notifications marque tout lu, un nouvel événement la rallume ; un joueur ne lit jamais les notifications d'un autre", async ({
     page,
   }) => {

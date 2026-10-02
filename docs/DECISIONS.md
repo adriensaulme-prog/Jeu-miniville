@@ -4199,6 +4199,45 @@ connexion, refus d'identité `P0007`). Captures desktop et 360 px vérifiées.
 
 ---
 
+### Place de n°1 mondial journalisée (suite de A-INTEGRER §26 A et B) — 02/10/2026
+
+**Contexte.** Le journal du monde et les notifications (migration `0042`)
+ne pouvaient pas dire « tu viens de perdre ta place n°1 » (cahier des
+charges §23) : seul le n°1 d'un *pays* était enregistré (`presidents`). Ce
+manque était noté « pas fait » dans l'entrée précédente.
+
+**Fait (migration `0043`).**
+- Table `premiers_mondiaux` (un mandat par ligne, `fin` nulle = en cours,
+  au plus un mandat ouvert, lecture publique) et
+  `verifier_premier_mondial()` : réconciliation opportuniste et
+  idempotente, **exactement le mécanisme de `verifier_president`** à
+  l'échelle du monde (appelée à l'affichage de « Ma ville », pas de tâche
+  planifiée). Égalité de population : la ville la plus ancienne reste en
+  tête, pas d'oscillation. Le premier appel ouvre un mandat sans passé :
+  l'histoire d'avant n'a jamais été enregistrée et n'est pas inventée.
+- `journal_monde()` et `notifications_joueur()` recréées avec une branche de
+  plus : `premier_mondial` (« X devient la ville n°1 du monde, devant Y »,
+  seulement s'il y a un prédécesseur d'une *autre* ville),
+  `premier_mondial_acquis` et `premier_mondial_perdu` (notifications du
+  propriétaire : « Ta ville X devient la n°1 du monde ! » / « …perd la
+  place de n°1 mondiale au profit de Y »). Textes FR + EN.
+- Test e2e : deux villes à 2 et 2,1 milliards d'habitants (< 2³¹) deviennent
+  brièvement n°1 ; remises à 1 habitant aussitôt après pour ne pas fausser
+  les autres suites.
+
+**Toujours pas fait.** « Ton rival vient de te dépasser » : il n'existe pas
+de notion de rival dans le jeu (à définir avec Adrien : la ville juste
+devant ? une ville choisie ?). Partage d'un « passage n°1 » sur la page
+publique d'une ville (§26 C) : les événements partageables sont des lignes
+de `city_events` ; ce serait un nouveau type d'événement partageable à
+rattacher aux mandats.
+
+**Testé.** `tests/unit/journal.test.ts` (+1) ; `tests/e2e/journal-notifications.spec.ts`
+(+1) : un seul mandat ouvert, idempotent, dépassement journalisé avec le
+nom de la ville dépassée, gain notifié à l'une et perte à l'autre.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

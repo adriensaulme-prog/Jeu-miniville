@@ -34,10 +34,14 @@ npm run dev
   ville). L'historique d'avant ce chantier est donc déjà là.
 - **Les attaques subies ne sont jamais publiques** : elles notifient le
   maire mais n'apparaissent pas dans le journal du monde.
-- **Pas encore là**, parce que ces faits ne sont pas enregistrés : « tu
-  viens de perdre ta place n°1 mondiale », « ton rival vient de te
-  dépasser », « ton pays débloque une technologie » (les technologies sont
-  par ville). Les ajouter demande de journaliser les changements de rang.
+- **Place de n°1 mondial** (migration `0043`) : quand une ville prend la
+  première place du monde, le journal l'annonce et son maire est notifié ;
+  le maire de la ville dépassée aussi. L'histoire d'avant la migration
+  n'existe pas : le suivi commence au premier affichage de « Ma ville ».
+- **Pas encore là** : « ton rival vient de te dépasser » (il n'y a pas de
+  notion de rival dans le jeu : la ville juste devant toi ? une ville
+  choisie ? à définir) et « ton pays débloque une technologie » (les
+  technologies sont par ville).
 - **Pas de notification poussée du navigateur** (celle qui s'affiche quand
   le jeu est fermé) : c'est un chantier à part, avec permissions,
   abonnement et envoi côté serveur.

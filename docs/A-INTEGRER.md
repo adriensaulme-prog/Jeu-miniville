@@ -1386,8 +1386,10 @@ niveau effort.
 au minimum par la note) : `/notifications` + cloche avec pastille de non
 lus, mêmes lectures que le journal filtrées sur la ville et le pays du
 joueur. **Notifications poussées du navigateur : non faites** (chantier à
-part, comme la note le disait). « Perte de la place n°1 mondiale » et
-« rival » : non faits, ces faits ne sont pas enregistrés.
+part, comme la note le disait). « Ton rival vient de te dépasser » : non fait, la notion de
+rival n'existe pas dans le jeu. **Mise à jour : la perte (et le gain) de la
+place n°1 mondiale sont maintenant journalisés** (migration `0043`,
+`DECISIONS.md` §4 « Place de n°1 mondial journalisée »).
 
 ### C. Page de ville partageable / viralité (cahier des charges §24)
 

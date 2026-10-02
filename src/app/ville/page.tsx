@@ -128,6 +128,10 @@ export default async function VillePage() {
   // "depuis quand" et les mandats précédents (voir DECISIONS.md §4,
   // Jalon 11).
   await supabaseAdmin.rpc("verifier_president", { p_country_id: ville.country_id });
+  // Même principe pour la place de n°1 MONDIALE (journal du monde et
+  // notifications, A-INTEGRER §26 A/B) : mandat tenu à jour de façon
+  // opportuniste, jamais bloquant si la fonction n'est pas installée.
+  await supabaseAdmin.rpc("verifier_premier_mondial");
 
   // Activité (7j) calculée à la volée (Jalon 9) : la colonne
   // cities.activite n'a jamais eu de vraie définition (toujours 0 pour

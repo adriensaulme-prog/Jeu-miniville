@@ -48,6 +48,24 @@ describe("libellé du journal", () => {
     expect(libelleJournal("fr", perdu, nomPays)).toBe("Ta ville Lyon n'est plus la première de France.");
   });
 
+  it("n°1 mondial : journal public et notifications du propriétaire", () => {
+    const l = ligne({ type: "premier_mondial", ville_nom: "Lyon", autre_ville_nom: "Paris" });
+    expect(libelleJournal("fr", l, nomPays)).toBe("Lyon devient la ville n°1 du monde, devant Paris.");
+    expect(libelleJournal("en", l, nomPays)).toBe("Lyon becomes the world's number one city, ahead of Paris.");
+    // Pas de prédécesseur exploitable : pas une nouvelle.
+    expect(libelleJournal("fr", ligne({ type: "premier_mondial", ville_nom: "Lyon" }), nomPays)).toBeNull();
+    expect(libelleJournal("fr", ligne({ type: "premier_mondial", ville_nom: "Lyon", autre_ville_nom: "Lyon" }), nomPays)).toBeNull();
+    expect(libelleJournal("fr", ligne({ type: "premier_mondial_acquis", ville_nom: "Lyon" }), nomPays)).toBe(
+      "Ta ville Lyon devient la n°1 du monde !"
+    );
+    expect(
+      libelleJournal("fr", ligne({ type: "premier_mondial_perdu", ville_nom: "Lyon", autre_ville_nom: "Paris" }), nomPays)
+    ).toBe("Ta ville Lyon perd la place de n°1 mondiale au profit de Paris.");
+    expect(libelleJournal("fr", ligne({ type: "premier_mondial_perdu", ville_nom: "Lyon" }), nomPays)).toBe(
+      "Ta ville Lyon n'est plus la n°1 du monde."
+    );
+  });
+
   it("guerre déclarée : neutre dans le journal, personnalisée pour un joueur du pays concerné", () => {
     const l = ligne({ type: "guerre_declaree", country_id: "FR", cible_country_id: "DE" });
     expect(libelleJournal("fr", l, nomPays)).toBe("France déclare la rivalité à Allemagne : un conflit s'ouvre.");

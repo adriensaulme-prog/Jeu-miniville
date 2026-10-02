@@ -322,7 +322,9 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 A et B codés**
+*Dernière mise à jour : 02/10/2026. **Place de n°1 mondial journalisée**
+(migration `0043`, notifications « tu as perdu / gagné la première place
+mondiale »). Avant : **A-INTEGRER §26 A et B codés**
 (journal du monde `/journal`, notifications `/notifications` + cloche,
 migration `0042` ; **les six chantiers du §26 sont faits** sauf les
 notifications poussées du navigateur). Avant : **A-INTEGRER §26 D codé** (suivi de
