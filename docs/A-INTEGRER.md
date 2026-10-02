@@ -1389,6 +1389,13 @@ pour quelqu'un qui n'a jamais ouvert le jeu) et la génération de liens
 ciblés vers un événement précis plutôt que juste la ville en général.
 Prérequis naturel pour D (Amis et suivi).
 
+**Traité le 02/10/2026 (Claude Code), troisième des six chantiers du
+§26** : page publique `/v/<id>` en lecture seule (3D, maire, rang,
+réussites), lien vers un événement précis, boutons de partage, sans
+migration — détail dans `DECISIONS.md` §4 « Page publique d'une ville ».
+Les événements « passage n°1 » / « présidence » du cahier des charges ne
+sont pas encore enregistrés comme événements (cf. A, journal mondial).
+
 ### D. Amis et suivi (cahier des charges §25)
 
 « Les joueurs peuvent suivre leurs amis, consulter leurs villes et voir

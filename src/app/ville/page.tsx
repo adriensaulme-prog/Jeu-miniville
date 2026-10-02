@@ -17,6 +17,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
+import { BoutonPartager } from "@/components/BoutonPartager";
+import { cheminPartage } from "@/components/evenements";
 import { VisiteAutomatique } from "@/components/VisiteAutomatique";
 import { JaugesActivites, EMOJI_ACTIVITE } from "@/components/JaugesActivites";
 import { ChoisirActivite } from "@/components/ChoisirActivite";
@@ -370,6 +372,14 @@ export default async function VillePage() {
             {traduire(locale, "region.changerBouton")}
           </Link>
         </p>
+        <div className="row">
+          <BoutonPartager
+            locale={locale}
+            chemin={cheminPartage(ville.id)}
+            titre={`${ville.nom} — jeu_miniville`}
+            libelle={traduire(locale, "partage.partagerMaVille")}
+          />
+        </div>
         <p className="note">
           <Link href="/pays" style={{ color: "var(--focus)" }}>
             {traduire(locale, "pays.voirMonPays")} {nomPays} →
@@ -457,7 +467,7 @@ export default async function VillePage() {
             ) : null}
           </p>
         ) : null}
-        <BulletinMunicipal locale={locale} evenements={evenementsBulletin} />
+        <BulletinMunicipal locale={locale} evenements={evenementsBulletin} villeId={ville.id} />
       </PanneauFlottant>
     </main>
   );

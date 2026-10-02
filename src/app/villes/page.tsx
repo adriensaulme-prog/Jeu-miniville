@@ -640,7 +640,7 @@ export default async function VillesPage({
                 ) : null}
                 <ActionsAntiVille locale={locale} villeId={c.id} quotaAtteint={quotaAntiVilleAtteint} />
                 <p className="note">{traduire(locale, "villes.pasDeDestruction")}</p>
-                <BulletinMunicipal locale={locale} evenements={evenementsBulletin} />
+                <BulletinMunicipal locale={locale} evenements={evenementsBulletin} villeId={c.id} />
 
                 <div className="row">
                   {statutJum === "actif" ? (

@@ -3990,6 +3990,78 @@ Passer définitif. Captures vérifiées à l'œil, desktop et mobile (390 px).
 
 ---
 
+### Page publique d'une ville, partageable (A-INTEGRER §26 C) — 02/10/2026
+
+**Contexte.** Proposition C du §26 (cahier des charges §24, validée par
+Adrien) : chaque ville doit avoir une page partageable publiquement, sans
+connexion, en lecture seule, avec des liens vers un événement précis.
+Prérequis de D (amis et suivi).
+
+**Fait (sans migration).**
+- *Page `/v/<id>`* (publique : hors de `PAGES_PROTEGEES` du middleware,
+  qui protège les préfixes `/ville`, `/villes`, `/jumelages` — d'où le
+  choix de `/v/` et non `/ville/<id>`) : nom de la ville en enseigne,
+  pays, maire (pseudo), rang dans son pays, niveau, population,
+  influence, **ville en 3D** (vocations, zonage, énergie, mégaprojets,
+  technologies, monuments — tout est lu, rien n'est recalculé), liste
+  « Réussites » avec un bouton Partager par événement, bouton « Partager
+  cette ville ». Connecté : bouton vers `/villes?ville=…` pour la visiter
+  (ou « Voir ma ville » pour sa propre ville) ; non connecté :
+  « Créer un compte » / « Se connecter ».
+- *Lien vers un événement* : `/v/<id>?evenement=<id>` met l'événement en
+  avant en tête de page. Un identifiant invalide ou d'une autre ville
+  n'affiche rien d'autre qu'un message neutre ; un identifiant de ville
+  inconnu ou mal formé renvoie un vrai 404.
+- *Événements partageables* : les **réussites** seulement (mégaprojet
+  construit, technologie, monument). Attaques subies, manifestations et
+  pertes de guerre restent dans le bulletin du maire et **n'apparaissent
+  pas** sur la page publique ni n'ont de bouton de partage (choix de
+  Claude Code : on partage ses victoires, pas ses déboires).
+- *Bouton `BoutonPartager`* : feuille de partage du système sur mobile
+  (Web Share API, si écran tactile), sinon copie du lien complet dans le
+  presse-papiers avec confirmation « Lien copié ✓ » ; repli sur une
+  boîte de dialogue si le presse-papiers est refusé. Présent sur la page
+  publique, sur « Ma ville » (« Partager ma ville ») et dans le bulletin
+  municipal de « Ma ville » et de « Villes » (une réussite se partage
+  aussi depuis là).
+- *Aperçu de lien* : balises `title`/`description`/Open Graph (nom de la
+  ville) pour que le lien partagé s'affiche proprement. **Pas d'image
+  d'aperçu** (génération côté serveur de la vue 3D : chantier à part).
+- Refactor : le texte des événements est extrait dans
+  `src/components/evenements.ts` (`libelleEvenement`) et partagé avec le
+  bulletin municipal, dont le rendu reste le même.
+- Textes FR + EN (`partage.*`).
+
+**Sécurité / données.** La page ne lit que des tables et fonctions déjà
+publiques (RLS `lecture_publique` : villes, utilisateurs/pseudos, blocs,
+événements, monuments, technologies ; `jauges_ville` et `etat_megaprojets`
+sont appelables sans connexion, vérifié). Elle n'**écrit jamais**
+(aucune attribution opportuniste de vocations, mégaprojets, technologies
+ou monuments, contrairement à `/ville`) : un visiteur anonyme ne
+déclenche rien en base. Le pseudo du maire est affiché : il l'est déjà
+dans les classements publics.
+
+**Pas fait (volontairement).**
+- Les événements « passage n°1 » et « accession à la présidence » du
+  cahier des charges : ils ne sont **pas enregistrés** comme événements
+  (la présidence est recalculée à la volée par le rang) ; les partager
+  suppose de les journaliser — c'est le chantier A (journal mondial).
+  « Victoire internationale » et « appel à la mobilisation » idem.
+- Image d'aperçu (Open Graph image).
+- Partage d'un classement ou d'un pays.
+
+**Testé.** `tests/unit/evenements.test.ts` (6) : texte de chaque type en FR
+et EN, donnée incomplète, quelles réussites se partagent, chemins.
+`tests/e2e/partage-ville.spec.ts` (4) : page publique sans connexion
+(maire, réussites, aucune attaque, invitation à s'inscrire, événement
+mis en avant) ; 404 (ville inconnue, identifiant mal formé) et événement
+d'une autre ville refusé ; boutons Partager qui copient le lien exact de
+la ville et de l'événement (presse-papiers lu) ; connecté, « Voir ma
+ville », « Partager ma ville » et partage d'une réussite depuis le
+bulletin. Capture vérifiée à l'œil.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

@@ -446,6 +446,24 @@ body {
   justify-content: flex-end;
   gap: 8px;
 }
+.partage-evenement-mis-en-avant {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--focus);
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.07);
+}
+.partage-evenement-mis-en-avant p {
+  margin: 0;
+}
+.partage-evenement {
+  margin-left: 4px;
+}
+.partage-invitation {
+  display: grid;
+  gap: 8px;
+}
 .center-card.regles {
   width: min(720px, calc(100% - 32px));
   margin: 72px auto 96px;
