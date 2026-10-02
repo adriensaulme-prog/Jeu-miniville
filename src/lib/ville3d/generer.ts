@@ -9,7 +9,7 @@
  */
 
 import { rngFrom } from "./aleatoire";
-import { BS, CITY_R_MIN, COL, MAT, T, blockX0, openAtK, towerAtK } from "./constantes";
+import { BS, CITY_R_MIN, COL, MAT, PLAFOND_RENDU_POPULATION, T, blockX0, openAtK, towerAtK } from "./constantes";
 import { flat, Geo } from "./geometrie";
 import type { TamponAO } from "./mobilier";
 import {
@@ -60,8 +60,11 @@ export function planifierBlocs(
   const key = cleDe(name);
   // Nombre de blocs ouverts à ce stade, puis candidats en anneaux autour
   // du croisement central (blocs repérés par des entiers relatifs).
+  // Plafond de rendu : l'étendue de la ville s'arrête à
+  // PLAFOND_RENDU_POPULATION, même si la population continue de monter.
+  const Crendu = Math.min(C, PLAFOND_RENDU_POPULATION);
   let K = 0;
-  while (openAtK(K) <= C) K++;
+  while (openAtK(K) <= Crendu) K++;
   const M = Math.ceil(Math.sqrt(K + 40) / 2) + 3;
   const blocks: Bloc[] = [];
   for (let bi = -M; bi < M; bi++)
@@ -86,7 +89,7 @@ export function planifierBlocs(
     b.openAt = openAtK(k);
     b.gap = openAtK(k + 1) - b.openAt;
     b.towerAt = towerAtK(k);
-    b.active = C >= b.openAt;
+    b.active = Crendu >= b.openAt;
     // Jalon 19 : vocation fixée par rang une fois pour toutes (§7) —
     // le rang k ici correspond exactement au rang stocké en base
     // (city_blocks.rang), puisque cet ordre (distance au centre + aléa

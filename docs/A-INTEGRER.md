@@ -104,10 +104,14 @@ journal existant, puis ce fichier peut être supprimé.*
 > plupart des vignettes sont blanches ou ne montrent qu'un fragment du
 > bâtiment, pas de vraie forme. Cause probable identifiée par Claude
 > chat : 15 `WebGLRenderer` simultanés sur une seule page (un par
-> vignette) contre un seul dans la vraie scène du jeu (`scene.ts`) — à
-> vérifier/corriger par Claude Code. Ce fichier peut être supprimé
-> quand Adrien aura répondu aux questions restantes et que les jalons
-> de la Phase 6 seront terminés.
+> vignette) contre un seul dans la vraie scène du jeu (`scene.ts`).
+> **§23 (refonte /pays, 02/10/2026) : nouveau** — Adrien ne veut plus de
+> la carte du pays (Jalon 9 ter) ; la remplacer par un statut
+> diplomatique de la semaine (paix/guerre/allié) et un historique
+> hebdomadaire complet (diplomatie + vote de ressource + résultat de
+> conflit). Nouvelle table de synthèse probablement nécessaire. Ce
+> fichier peut être supprimé quand Adrien aura répondu aux questions
+> restantes et que les jalons de la Phase 6 seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -1043,3 +1047,60 @@ Le showroom a aussi révélé un vrai défaut : un trou dans le toit de
 `immeuble-haussmannien` (dessus de la façade non fermé), corrigé.
 Rendu simplifié : pas de textures de fenêtres dans le showroom, donc
 les façades y paraissent unies — normal, ce n'est pas la scène du jeu.
+
+---
+
+## 23. Refonte de l'onglet Pays : retirer la carte, ajouter un statut diplomatique + un historique hebdomadaire (demande d'Adrien, 02/10/2026)
+
+**Demande d'Adrien** : il n'aime pas l'onglet/page Pays telle qu'elle
+est aujourd'hui. Il pense que la carte du pays (Jalon 9 ter) n'est pas
+nécessaire. Il propose à la place un affichage plus simple : le pays,
+son statut de la semaine (en guerre / coalition [alliance] / paix), et
+un historique semaine par semaine.
+
+**Écart avec une décision précédente** : la carte du pays était une
+demande d'Adrien lui-même (Jalon 9 ter, 25/09/2026, remplaçant le fond
+3D de la page). Elle a aussi des limites déjà connues et jamais
+corrigées (`DECISIONS.md` §10 point 28 : pas de scintillement nocturne,
+pas de repères de jumelage, pas de clic sur une région, canvas 3D qui
+continue de tourner invisible derrière). Adrien revient sur ce choix
+après usage — assumé, même mécanique que la croissance rapide annulée
+au §17.
+
+**Proposition retenue (confirmée par Adrien)** :
+
+1. Retirer la carte (`<CartePays>`) de la page `/pays`. Le canvas 3D
+   qui tournait dessous (gaspillage CPU/GPU du point 28) disparaît avec
+   elle.
+2. À la place, en haut de page : le nom/drapeau du pays, et son statut
+   de la semaine en cours — un badge clair parmi : en paix (rien
+   d'adopté cette semaine), en guerre (rivalité adoptée + conflit en
+   cours), ou allié (alliance adoptée cette semaine) — à partir des
+   données déjà calculées (`resultatDecision`, `conflit`).
+3. Un historique hebdomadaire, semaine par semaine, le plus récent en
+   premier, contenant pour chaque semaine passée : la décision
+   diplomatique adoptée (et contre quel pays si rivalité), la
+   catégorie de ressource qui a gagné le vote cette semaine-là, et le
+   résultat du conflit si une rivalité a eu lieu cette semaine-là
+   (victoire/défaite/égalité, pertes de population subies par chaque
+   camp). **Confirmé par Adrien** : l'historique doit tout contenir
+   (diplomatie + vote + conflit), pas seulement le statut diplomatique.
+
+**Ce qui ne change pas** : les sections déjà existantes de `/pays` non
+visées par la demande (villes principales, vote hebdomadaire en cours,
+détail du conflit en cours, ressources accumulées, historique des
+présidents) restent en l'état — seule la carte part, et l'historique
+hebdomadaire est une vraie nouveauté à construire (rien de tel
+n'existe aujourd'hui : seul l'historique des mandats présidentiels est
+conservé).
+
+**Donnée à prévoir** : rien aujourd'hui ne conserve un instantané par
+semaine (le vote et les décisions diplomatiques sont recalculés à la
+volée depuis `votes_pays`/`votes_diplomatie`/`conflits`, sans table de
+synthèse hebdomadaire) — une nouvelle table (type
+`historique_pays_semaine` : pays, semaine, catégorie gagnante du vote,
+décision diplomatique adoptée, pays cible éventuel, résultat du
+conflit éventuel) est probablement nécessaire, à moins que Claude Code
+trouve plus simple de recalculer l'historique à la demande à partir
+des tables existantes (semaine par semaine, en remontant dans le
+temps) — à évaluer selon le volume de données déjà accumulé.

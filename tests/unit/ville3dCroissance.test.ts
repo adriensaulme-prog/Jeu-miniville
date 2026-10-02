@@ -5,6 +5,7 @@ import {
   BLOCK_OPEN,
   CITY_R_MIN,
   HABITANTS_PAR_LOGEMENT_MAISON,
+  PLAFOND_RENDU_POPULATION,
   TOWER_AFTER_OPEN,
   openAtK,
   towerAtK,
@@ -106,5 +107,38 @@ describe("rayon de ville : brouillard, ombres et occlusion suivent la taille ré
     }
     expect(dimensionsAO(CITY_R_MIN).res).toBe(512);
     expect(dimensionsAO(480).res).toBe(1024);
+  });
+});
+
+/**
+ * Plafond de rendu (docs/DECISIONS.md §10 point 19) : la ville dessinée
+ * cesse de s'étendre à PLAFOND_RENDU_POPULATION, la population continue
+ * de monter.
+ */
+describe("plafond de rendu des très grandes villes", () => {
+  it("au-delà du plafond, le nombre de blocs dessinés ne change plus", () => {
+    const auPlafond = planifierBlocs("graine-plafond", PLAFOND_RENDU_POPULATION);
+    const enDessous = planifierBlocs("graine-plafond", PLAFOND_RENDU_POPULATION - 5000);
+    const bienAuDela = planifierBlocs("graine-plafond", 9_000_000);
+
+    const nbActifs = (r: ReturnType<typeof planifierBlocs>) => r.blocks.filter((b) => b.active).length;
+    expect(nbActifs(bienAuDela)).toBe(nbActifs(auPlafond));
+    expect(bienAuDela.K).toBe(auPlafond.K);
+    // Et la ville grossit bien jusqu'au plafond (le test ne passe pas "par vacuité").
+    expect(nbActifs(auPlafond)).toBeGreaterThan(nbActifs(enDessous) - 1);
+    expect(nbActifs(auPlafond)).toBeGreaterThan(50);
+  });
+
+  it("une ville à 9 000 000 d'habitants se génère aussi vite qu'une ville au plafond", () => {
+    const mesurer = (c: number) => {
+      const t0 = performance.now();
+      generate("graine-temps", c);
+      return performance.now() - t0;
+    };
+    mesurer(PLAFOND_RENDU_POPULATION); // échauffement
+    const auPlafond = mesurer(PLAFOND_RENDU_POPULATION);
+    const geante = mesurer(9_000_000);
+    // Avant le plafond, ~1 800 blocs : des dizaines de fois plus lent.
+    expect(geante).toBeLessThan(auPlafond * 3 + 200);
   });
 });

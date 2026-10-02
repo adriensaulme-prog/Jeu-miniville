@@ -54,6 +54,16 @@ export const BLOC_SUPPLEMENTAIRE_TOUS = 5000;
 // après l'ouverture de son bloc (les blocs lointains se construisent d'abord).
 export const TOWER_AFTER_OPEN = 12000;
 
+// Plafond de rendu (docs/DECISIONS.md §10 point 19, arbitrage d'Adrien du
+// 02/10/2026) : au-delà de ce nombre d'habitants, la ville dessinée
+// cesse de s'étendre (la population, elle, continue de monter). Un test
+// e2e avec une ville à 9 000 000 d'habitants (~1 800 blocs) gelait le
+// navigateur 10 à 15 s. 250 000 = seuil du niveau Mégapole (le dernier) :
+// ~58 blocs, un peu plus de deux fois la plus grande ville de test
+// (114 000 hab.). Chiffre choisi par Claude Code, à ajuster après mesure
+// sur téléphone (le §10 point 19 estimait que ça ramerait vers 500 000).
+export const PLAFOND_RENDU_POPULATION = 250_000;
+
 /** Seuil de population à partir duquel le k-ième bloc (0 = le plus central) s'ouvre. */
 export const openAtK = (k: number): number =>
   k < BLOCK_OPEN.length

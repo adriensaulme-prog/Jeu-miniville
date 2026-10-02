@@ -3514,6 +3514,38 @@ pas encore appliquée au moment de l'écriture.
 
 ---
 
+### Plafond de rendu des très grandes villes — 02/10/2026
+
+**Arbitrage d'Adrien** (`AskUserQuestion`, 02/10/2026) : principe validé
+pour le point ouvert §10 n°19, devenu concret en cherchant pourquoi les
+specs e2e à villes de 9 000 000 d'habitants gelaient le navigateur.
+Mesure : sans plafond, `generate()` produit **1 808 blocs** pour une ville
+à 9 M d'habitants et prend ~5,4 s *dans Node* (le navigateur, plus lent,
+gelait 10 à 15 s) ; la population, elle, n'a aucune limite.
+
+**Fait** : `PLAFOND_RENDU_POPULATION = 250 000` (`constantes.ts`),
+appliqué dans `planifierBlocs()` — le nombre de blocs dessinés cesse de
+croître à ce seuil (~58 blocs). La population continue de monter, le
+niveau aussi (Mégapole = 250 000, le dernier), et les bâtiments déjà
+construits gardent leur logique de hauteur. **Chiffre choisi par Claude
+Code, à ajuster après mesure sur téléphone** (le §10 point 19 estimait
+que ça ramerait vers 500 000) : 250 000 = seuil du dernier niveau, un peu
+plus de deux fois la plus grande ville de test (114 000).
+
+*Nuance à connaître* : `docs/A-INTEGRER.md` §2 (demande d'Adrien) disait
+« la ville ne s'arrête jamais de grandir » ; cette règle s'applique donc
+désormais à la *population* et à la *densité*, pas à l'étendue au-delà
+de 250 000 habitants — c'était précisément le compromis prévu au §10
+point 19.
+
+**Testé.** `tests/unit/ville3dCroissance.test.ts` (+2 tests) : au-delà
+du plafond le nombre de blocs ne change plus ; une ville à 9 000 000
+se génère presque aussi vite qu'une ville au plafond. **Sabotage
+vérifié** : avec la constante neutralisée, les deux tests échouent
+(1 808 blocs au lieu de ~58, 5,4 s).
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -3784,7 +3816,9 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     test de stabilité du Jalon 7bis en couvre l'ordre des blocs ; la
     future bibliothèque de bâtiments, `docs/BATIMENTS-ET-PACKS.md` §2,
     devra faire de même pour les modèles).
-19. **Plafond de rendu pour les très grandes villes ?** La croissance est
+19. **Plafond de rendu pour les très grandes villes ?** **[Résolu le
+    02/10/2026 : plafond à 250 000 habitants, voir §4 — chiffre à
+    ajuster après mesure sur téléphone.]** Texte d'origine : La croissance est
     sans limite comme demandé, mais le coût monte : 436 000 sommets à
     250 000 habitants, 706 000 à 500 000, 1,25 million à 1 000 000 (mesures
     au §4, Jalon 7bis). Sur téléphone, au-delà de ~500 000 habitants, ça
