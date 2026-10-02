@@ -69,7 +69,7 @@ test.describe("Jalon 22 — paliers visibles pour visites, influence et jumelage
     const joueurB = await creerCompteAvecVille("j22-rls-b");
     try {
       // visites : un même joueur peut visiter plusieurs fois par jour
-      // (quota 3), contrairement à actions_influence (une ligne par
+      // (quota de visites par jour), contrairement à actions_influence (une ligne par
       // (joueur, ville, jour), unique).
       await donnerVisitesAujourdhui(joueurA.userId, cible.villeId, 3);
       await donnerVisitesAujourdhui(joueurB.userId, cible.villeId, 2);
@@ -183,13 +183,14 @@ test.describe("Jalon 22 — paliers visibles pour visites, influence et jumelage
     );
     try {
       for (const v of visiteurs) {
-        await donnerVisitesAujourdhui(v.userId, cible.villeId, 1);
+        await donnerVisitesAujourdhui(v.userId, cible.villeId, 3);
         const { error } = await supabaseAdmin
           .from("actions_influence")
           .insert({ joueur_id: v.userId, ville_id: cible.villeId, jour: AUJOURDHUI });
         expect(error).toBeNull();
       }
-      // 5 visites => palier "tres_frequentee" ; 5 actions d'influence => "renommee".
+      // 5 visiteurs x 3 visites = 15 visites => palier "tres_frequentee" (13 à 39 avec un
+      // plafond de 8 visites/jour, §27 A) ; 5 actions d'influence => "renommee".
 
       await page.goto("/connexion");
       await page.getByLabel("Adresse e-mail").fill(moi.email);

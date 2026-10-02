@@ -1563,7 +1563,8 @@ d'emblée pour une visite de moins de 2 minutes) et C (page publique
 `/regles`, FR + EN, v1 cœur de boucle) — détail dans `DECISIONS.md` §4
 « Plafond de visites à 8… ». **Question posée à Adrien** : les paliers
 de popularité du Jalon 22 sont-ils à relever maintenant que le plafond
-passe de 3 à 8 ?
+passe de 3 à 8 ? **Réponse d'Adrien : oui — fait** (seuils 1 / 13 / 40 /
+133, qui suivent le plafond ; `DECISIONS.md` §4).
 
 ---
 

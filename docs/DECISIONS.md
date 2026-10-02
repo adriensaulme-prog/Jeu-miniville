@@ -4280,6 +4280,37 @@ e-mails de confirmation. Le premier essai réel (guide §4) le dira.
 
 ---
 
+### Paliers de popularité relevés avec le plafond de visites à 8 (suite de A-INTEGRER §27 A) — 02/10/2026
+
+**Contexte.** Question laissée à Adrien après le §27 A : le plafond de
+visites passant de 3 à 8 par jour et par visiteur, les paliers de
+popularité du Jalon 22 (visites reçues aujourd'hui : 5 / 15 / 50, calibrés
+pour 3 visites par jour) deviennent trop faciles à atteindre. Adrien :
+« paliers de popularité » (relever).
+
+**Fait (purement TypeScript, aucune migration : les paliers sont de
+l'affichage, la base ne fait que compter).**
+- Les seuils de `palierVisites()` (`src/lib/game/popularite.ts`) suivent le
+  plafond : seuils d'origine × `QUOTA_VISITE_QUOTIDIEN` / 3, arrondis —
+  **1 / 13 / 40 / 133** à 8 visites par jour (Fréquentée dès 1, Très
+  fréquentée 13, En vogue 40, Virale 133). Ils se recalculent d'eux-mêmes si
+  le plafond change encore, sans retoucher ce fichier. Exportés sous
+  `SEUILS_POPULARITE`.
+- Choix de Claude Code : proportionnel au plafond (×8/3) plutôt qu'un
+  chiffre rond arbitraire, pour que « Virale » garde le sens qu'elle avait
+  (≈ 17 visiteurs utilisant leur quota) ; seuils facilement ajustables si
+  Adrien les trouve trop hauts ou trop bas à l'usage.
+- **Paliers de renommée (influence) inchangés** : le quota d'influence
+  (5 actions par jour et par joueur) n'a pas bougé. Paliers de jumelage
+  inchangés.
+
+**Testé.** `tests/unit/popularite.test.ts` : valeurs aux bornes (12/13,
+39/40, 132/133), seuils recalculés depuis le plafond, strictement croissants.
+`jalon22-paliers…spec.ts` : 5 visiteurs × 3 visites = 15 → « Très
+fréquentée » à l'écran (avant : 5 visites).
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

@@ -31,8 +31,9 @@ npm run dev
 
 - **Effet d'équilibrage** : 8 visites au lieu de 3, c'est 2,7 fois plus
   de croissance possible par visiteur et par ville. Les paliers de
-  popularité du Jalon 22 (visites reçues aujourd'hui) avaient été
-  calibrés avant. **À relever ?** Dis-moi.
+  popularité (visites reçues aujourd'hui) ont été relevés en conséquence :
+  Fréquentée dès 1, Très fréquentée 13, En vogue 40, Virale 133 (ils
+  suivent le plafond de visites). À ajuster si tu les trouves mal placés.
 - **Les règles écrites sont à relire par toi** : j'ai repris les chiffres
   des migrations (influence 5/jour, AntiVille 3/jour, 3 jumelages
   actifs, fenêtre de 5 minutes). Si une phrase te paraît inexacte ou mal
