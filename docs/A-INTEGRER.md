@@ -1407,6 +1407,12 @@ accès rapide depuis cette liste plutôt que de chercher dans `/villes`.
 S'appuie naturellement sur C (une ville suivie s'afficherait un peu
 comme sa page partageable, mais pour un joueur connecté).
 
+**Traité le 02/10/2026 (Claude Code), quatrième des six chantiers du
+§26** : suivi **unilatéral** de villes (pas d'amitié réciproque, l'autre
+joueur n'est pas prévenu), page `/suivi` avec rangs pays et monde, bouton
+Suivre sur « Villes » et sur la page publique, quota de 50, migration
+`0041` — détail et choix dans `DECISIONS.md` §4 « Amis et suivi ».
+
 ### E. Découverte des petites villes neuves sur `/villes`
 
 Idée de Claude chat, pas dans le cahier des charges : `/villes` est

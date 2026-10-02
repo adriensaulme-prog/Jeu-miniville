@@ -21,7 +21,7 @@ export const ETAPES_GUIDE: readonly EtapeGuide[] = [
 ];
 
 /** Écrans du jeu où la carte s'affiche (pas sur l'accueil, la connexion, la création de ville ni les règles). */
-const PAGES_DU_JEU = ["/ville", "/villes", "/jumelages", "/classement", "/palmares", "/pays"];
+const PAGES_DU_JEU = ["/ville", "/villes", "/jumelages", "/classement", "/palmares", "/pays", "/suivi"];
 const ECRANS_DE_RATTRAPAGE = ["/ville/creer", "/ville/region", "/ville/noms"];
 
 export function pageDuGuide(pathname: string | null): boolean {

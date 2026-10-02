@@ -322,7 +322,8 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 C codé** (page
+*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 D codé** (suivi de
+villes, `/suivi`, migration `0041` ; reste A et B). Avant : **A-INTEGRER §26 C codé** (page
 publique `/v/<id>` partageable, sans migration ; reste A, B, D). Avant :
 **A-INTEGRER §26 F codé** (guide de
 démarrage en 5 étapes, sans migration). Avant : **A-INTEGRER §26 E codé** (tris de

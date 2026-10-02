@@ -4062,6 +4062,63 @@ bulletin. Capture vérifiée à l'œil.
 
 ---
 
+### Amis et suivi : suivre des villes (A-INTEGRER §26 D) — 02/10/2026
+
+**Contexte.** Proposition D du §26 (cahier des charges §25 : « les joueurs
+peuvent suivre leurs amis, consulter leurs villes et voir leurs
+classements. Les relations sociales doivent rester simples »), validée par
+Adrien. Le §26 laissait « à confirmer au moment de spécifier » si une
+amitié réciproque est nécessaire.
+
+**Choix de Claude Code.** Un **suivi unilatéral d'une ville**, sans demande
+ni acceptation ni amitié réciproque : une liste de raccourcis personnelle
+vers des villes d'autres joueurs, avec leur rang. L'autre joueur **n'est
+pas prévenu** et personne ne voit qui suit quoi (RLS `lecture_propre` : on
+ne lit que sa propre liste, pas de compteur d'abonnés). Si Adrien veut une
+vraie notion d'« ami » (réciprocité, demandes), c'est une extension — le
+modèle actuel n'en empêche pas.
+
+**Fait.**
+- *Migration `0041`* : table `villes_suivies (joueur_id, ville_id)`
+  (clé primaire = la paire, `on delete cascade` des deux côtés) ;
+  `suivre_ville()` (idempotente ; refuse sa propre ville `P0005`, une
+  ville inconnue `P0004`, un autre joueur `P0007` ; **quota de 50**, nouveau
+  code `P0029`, non appliqué à un suivi déjà existant) ;
+  `ne_plus_suivre_ville()` ; `villes_suivies_rangs()` (rang dans le pays
+  et dans le monde de chaque ville suivie, `rank()` comme partout : ex
+  æquo au même rang, un seul appel pour toute la page). Aucune policy
+  d'écriture : tout passe par les fonctions.
+- *Page `/suivi`* (protégée, ajoutée à `PAGES_PROTEGEES` et aux écrans du
+  guide) : liste triée par population, avec pays, niveau, population, rang
+  dans le pays (badge Président si 1ᵉʳ) et rang mondial, lien vers la
+  ville dans « Villes », bouton « Ne plus suivre », compteur `n/50`.
+- *Bouton « ☆ Suivre » / « ★ Ne plus suivre »* (`BoutonSuivre`, composant
+  serveur + actions `src/app/suivi/actions.ts`) dans le détail d'une ville
+  sur « Villes » et sur la page publique `/v/<id>` (connecté, hors sa
+  propre ville) ; désactivé quand la liste est pleine.
+- *Découverte* : lien « ★ Mes villes suivies (n) » dans le panneau de
+  « Villes », étoile ★ sur les villes suivies dans la liste.
+- Textes FR + EN (`suivi.*`). `src/lib/game/suivi.ts` : miroir du quota,
+  parité avec la migration vérifiée par `tests/unit/suivi.test.ts`.
+
+**Pas fait (volontairement).** Pas d'onglet « Suivi » dans la barre de
+navigation (7 onglets ne tiennent pas sur un téléphone : l'accès se fait
+depuis « Villes ») ; pas de notification quand une ville suivie change de
+rang ou débloque quelque chose (c'est le chantier B) ; pas de fil
+d'activité des villes suivies (chantier A, journal mondial, pourra les
+filtrer) ; pas de suivi d'un joueur ou d'un pays, seulement de villes.
+
+**Testé.** `tests/unit/suivi.test.ts` (1) : parité quota TS/SQL.
+`tests/e2e/suivi-villes.spec.ts` (4, pays AT réservé) : suivre idempotent,
+refus de sa propre ville / ville inconnue, quota de 50 (49 + le 50ᵉ passe,
+le 51ᵉ refusé en P0029, un suivi déjà existant jamais refusé) ; rangs pays
+et monde avec ex æquo ; interface complète (suivre depuis « Villes », liste
+vide puis remplie avec « 1ᵉʳ dans le pays » et Président, état du bouton
+sur la page publique, retirer) ; accès réservé aux connectés et pas de
+bouton sur sa propre ville.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

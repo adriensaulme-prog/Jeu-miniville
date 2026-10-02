@@ -446,6 +446,15 @@ body {
   justify-content: flex-end;
   gap: 8px;
 }
+.suivi-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.suivi-ligne .rowbtn {
+  flex: 1;
+  min-width: 0;
+}
 .partage-evenement-mis-en-avant {
   display: grid;
   gap: 4px;

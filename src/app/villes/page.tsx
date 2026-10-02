@@ -29,6 +29,8 @@ import { Megaprojets, type EtatMegaprojet } from "@/components/Megaprojets";
 import { Technologies } from "@/components/Technologies";
 import { Monuments } from "@/components/Monuments";
 import { influencerVille, proposerJumelage } from "./actions";
+import { BoutonSuivre } from "@/components/BoutonSuivre";
+import { QUOTA_VILLES_SUIVIES } from "@/lib/game/suivi";
 
 const DELAI_VISITE_MINUTES = 60;
 const GAIN_VISITE = 1;
@@ -218,6 +220,11 @@ export default async function VillesPage({
       joursBonusParJumelage.set(ligne.jumelage_id, ligne.jours);
     }
   }
+
+  // A-INTEGRER §26 D : villes suivies par le joueur (RLS : sa propre liste).
+  const { data: suivisBruts } = await supabase.from("villes_suivies").select("ville_id").eq("joueur_id", user.id);
+  const villesSuivies = new Set((suivisBruts ?? []).map((s) => s.ville_id as string));
+  const quotaSuiviAtteint = villesSuivies.size >= QUOTA_VILLES_SUIVIES;
 
   const villeSelectionnee =
     villeSelectionneeId && villeSelectionneeId !== maVilleId
@@ -424,6 +431,11 @@ export default async function VillesPage({
         <p className="note">
           {traduire(locale, "villes.actionsRestantes")} {actionsInfluenceRestantes}/{QUOTA_INFLUENCE_QUOTIDIEN}
         </p>
+        <p className="note">
+          <Link href="/suivi" style={{ color: "var(--focus)" }}>
+            ★ {traduire(locale, "suivi.lien")} ({villesSuivies.size})
+          </Link>
+        </p>
         <FiltreVilles locale={locale} pays={(listePays ?? []) as { id: string; nom: string }[]} />
         <ol className="list">
           {villesAffichees.length === 0 ? (
@@ -455,6 +467,7 @@ export default async function VillesPage({
                         <span className="badge pres">{traduire(locale, "classement.president")}</span>
                       ) : null}
                       {estMoi ? <span className="badge">{traduire(locale, "villes.maVille")}</span> : null}
+                      {villesSuivies.has(v.id) ? <span className="badge">★</span> : null}
                       {statutJum === "actif" ? (
                         <span className="badge good">{traduire(locale, "villes.jumelee")}</span>
                       ) : null}
@@ -667,6 +680,12 @@ export default async function VillesPage({
                       </button>
                     </form>
                   )}
+                  <BoutonSuivre
+                    locale={locale}
+                    villeId={c.id}
+                    suivie={villesSuivies.has(c.id)}
+                    quotaAtteint={quotaSuiviAtteint}
+                  />
                 </div>
               </>
             );

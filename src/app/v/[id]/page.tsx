@@ -14,6 +14,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server-session";
 import { SincroniserScene } from "@/components/SincroniserScene";
 import { PanneauFlottant } from "@/components/PanneauFlottant";
 import { BoutonPartager } from "@/components/BoutonPartager";
+import { BoutonSuivre } from "@/components/BoutonSuivre";
+import { QUOTA_VILLES_SUIVIES } from "@/lib/game/suivi";
 import {
   cheminPartage,
   evenementPartageable,
@@ -78,9 +80,16 @@ export default async function VillePubliquePage({ params, searchParams }: Props)
     data: { user },
   } = await supabase.auth.getUser();
   let estMaVille = false;
+  let villeSuivie = false;
+  let quotaSuiviAtteint = false;
   if (user) {
     const { data: profil } = await supabase.from("users").select("city_id").eq("id", user.id).maybeSingle();
     estMaVille = profil?.city_id === ville.id;
+    if (!estMaVille) {
+      const { data: suivis } = await supabase.from("villes_suivies").select("ville_id").eq("joueur_id", user.id);
+      villeSuivie = (suivis ?? []).some((s) => s.ville_id === ville.id);
+      quotaSuiviAtteint = (suivis ?? []).length >= QUOTA_VILLES_SUIVIES;
+    }
   }
 
   const paysBrut = Array.isArray(ville.pays) ? ville.pays[0] : ville.pays;
@@ -232,6 +241,9 @@ export default async function VillePubliquePage({ params, searchParams }: Props)
             libelle={traduire(locale, "partage.partagerVille")}
             className="btn small"
           />
+          {user && !estMaVille ? (
+            <BoutonSuivre locale={locale} villeId={ville.id} suivie={villeSuivie} quotaAtteint={quotaSuiviAtteint} />
+          ) : null}
         </div>
 
         {user ? (
