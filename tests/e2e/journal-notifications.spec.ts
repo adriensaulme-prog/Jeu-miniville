@@ -197,6 +197,32 @@ test.describe("Journal mondial et notifications (A-INTEGRER §26 A/B)", () => {
     }
   });
 
+  test("palier Crise (migration 0044) : 500 attaques sur une ville notifient tout son pays, et seulement lui", async () => {
+    test.setTimeout(90_000);
+    const victime = await nouveau("jn-crise-victime", "LV");
+    const voisin = await nouveau("jn-crise-voisin", "LV");
+    const etranger = await nouveau("jn-crise-etranger", "LT");
+    const attaquant = await nouveau("jn-crise-attaquant", "LT");
+    const jour = new Date().toISOString().slice(0, 10);
+    const attaques = (n: number) =>
+      Array.from({ length: n }, () => ({ attaquant_id: attaquant.userId, ville_id: victime.villeId, type_action: "propagande", jour }));
+
+    // 499 attaques : palier « Incidents/Émeutes », pas encore la Crise.
+    expect((await supabaseAdmin.from("actions_antiville").insert(attaques(499))).error).toBeNull();
+    expect((await notifs(voisin.userId)).some((n) => n.type === "ville_en_crise")).toBe(false);
+
+    // La 500ᵉ franchit le seuil.
+    expect((await supabaseAdmin.from("actions_antiville").insert(attaques(1))).error).toBeNull();
+    for (const joueur of [voisin.userId, victime.userId]) {
+      const crise = (await notifs(joueur)).find((n) => n.type === "ville_en_crise");
+      expect(crise, "notification de crise").toBeDefined();
+      expect(crise!.ville_id).toBe(victime.villeId);
+      expect(Number(crise!.valeur)).toBe(500);
+    }
+    // Un autre pays n'est pas concerné.
+    expect((await notifs(etranger.userId)).some((n) => n.type === "ville_en_crise")).toBe(false);
+  });
+
   test("non lues : la pastille compte, la page notifications marque tout lu, un nouvel événement la rallume ; un joueur ne lit jamais les notifications d'un autre", async ({
     page,
   }) => {

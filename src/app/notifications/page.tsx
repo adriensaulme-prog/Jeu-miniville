@@ -59,7 +59,14 @@ export default async function NotificationsPage() {
                 <span>
                   {l.non_lue ? <b className="badge info">{traduire(locale, "notifications.nouveau")}</b> : null}{" "}
                   {texte}
-                  {l.ville_id && l.type !== "president_perdu" ? (
+                  {l.ville_id && l.type === "ville_en_crise" ? (
+                    <>
+                      {" "}
+                      <Link href={`/v/${l.ville_id}`} className="journal-lien">
+                        {traduire(locale, "journal.voirLaVille")} →
+                      </Link>
+                    </>
+                  ) : l.ville_id && l.type !== "president_perdu" ? (
                     <>
                       {" "}
                       <Link href="/ville" className="journal-lien">

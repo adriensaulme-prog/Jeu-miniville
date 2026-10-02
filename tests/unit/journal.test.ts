@@ -66,6 +66,17 @@ describe("libellé du journal", () => {
     );
   });
 
+  it("ville en crise (palier AntiVille) : nom et nombre d'attaques, rien sans donnée", () => {
+    const l = ligne({ type: "ville_en_crise", ville_nom: "Lyon", valeur: 512 });
+    expect(libelleJournal("fr", l, nomPays)).toBe(
+      "Une ville de ton pays est en crise : Lyon a subi 512 attaques AntiVille en une journée."
+    );
+    expect(libelleJournal("en", l, nomPays)).toBe(
+      "A city in your country is in crisis: Lyon suffered 512 AntiCity attacks in a single day."
+    );
+    expect(libelleJournal("fr", ligne({ type: "ville_en_crise", ville_nom: "Lyon" }), nomPays)).toBeNull();
+  });
+
   it("guerre déclarée : neutre dans le journal, personnalisée pour un joueur du pays concerné", () => {
     const l = ligne({ type: "guerre_declaree", country_id: "FR", cible_country_id: "DE" });
     expect(libelleJournal("fr", l, nomPays)).toBe("France déclare la rivalité à Allemagne : un conflit s'ouvre.");

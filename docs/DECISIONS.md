@@ -3591,9 +3591,8 @@ demandés : paix par défaut).
 — comme sur les autres pages sans ville (classement, palmarès), la scène
 partagée du layout montre la ville d'accueil derrière le panneau. Les
 données de carte (`src/data/cartes`, ~930 Ko) et le script qui les génère
-(`scripts/generer-cartes-pays.mjs`) ne servent plus à rien : **laissés en
-place** pour que ce soit Adrien qui décide de les supprimer (pas de
-poids dans le paquet client, ces fichiers n'étaient lus que côté serveur).
+(`scripts/generer-cartes-pays.mjs`) ne servaient plus à rien : laissés en
+place pour qu'Adrien décide, **supprimés le 02/10/2026** (« petits points »).
 §10 point 28 (détails laissés de côté de la carte) est devenu sans objet.
 
 **Testé.** `tests/e2e/refonte-pays-historique.spec.ts` (3 tests) :
@@ -4311,6 +4310,62 @@ fréquentée » à l'écran (avant : 5 visites).
 
 ---
 
+### Petits points : « voir où il est » étendu, monuments agrandis, notification de crise, données de carte retirées — 02/10/2026
+
+**Contexte.** Adrien : « petits points ». Les points qui demandaient un
+arbitrage lui ont été posés (monuments, §10 points 33 à 35) ; les autres
+ont été traités directement.
+
+**Fait.**
+- *« Voir où il est » étendu* aux **mégaprojets construits** (bouton à côté de
+  chaque mégaprojet construit, panneau Mégaprojets) et à l'**Énergie**
+  (bouton 📍 sur la jauge Énergie dès que la ville a des installations —
+  amène sur la centrale si elle existe, sinon sur la première installation).
+  Même mécanisme que pour les monuments (emplacements déterministes,
+  `emplacements.ts`) ; le test lit `canvas[data-repere]` pour vérifier la
+  cible exacte. Les technologies n'ont pas d'objet visible en 3D : pas de
+  bouton.
+- *Monuments agrandis* (décision d'Adrien : « les agrandir nettement ») : un
+  coefficient `ECHELLE_MONUMENT = 2,5` sur les mêmes silhouettes — de **4 m**
+  (palier 0) à **15 m** (derniers paliers) de haut au lieu de 2 à 6 m, socle
+  de 2,75 à 5 m de rayon. Toujours très en deçà de l'espacement des monuments
+  (≥ 40 m). Réglable avec ce seul coefficient. Test : hauteur 4-15,5 m,
+  emprise < 12 m.
+- *Notification « Crise »* (§10 point 35, décision d'Adrien : notification
+  seulement, **pas de fumée 3D**) : quand une ville atteint 500 attaques
+  AntiVille dans la journée (palier Crise du Jalon 18), **tous les joueurs de
+  son pays**, le sien compris, reçoivent « Une ville de ton pays est en crise
+  : X a subi N attaques AntiVille en une journée » avec un lien vers sa page
+  publique. Migration `0044` : branche `ville_en_crise` dans
+  `notifications_joueur()` + index `actions_antiville (ville_id, jour)`
+  (nécessaire : cette branche et `attaques_recues_aujourdhui()` comptent par
+  ville et par jour). L'instant est celui de la 500ᵉ attaque.
+- *Données de carte supprimées* : `src/data/cartes` (~930 Ko) et
+  `scripts/generer-cartes-pays.mjs`, devenus inutiles depuis le retrait de la
+  carte du pays (§23). Restent dans l'historique git si besoin.
+
+**Tranché par Adrien, sans code.** §10 point 34 (gratte-ciel figés en crise
+Énergie) : **non**, les tours continuent de monter, seul l'effet réel
+(manifestation ×2) s'applique. §10 point 33 (immeubles et tours en
+« logements ») : **non**, on garde le rythme en étages (les repères de
+densité du cahier des charges restent valables).
+
+**Pas fait.** *Rotation du zonage par ville* : écartée volontairement — elle
+déplacerait les blocs déjà ouverts et déjà zonés des villes existantes
+(contraire à « un bloc ouvert ne bouge jamais ») ; la rendre sûre demande un
+champ d'orientation par ville fixé à la création, donc une migration et un
+rattrapage pour peu de bénéfice. À rouvrir si l'orientation fixe gêne à
+l'usage.
+
+**Testé.** `tests/unit/monumentsEchelle.test.ts` (2) ;
+`tests/unit/journal.test.ts` (+1 : texte de la notification de crise, FR/EN) ;
+`tests/e2e/voir-ou-megaprojets-energie.spec.ts` (1 : mégaprojet construit et
+Énergie, cible exacte de la caméra) ; `tests/e2e/journal-notifications.spec.ts`
+(+1 : 499 attaques ne notifient pas, la 500ᵉ notifie le voisin et la victime
+mais pas un pays étranger). Capture vérifiée à l'œil (monuments lisibles).
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,
@@ -4727,7 +4782,8 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     rétention justifie-t-il d'étendre le même principe à Influence et/ou
     AntiVille, ou ces deux actions restent-elles volontairement à une
     fois par jour ?
-33. ~~"Combien d'habitants par habitation" — maisons.~~ **Fait le
+33. ~~"Combien d'habitants par habitation" — maisons.~~ **Immeubles et tours :
+    tranché le 02/10/2026, non — on garde le rythme en étages.** **Fait le
     27/09/2026** : Adrien choisit la refonte complète par type de
     bâtiment (plutôt que juste retoucher les seuils existants) ;
     implémenté pour les **maisons** (`HABITANTS_PAR_LOGEMENT_MAISON = 4`,
@@ -4739,7 +4795,9 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     oubli. → **À trancher par Adrien** : le rythme des immeubles/tours
     doit-il lui aussi être repensé en "logements", ou son rythme actuel
     (mesuré en étages) reste-t-il satisfaisant tel quel ?
-34. **Gratte-ciel figés en crise Énergie (Jalon 18, docs/SYSTEME-DEVELOPPEMENT.md
+34. ~~Gratte-ciel figés en crise Énergie~~ **Tranché le 02/10/2026 : non**
+    (décision d'Adrien, les tours continuent de monter — voir `DECISIONS.md` §4
+    « Petits points »). Texte d'origine : **Gratte-ciel figés en crise Énergie (Jalon 18, docs/SYSTEME-DEVELOPPEMENT.md
     §4).** "Les gratte-ciel arrêtent de monter" en crise Énergie n'est
     pas implémenté — nécessiterait un nouvel état persistant (un
     "population gelée pour les tours", mise à jour uniquement quand
@@ -4748,7 +4806,9 @@ Liste vivante des points signalés, avec qui doit trancher. À jour au
     le coût d'implémentation, ou peut-on laisser les tours continuer de
     monter même en crise Énergie (l'effet réel — risque de
     manifestation ×2 — reste lui bien appliqué) ?
-35. **Fumée 3D (palier Émeutes) et notification du pays (palier Crise),
+35. ~~Fumée 3D et notification du pays~~ **Tranché le 02/10/2026 :
+    notification seulement, sans fumée 3D** (migration `0044`, voir §4
+    « Petits points »). Texte d'origine : **Fumée 3D (palier Émeutes) et notification du pays (palier Crise),
     Jalon 18, docs/SYSTEME-DEVELOPPEMENT.md §6bis.** Pas d'infra de
     notification pays pour l'instant (pas de boîte de réception, pas de
     page dédiée) ; l'effet 3D "fumée visible" nécessiterait de toucher

@@ -6,6 +6,8 @@ import { traduire, type Locale } from "@/lib/i18n/dictionaries";
 import { choisirMegaprojet } from "@/app/villes/actions";
 import { optionsPalier, coutMegaprojet, type TypeMegaprojet } from "@/lib/game/megaprojets";
 import { EMOJI_ACTIVITE } from "@/components/JaugesActivites";
+import { BoutonVoirOu } from "@/components/BoutonVoirOu";
+import { cleDe, emplacementMegaprojet } from "@/lib/ville3d/emplacements";
 
 export interface EtatMegaprojet {
   palier: number;
@@ -109,6 +111,16 @@ export function Megaprojets({
               {chantier.statut === "construit"
                 ? traduire(locale, "megaprojet.construit")
                 : traduire(locale, "megaprojet.enChantier")}
+              {chantier.statut === "construit" ? (
+                <>
+                  {" "}
+                  <BoutonVoirOu
+                    {...emplacementMegaprojet(cleDe(villeId), chantier.palier)}
+                    libelle={traduire(locale, "monument.voir")}
+                    titre={`${traduire(locale, "monument.voir")} : ${traduire(locale, `megaprojet.type.${chantier.type}`)}`}
+                  />
+                </>
+              ) : null}
               {chantier.statut === "en_chantier" && (
                 <div>
                   <p>

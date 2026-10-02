@@ -322,7 +322,10 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **Mise en ligne préparée** (build de
+*Dernière mise à jour : 02/10/2026. **« Petits points » traités**
+(« voir où il est » pour mégaprojets et Énergie, monuments ×2,5,
+notification de crise AntiVille — migration `0044` —, données de carte
+supprimées ; §10 points 33 à 35 tranchés par Adrien). Avant : **Mise en ligne préparée** (build de
 production vérifié, showroom retiré de la production, schéma assemblé,
 `docs/DEPLOIEMENT.md`) : reste le déploiement lui-même, à faire par
 Adrien. Avant : **Place de n°1 mondial journalisée**

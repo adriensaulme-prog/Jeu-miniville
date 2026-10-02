@@ -562,7 +562,7 @@ export default async function VillesPage({
                   </div>
                 </div>
 
-                <JaugesActivites locale={locale} jauges={jauges} />
+                <JaugesActivites locale={locale} jauges={jauges} energie={{ cleVille: c.id, elan: elanEnergie3D }} />
                 <ChoisirActivite
                   locale={locale}
                   villeId={c.id}

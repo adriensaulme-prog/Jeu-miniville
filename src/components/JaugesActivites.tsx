@@ -1,5 +1,8 @@
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
 import { etatJauge, type Activite } from "@/lib/game/activites";
+import { BoutonVoirOu } from "@/components/BoutonVoirOu";
+import { ENERGIE_PAR_INSTALLATION, ENERGIE_SEUIL_CENTRALE } from "@/lib/ville3d/constantes";
+import { cleDe, emplacementCentrale, emplacementEnergie } from "@/lib/ville3d/emplacements";
 
 export const EMOJI_ACTIVITE: Record<Activite, string> = {
   residentiel: "🏠",
@@ -18,9 +21,13 @@ export const EMOJI_ACTIVITE: Record<Activite, string> = {
 export function JaugesActivites({
   locale,
   jauges,
+  energie,
 }: {
   locale: Locale;
   jauges: { activite: Activite; jauge: number }[];
+  /** A-INTEGRER §25 : si fourni et que la ville a déjà des installations d'Énergie
+   * (élan ≥ une installation), un bouton « Voir où il est » amène la caméra dessus. */
+  energie?: { cleVille: string; elan: number };
 }) {
   return (
     <div className="jauges" aria-label={traduire(locale, "activite.jauges")}>
@@ -31,6 +38,19 @@ export function JaugesActivites({
           <div key={activite} className="jauge">
             <span className="jauge-nom">
               {EMOJI_ACTIVITE[activite]} {traduire(locale, `activite.${activite}`)}
+              {activite === "energie" && energie && energie.elan >= ENERGIE_PAR_INSTALLATION ? (
+                <>
+                  {" "}
+                  <BoutonVoirOu
+                    {...(energie.elan >= ENERGIE_SEUIL_CENTRALE
+                      ? emplacementCentrale(cleDe(energie.cleVille))
+                      : emplacementEnergie(cleDe(energie.cleVille), 0))}
+                    libelle="📍"
+                    titre={`${traduire(locale, "monument.voir")} : ${traduire(locale, "activite.energie")}`}
+                    className="btn small jauge-voir"
+                  />
+                </>
+              ) : null}
             </span>
             <div
               className="bar"

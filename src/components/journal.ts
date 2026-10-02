@@ -16,6 +16,7 @@ export type TypeLigneJournal =
   | "premier_mondial"
   | "premier_mondial_acquis"
   | "premier_mondial_perdu"
+  | "ville_en_crise"
   | "guerre_declaree"
   | "guerre_terminee"
   | "alliance"
@@ -56,7 +57,7 @@ export function libelleJournal(
   const t = (cle: string) => traduire(locale, cle as never);
   const pays = l.country_id ? nomPays(l.country_id) : "";
   const cible = l.cible_country_id ? nomPays(l.cible_country_id) : "";
-  const v = { ville: l.ville_nom ?? "", autre: l.autre_ville_nom ?? "", pays, cible };
+  const v = { ville: l.ville_nom ?? "", autre: l.autre_ville_nom ?? "", pays, cible, nb: String(l.valeur ?? "") };
 
   switch (l.type) {
     case "president":
@@ -85,6 +86,9 @@ export function libelleJournal(
         ),
         v
       );
+    case "ville_en_crise":
+      if (l.valeur == null || !l.ville_nom) return null;
+      return remplacer(t("journal.villeEnCrise"), v);
     case "guerre_declaree":
       if (monPays && l.country_id === monPays) return remplacer(t("journal.guerreNotreAttaque"), v);
       if (monPays && l.cible_country_id === monPays) return remplacer(t("journal.guerreNousAttaque"), v);

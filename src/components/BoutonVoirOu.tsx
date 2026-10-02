@@ -11,12 +11,24 @@ export const EVENEMENT_REDUIRE_PANNEAU = "jeu-miniville:reduire-panneau";
  * repère lumineux. Sur mobile le panneau flottant est replié d'abord,
  * sinon il cacherait justement ce que le joueur veut voir.
  */
-export function BoutonVoirOu({ x, z, libelle, titre }: { x: number; z: number; libelle: string; titre: string }) {
+export function BoutonVoirOu({
+  x,
+  z,
+  libelle,
+  titre,
+  className = "btn small",
+}: {
+  x: number;
+  z: number;
+  libelle: string;
+  titre: string;
+  className?: string;
+}) {
   const { allerA } = useSceneVille();
   return (
     <button
       type="button"
-      className="btn small"
+      className={className}
       aria-label={titre}
       onClick={() => {
         window.dispatchEvent(new Event(EVENEMENT_REDUIRE_PANNEAU));

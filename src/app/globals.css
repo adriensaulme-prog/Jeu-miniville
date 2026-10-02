@@ -558,6 +558,12 @@ body {
   color: var(--focus);
   text-decoration: underline;
 }
+.jauge .jauge-voir {
+  padding: 0 6px;
+  min-height: 0;
+  line-height: 1.5;
+  font-size: 11px;
+}
 .catalogue-monuments summary {
   cursor: pointer;
 }
