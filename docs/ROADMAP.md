@@ -322,7 +322,9 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **A-INTEGRER §27 codé** (plafond de
+*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 E codé** (tris de
+`/villes` pour les villes neuves, migration `0040` ; A, B, C, D, F restent
+à prioriser). Avant : **A-INTEGRER §27 codé** (plafond de
 visites 8, « +1 visite » + choix d'emblée, page `/regles`, migration
 `0039`) ; §28 (APK) reçu, pas commencé. Avant : **A-INTEGRER §25, sous-jalon 25a
 codé** (catalogue des 16 monuments, « voir où il est », secteurs fixes

@@ -3890,6 +3890,54 @@ barre du haut.
 
 ---
 
+### Découverte des petites villes neuves sur `/villes` (A-INTEGRER §26 E) — 02/10/2026
+
+**Contexte.** Proposition E du §26 (idée de Claude chat, validée par
+Adrien, qui l'a choisie comme première des six) : `/villes` est trié par
+population décroissante depuis le Jalon 2, donc une ville neuve est
+tout en bas, quasi invisible, et ne reçoit jamais ses premières visites.
+Le §26 laissait « quel tri, où l'afficher » à spécifier : choix de
+Claude Code ci-dessous.
+
+**Fait.**
+- *Sélecteur « Trier les villes »* sur `/villes`, sous le filtre de pays
+  (paramètre d'URL `tri`, conservé par la sélection d'une ville et le
+  bouton retour, combinable avec le pays et la recherche) :
+  - **Les plus peuplées** (défaut, inchangé — choix d'Adrien du Jalon 2) ;
+  - **Villes récentes** : création décroissante ;
+  - **Qui attendent des visites** : visites reçues sur 7 jours croissantes
+    (une ville sans aucune visite d'abord), à égalité la plus récente
+    d'abord, **sans sa propre ville** ; chaque ligne affiche « n visite(s)
+    / 7 j ».
+- *Rang affiché* : au tri par défaut, comme avant (position dans la liste
+  filtrée) ; avec les autres tris, le rang mondial de population (un rang
+  1, 2, 3 n'aurait plus de sens dans une liste triée autrement).
+- *Migration `0040`* : `visites_recues_7j_par_ville()` (aujourd'hui + 6
+  jours précédents, UTC, comptes agrégés par ville sans révéler qui a
+  visité, `security definer` parce que `visites` est restreinte au
+  visiteur par RLS). Aucune table, aucun code d'erreur. Appelée
+  uniquement quand le tri « à visiter » est choisi.
+- *Logique pure* : `src/lib/game/triVilles.ts` (`trierVilles`,
+  `triValide` : valeur inconnue => tri par défaut).
+
+**Pas fait (volontairement).** Aucune mise en avant en dehors de
+`/villes` (accueil, `/ville`) ni badge « nouvelle ville » : le tri est
+discret, un joueur qui ne le cherche pas ne le verra pas. Proposition
+possible si Adrien veut plus visible : trois « villes qui attendent une
+visite » sur `Ma ville`.
+
+**Testé.** `tests/unit/triVilles.test.ts` (6) : tri par défaut,
+récentes, à visiter (ordre, ville du joueur exclue, égalités), liste
+d'entrée non modifiée. `tests/e2e/decouverte-petites-villes.spec.ts` (2,
+pays LU réservé) : fenêtre de 7 jours exacte du compteur SQL (aujourd'hui
+et J-6 comptés, J-7 et J-20 non) ; ordre des trois tris dans l'interface,
+badges « 0 / 1 visite(s) / 7 j », sélecteur reflétant le tri.
+*Incident de mise en œuvre* : la fonction n'était pas visible côté API
+après un premier collage de la migration (PGRST202) ; elle l'a été après
+exécution complète de la migration puis `notify pgrst, 'reload schema'`.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

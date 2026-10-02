@@ -1415,6 +1415,12 @@ une petite sélection mise en avant quelque part sur `/villes` ou
 l'accueil. Détail exact (quel tri, où l'afficher) à spécifier avec
 Adrien quand ce chantier est pris.
 
+**Traité le 02/10/2026 (Claude Code), premier des six chantiers du §26
+choisi par Adrien** : sélecteur de tri sur `/villes` (récentes, « qui
+attendent des visites » sur 7 jours), migration `0040` — détail dans
+`DECISIONS.md` §4 « Découverte des petites villes neuves ». Pas de mise en
+avant hors de `/villes` pour l'instant.
+
 ### F. Parcours de découverte pour les nouveaux joueurs
 
 Idée de Claude chat, pas dans le cahier des charges : avec 7 activités,

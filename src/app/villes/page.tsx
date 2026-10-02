@@ -10,6 +10,7 @@ import { palierJumelage } from "@/lib/game/jumelages";
 import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
 import { typeMonument } from "@/lib/game/monuments";
 import { DUREE_VISITE_FRAICHE_MS, QUOTA_VISITE_QUOTIDIEN } from "@/lib/game/visites";
+import { trierVilles, triValide } from "@/lib/game/triVilles";
 import { premierRangZone, type VocationsBlocs } from "@/lib/ville3d/generer";
 import type { VocationQuartier } from "@/lib/ville3d/quartiers";
 import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
@@ -39,6 +40,7 @@ const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europ
 type LigneVille = {
   id: string;
   nom: string;
+  created_at: string;
   population: number;
   population_max: number;
   niveau: number;
@@ -59,10 +61,11 @@ function unwrap<T>(v: T | T[] | null): T | null {
 export default async function VillesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ pays?: string; q?: string; ville?: string }>;
+  searchParams: Promise<{ pays?: string; q?: string; ville?: string; tri?: string }>;
 }) {
   const locale = await getLocale();
-  const { pays: filtrePays, q: recherche, ville: villeSelectionneeId } = await searchParams;
+  const { pays: filtrePays, q: recherche, ville: villeSelectionneeId, tri: triBrut } = await searchParams;
+  const tri = triValide(triBrut);
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -89,7 +92,7 @@ export default async function VillesPage({
   const { data, error: erreurListe } = await supabase
     .from("cities")
     .select(
-      `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, theme, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
+      `id, nom, created_at, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, theme, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
     )
     .order("population", { ascending: false });
   if (erreurListe) console.error("Chargement des villes a échoué :", erreurListe.message);
@@ -112,7 +115,16 @@ export default async function VillesPage({
   }
   for (const m of meilleurParPays.values()) presidents.add(m.id);
 
-  const villesAffichees = toutesLesVilles.filter((v) => {
+  // A-INTEGRER §26 E : tris alternatifs pour remettre en avant les villes
+  // neuves / peu visitées. Le rang affiché reste celui de la population
+  // (mondial) hors du tri par défaut, où il suit la liste filtrée comme avant.
+  const visitesRecues7j = new Map<string, number>();
+  if (tri === "a_visiter") {
+    const { data: compteurs } = await supabase.rpc("visites_recues_7j_par_ville");
+    for (const c of (compteurs ?? []) as { ville_id: string; nb: number }[]) visitesRecues7j.set(c.ville_id, c.nb);
+  }
+  const rangMondial = new Map(toutesLesVilles.map((v, i) => [v.id, i + 1]));
+  const villesAffichees = trierVilles(toutesLesVilles, tri, visitesRecues7j, maVilleId).filter((v) => {
     if (filtrePays && filtrePays !== "all" && v.country_id !== filtrePays) return false;
     if (recherche && !v.nom.toLowerCase().includes(recherche.toLowerCase())) return false;
     return true;
@@ -275,6 +287,7 @@ export default async function VillesPage({
   const paramsConserves = new URLSearchParams();
   if (filtrePays) paramsConserves.set("pays", filtrePays);
   if (recherche) paramsConserves.set("q", recherche);
+  if (tri !== "population") paramsConserves.set("tri", tri);
 
   function paysDe(pays: LigneVille["pays"]) {
     const p = unwrap(pays);
@@ -428,11 +441,16 @@ export default async function VillesPage({
               return (
                 <li key={v.id}>
                   <Link href={href} className="rowbtn" aria-current={villeSelectionneeId === v.id}>
-                    <span className="rk">{i + 1}</span>
+                    <span className="rk">{tri === "population" ? i + 1 : (rangMondial.get(v.id) ?? i + 1)}</span>
                     <span className="nm">{v.nom}</span>
                     <span className="pp">{new Intl.NumberFormat(locale).format(v.population)}</span>
                     <span className="meta">
                       {nomPays} · {libelleNiveau(v.niveau, locale)}
+                      {tri === "a_visiter" ? (
+                        <span className="badge">
+                          {visitesRecues7j.get(v.id) ?? 0} {traduire(locale, "villes.visites7j")}
+                        </span>
+                      ) : null}
                       {presidents.has(v.id) ? (
                         <span className="badge pres">{traduire(locale, "classement.president")}</span>
                       ) : null}

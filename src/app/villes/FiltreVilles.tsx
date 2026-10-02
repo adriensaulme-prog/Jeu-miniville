@@ -43,6 +43,19 @@ export function FiltreVilles({
         </select>
       </div>
       <div className="row">
+        <select
+          className="select"
+          aria-label={traduire(locale, "villes.tri")}
+          style={{ flex: 1 }}
+          defaultValue={searchParams.get("tri") ?? "population"}
+          onChange={(e) => majParam("tri", e.target.value === "population" ? "" : e.target.value)}
+        >
+          <option value="population">{traduire(locale, "villes.tri.population")}</option>
+          <option value="recentes">{traduire(locale, "villes.tri.recentes")}</option>
+          <option value="a_visiter">{traduire(locale, "villes.tri.aVisiter")}</option>
+        </select>
+      </div>
+      <div className="row">
         <input
           className="input"
           type="search"
