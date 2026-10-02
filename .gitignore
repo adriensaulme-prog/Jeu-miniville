@@ -28,3 +28,6 @@ next-env.d.ts
 # système
 .DS_Store
 Thumbs.db
+
+# schéma assemblé pour un projet neuf (npm run schema:complet) : se régénère
+supabase/schema-complet.sql

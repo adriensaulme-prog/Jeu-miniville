@@ -4238,6 +4238,48 @@ nom de la ville dépassée, gain notifié à l'une et perte à l'autre.
 
 ---
 
+### Préparation de la mise en ligne (suite de la Phase 6) — 02/10/2026
+
+**Contexte.** Le backlog fonctionnel documenté étant vide, le seul vrai jalon
+restant est le **déploiement en ligne**, préalable à l'APK (A-INTEGRER §28)
+et aux tests Play Store. Rien n'est déployé ni dépensé ; cette étape
+prépare et vérifie tout ce qui peut l'être côté code. Guide complet :
+`docs/DEPLOIEMENT.md`.
+
+**Fait.**
+- *Build de production vérifié* : `npm run build` (19 routes, aucune erreur
+  de types ni de lint) et **25 tests de parcours réels contre `next start`**
+  (connexion, création de ville, visites, choix d'activité, page publique,
+  suivi, zonage) tous verts. Les pages protégées redirigent vers la
+  connexion, les pages publiques répondent.
+- *Défaut corrigé* : **`/dev/showroom`, outil de développement, était publié
+  tel quel en production** (le commentaire en tête disait « jamais dans le
+  jeu publié » sans rien l'empêcher). La page renvoie désormais 404 quand
+  `NODE_ENV === "production"` (vérifié sur le build).
+- *`npm run schema:complet`* (`scripts/assembler-migrations.mjs`) : assemble
+  les migrations en un seul fichier (`supabase/schema-complet.sql`, ~380 Ko,
+  ignoré par git, se régénère) pour initialiser un projet Supabase neuf
+  d'un collage ; refuse un trou dans la numérotation.
+- *`docs/DEPLOIEMENT.md`* : décisions à prendre, variables d'environnement,
+  déroulé en 5 étapes, points d'attention après la mise en ligne.
+
+**À savoir / à décider par Adrien** (détaillé dans le guide) : projet
+Supabase de production séparé de celui de dev (les tests suppriment des
+comptes en masse) ; plan gratuit Vercel Hobby **non commercial** (le plan
+Pro, ~20 $/mois, deviendra nécessaire avec des packs payants — dépense à
+valider) ; nom de domaine payant, facultatif ; e-mails de confirmation
+d'inscription limités à quelques par heure avec le service intégré de
+Supabase (SMTP à soi, ou confirmation désactivée pendant la phase d'amis) ;
+même région pour Supabase et Vercel (« Ma ville » fait ~26 requêtes à la
+suite).
+
+**Pas vérifié** (impossible sans un vrai projet Supabase neuf) : que les 43
+migrations s'appliquent d'un seul bloc sur une base vide (elles l'ont été
+une à une en développement, dans cet ordre) ; le comportement réel des
+e-mails de confirmation. Le premier essai réel (guide §4) le dira.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

@@ -322,7 +322,10 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **Place de n°1 mondial journalisée**
+*Dernière mise à jour : 02/10/2026. **Mise en ligne préparée** (build de
+production vérifié, showroom retiré de la production, schéma assemblé,
+`docs/DEPLOIEMENT.md`) : reste le déploiement lui-même, à faire par
+Adrien. Avant : **Place de n°1 mondial journalisée**
 (migration `0043`, notifications « tu as perdu / gagné la première place
 mondiale »). Avant : **A-INTEGRER §26 A et B codés**
 (journal du monde `/journal`, notifications `/notifications` + cloche,

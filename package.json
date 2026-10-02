@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "seed:test": "node scripts/charger-villes-test.mjs"
+    "seed:test": "node scripts/charger-villes-test.mjs",
+    "schema:complet": "node scripts/assembler-migrations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
