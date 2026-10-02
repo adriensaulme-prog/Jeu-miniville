@@ -3490,7 +3490,7 @@ d'aujourd'hui). Causes réelles, toutes corrigées : (a) `/ville` enchaîne
 **~26 appels Supabase séquentiels** (31 pour `/villes`) à 100-400 ms
 chacun — plusieurs secondes de rendu, donc le `toHaveURL` de 5 s tombait
 ; délai d'assertion porté à 20 s et de test à 60 s (`playwright.config.ts`)
-**en attendant de paralléliser ces appels** (tâche proposée à part, vraie
+**en attendant de paralléliser ces appels** (fait ensuite, voir l'entrée « Rapidité de `/ville` et `/villes` » ci-dessous ; tâche proposée à part, vraie
 amélioration pour les joueurs) ; (b) serveur de dev lancé à froid :
 préchauffage des pages (`tests/e2e/prechauffage.ts`) ; (c) des villes de
 test à **9 000 000 d'habitants** (près de 1 800 blocs à générer côté
@@ -3511,6 +3511,94 @@ sous-chaîne, corrigé depuis).
 collisions casse/accent/tiret/espace, création simultanée, disponibilité,
 renommage, seed sans collision). Pas encore lancés : migration `0035`
 pas encore appliquée au moment de l'écriture.
+
+---
+
+### Rapidité de `/ville` et `/villes` — appels Supabase en parallèle — 02/10/2026
+
+**Constat.** `/ville` enchaînait ~24 allers-retours Supabase à la suite
+(RPC et requêtes, ≈100 ms chacun mesurés ici) et `/villes` une trentaine :
+plusieurs secondes de rendu à chaque page, la vraie cause des « échecs de
+connexion » de la suite e2e (voir l'entrée précédente) et un défaut réel
+pour les joueurs (règle « application légère », §1 point 6).
+
+**Mesure** (serveur de dev local, même base Supabase distante, compte de
+test neuf, 8 chargements après 2 d'échauffement, réponse HTML complète ;
+script jetable, médiane) :
+
+| page | avant | après | gain |
+|---|---|---|---|
+| `/ville` | 2 586 ms | 938 ms | −64 % |
+| `/villes` | 2 230 ms | 678 ms | −70 % |
+| `/villes?ville=…` (panneau détail) | 2 754 ms | 811 ms | −71 % |
+
+Ce qui reste est surtout le plancher incompressible : `getUser()` du
+middleware, puis celui de la page, puis les vagues ci-dessous.
+
+**Ce qui a été fait.** Les appels sont regroupés en *vagues* de
+`Promise.all` ; l'ordre RELATIF de chaque couple « écriture opportuniste →
+lecture qui la consomme » (et « lecture → écriture qui la modifierait »)
+est celui d'origine, vérifié dans les fonctions SQL (migrations 0024 à
+0033) :
+
+- `/ville` : `getUser` → `reclamer_bonus_jumelages` (modifie population,
+  population_max, niveau) → lecture de la ville → **vague 1** (rang, 
+  `verifier_president`, activité, jauges, visites, paliers du jour, points
+  de Recherche : tout ce qui doit voir l'état *avant* les écritures ou n'y
+  est pas lié) → **vague 2** (`assigner_vocations_blocs`,
+  `avancer_megaprojets`, `avancer_technologies`, `avancer_monuments` :
+  indépendantes entre elles — tables distinctes, aucune ne lit ce que les
+  autres écrivent ; `assigner_vocations_blocs` ne lit que l'élan des cinq
+  activités de quartier, que les mégaprojets ne modifient pas) →
+  **vague 3** (`verifier_manifestation`, qui lit les mégaprojets
+  construits — Stade, centrales — donc après la vague 2, et en parallèle
+  les lectures des blocs, de l'état des chantiers, des technologies et des
+  monuments) → **vague 4** (bulletin municipal : `city_events` est écrit
+  par la manifestation, les mégaprojets, les technologies et les
+  monuments).
+- `/villes` : même principe, avec **l'ordre propre à cette page**, qui
+  n'est pas celui de `/ville` : ici `verifier_manifestation` précède
+  `avancer_megaprojets`, et le bulletin est lu *avant* les écritures de
+  mégaprojets/technologies/monuments (leurs événements n'y apparaissent
+  qu'au chargement suivant). Conservé tel quel, ce qui coûte une vague de
+  plus quand une ville est sélectionnée (6 allers-retours `getUser` inclus au lieu de 5).
+  La garde `exigerRegionChoisie` part avec le profil, la liste des villes
+  et les quotas du jour ; `jours_bonus_jumelages_ville` garde sa condition
+  « au moins un jumelage actif ».
+- `exigerRegionChoisie` (`gardes.ts`, aussi utilisée par `/jumelages`,
+  `/classement`, `/palmares`, `/pays`) : ses deux lectures indépendantes
+  partent ensemble, la priorité des redirections est inchangée.
+- `playwright.config.ts` : le `expect.timeout` de 20 s ajouté pour
+  contourner la lenteur est retiré (retour à la valeur par défaut de 5 s).
+
+**Non-régression vérifiée** : le HTML visible de `/ville` et de quatre
+variantes de `/villes` (liste, ville sélectionnée, sa propre ville
+sélectionnée, filtre) est identique avant/après (texte HTML hors scripts de sérialisation) sur
+le même état de base — compte de test neuf, donc sans mégaprojet ni
+manifestation en attente : ces cas-là sont couverts par les specs
+`jalon18`, `jalon19`, `jalon20-*` ; l'écart restant concerne des
+identifiants internes de sérialisation propres à la compilation ; vitest, `tsc --noEmit`, eslint,
+puis la suite e2e complète : **108 tests verts sur 108** (`npx playwright test --workers=1`, 7,2 min)
+avec le `expect.timeout` par défaut de 5 s.
+
+**Écarts connus, assumés.** (1) Les événements écrits dans le même
+chargement par des fonctions désormais concurrentes (par exemple un
+monument et une technologie débloqués ensemble) peuvent avoir un ordre
+d'horodatage différent de l'ordre séquentiel d'avant dans le bulletin —
+même seconde, sans conséquence visible en pratique. (2) Les écritures
+opportunistes restent déclenchées à l'affichage, comme avant.
+
+**Gains supplémentaires possibles, NON appliqués car ils changeraient un
+comportement visible — à trancher par Adrien** : (a) sur `/ville`, lire
+les jauges *après* `avancer_megaprojets` au lieu d'avant (économise une
+vague, mais les jauges d'Énergie montreraient un mégaprojet construit à
+ce chargement au lieu du suivant) ; (b) sur `/villes`, lire le bulletin
+après toutes les écritures comme le fait `/ville` (économise une vague,
+mais un événement créé à ce chargement apparaîtrait tout de suite) ; (c)
+aligner les deux pages sur le même ordre manifestation/mégaprojets (elles
+diffèrent aujourd'hui : l'effet du Stade sur la manifestation ne s'applique
+pas au même moment) — une incohérence préexistante, signalée plutôt que
+corrigée ici.
 
 ---
 

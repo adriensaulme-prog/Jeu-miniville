@@ -73,32 +73,61 @@ export default async function VillesPage({
     redirect("/connexion");
   }
 
-  const { data: profil } = await supabase
-    .from("users")
-    .select("id, city_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
+  const maintenant = new Date();
+  const aujourdhui = maintenant.toISOString().slice(0, 10);
+  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
+
+  // Chargement en vagues parallèles plutôt qu'une trentaine d'allers-retours
+  // Supabase à la suite (≈100-400 ms chacun, voir DECISIONS.md §4, journal
+  // « Rapidité de /ville et /villes »). L'ordre RELATIF des écritures
+  // opportunistes et des lectures qui les consomment est celui d'origine ;
+  // seul ce qui est indépendant est lancé ensemble.
+  //
+  // Vague 1 — tout ce qui ne dépend que de l'utilisateur : profil, garde
+  // de région/noms (voir gardes.ts : « à appeler après avoir vérifié que
+  // le profil existe », or sans profil elle ne redirige jamais — le test
+  // `!profil` ci-dessous garde donc la priorité), liste des villes, pays
+  // et les quotas/historiques du jour.
+  // Jalon 13 bis : jusqu'à QUOTA_VISITE_QUOTIDIEN visites par jour et par
+  // (visiteur, ville), avec un délai minimum entre deux visites de la
+  // même ville — deux requêtes séparées, comme pour les actions AntiVille
+  // (compteur du jour + fenêtre récente pour la protection).
+  const [
+    { data: profil },
+    { data, error: erreurListe },
+    { data: listePays },
+    { data: visitesRecentes },
+    { data: visitesDuJour },
+    { data: actionsInfluenceDuJour },
+    { data: actionsAntiVilleAujourdhui },
+  ] = await Promise.all([
+    supabase.from("users").select("id, city_id").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("cities")
+      .select(
+        `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, theme, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
+      )
+      .order("population", { ascending: false }),
+    supabase.from("countries").select(`id, nom:${colonneNomPays}`).order(colonneNomPays),
+    supabase
+      .from("visites")
+      .select("ville_id, created_at")
+      .eq("visiteur_id", user.id)
+      .gte("created_at", ilUneHeureEnArriere),
+    supabase.from("visites").select("ville_id").eq("visiteur_id", user.id).eq("jour", aujourdhui),
+    supabase.from("actions_influence").select("ville_id").eq("joueur_id", user.id).eq("jour", aujourdhui),
+    supabase.from("actions_antiville").select("ville_id").eq("attaquant_id", user.id).eq("jour", aujourdhui),
+    exigerRegionChoisie(supabase, user.id),
+  ]);
 
   if (!profil) {
     redirect("/ville/creer");
   }
   const maVilleId = profil!.city_id as string;
-  await exigerRegionChoisie(supabase, user.id);
 
-  const colonneNomPays = locale === "fr" ? "nom_fr" : "nom_en";
-  const { data, error: erreurListe } = await supabase
-    .from("cities")
-    .select(
-      `id, nom, population, population_max, niveau, influence, influence_max, greve_jusqua, recommandation_activite, theme, country_id, pays:countries(nom:${colonneNomPays}, latitude, longitude, fuseau_horaire), owner:users!cities_owner_id_fkey(pseudo)`
-    )
-    .order("population", { ascending: false });
   if (erreurListe) console.error("Chargement des villes a échoué :", erreurListe.message);
   const toutesLesVilles = (data ?? []) as LigneVille[];
-
-  const { data: listePays } = await supabase
-    .from("countries")
-    .select(`id, nom:${colonneNomPays}`)
-    .order(colonneNomPays);
 
   // Statut "Président" : n°1 de son pays, calculé sur l'ensemble non
   // filtré (indépendant des filtres actuellement affichés).
@@ -118,30 +147,12 @@ export default async function VillesPage({
     return true;
   });
 
-  const maintenant = new Date();
-  const aujourdhui = maintenant.toISOString().slice(0, 10);
-  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
-
-  // Jalon 13 bis : jusqu'à QUOTA_VISITE_QUOTIDIEN visites par jour et par
-  // (visiteur, ville), avec un délai minimum entre deux visites de la
-  // même ville — deux requêtes séparées, comme pour les actions AntiVille
-  // ci-dessous (compteur du jour + fenêtre récente pour la protection).
-  const { data: visitesRecentes } = await supabase
-    .from("visites")
-    .select("ville_id, created_at")
-    .eq("visiteur_id", user.id)
-    .gte("created_at", ilUneHeureEnArriere);
   const derniereVisiteParVille = new Map<string, string>();
   for (const v of visitesRecentes ?? []) {
     const existante = derniereVisiteParVille.get(v.ville_id);
     if (!existante || v.created_at > existante) derniereVisiteParVille.set(v.ville_id, v.created_at);
   }
 
-  const { data: visitesDuJour } = await supabase
-    .from("visites")
-    .select("ville_id")
-    .eq("visiteur_id", user.id)
-    .eq("jour", aujourdhui);
   const nbVisitesAujourdhuiParVille = new Map<string, number>();
   for (const v of visitesDuJour ?? []) {
     nbVisitesAujourdhuiParVille.set(v.ville_id, (nbVisitesAujourdhuiParVille.get(v.ville_id) ?? 0) + 1);
@@ -155,119 +166,16 @@ export default async function VillesPage({
       )
   );
 
-  const { data: actionsInfluenceDuJour } = await supabase
-    .from("actions_influence")
-    .select("ville_id")
-    .eq("joueur_id", user.id)
-    .eq("jour", aujourdhui);
   const villesDejaInfluencees = new Set((actionsInfluenceDuJour ?? []).map((a) => a.ville_id));
   const actionsInfluenceRestantes = QUOTA_INFLUENCE_QUOTIDIEN - villesDejaInfluencees.size;
 
-  const { data: actionsAntiVilleAujourdhui } = await supabase
-    .from("actions_antiville")
-    .select("ville_id")
-    .eq("attaquant_id", user.id)
-    .eq("jour", aujourdhui);
   const nbAntiVilleUtilisees = (actionsAntiVilleAujourdhui ?? []).length;
   const quotaAntiVilleAtteint = nbAntiVilleUtilisees >= QUOTA_ANTIVILLE_QUOTIDIEN;
-
-  const { data: mesJumelages } = await supabase
-    .from("jumelages")
-    .select("id, ville_proposante_id, ville_ciblee_id, statut")
-    .or(`ville_proposante_id.eq.${maVilleId},ville_ciblee_id.eq.${maVilleId}`)
-    .in("statut", ["en_attente", "actif"]);
-  const statutJumelageParVille = new Map<string, "actif" | "envoye" | "recu">();
-  const jumelageIdParVille = new Map<string, string>();
-  let nbJumelagesActifs = 0;
-  for (const j of mesJumelages ?? []) {
-    const autreVilleId = j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
-    if (j.statut === "actif") {
-      statutJumelageParVille.set(autreVilleId, "actif");
-      jumelageIdParVille.set(autreVilleId, j.id);
-      nbJumelagesActifs++;
-    } else {
-      statutJumelageParVille.set(
-        autreVilleId,
-        j.ville_proposante_id === maVilleId ? "envoye" : "recu"
-      );
-    }
-  }
-  const quotaJumelagesAtteint = nbJumelagesActifs >= QUOTA_JUMELAGES_ACTIFS;
-
-  // Jalon 22 (docs/DECISIONS.md §10 point 22) : palier de solidité de
-  // chaque jumelage actif, dérivé du cumul de jours où son bonus a déjà
-  // été accordé — affichage seulement, aucun effet ajouté.
-  const joursBonusParJumelage = new Map<string, number>();
-  if (nbJumelagesActifs > 0) {
-    const { data: joursBonusBruts } = await supabase.rpc("jours_bonus_jumelages_ville", {
-      p_ville_id: maVilleId,
-    });
-    for (const ligne of (joursBonusBruts ?? []) as { jumelage_id: string; jours: number }[]) {
-      joursBonusParJumelage.set(ligne.jumelage_id, ligne.jours);
-    }
-  }
 
   const villeSelectionnee =
     villeSelectionneeId && villeSelectionneeId !== maVilleId
       ? (toutesLesVilles.find((v) => v.id === villeSelectionneeId) ?? null)
       : null;
-
-  // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
-  // de développement de la ville affichée dans le panneau détail, et
-  // l'activité de la dernière visite du joueur (si récente — fenêtre
-  // de grâce de 5 minutes, cohérente avec choisir_activite_visite()
-  // côté SQL) pour proposer de la changer.
-  const { data: jaugesBrutes } = villeSelectionnee
-    ? await supabase.rpc("jauges_ville", { p_ville_id: villeSelectionnee.id })
-    : { data: null };
-  const jauges = (jaugesBrutes ?? []) as { activite: Activite; elan: number; jauge: number }[];
-
-  const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const { data: derniereVisiteActivite } = villeSelectionnee
-    ? await supabase
-        .from("visites")
-        .select("activite, activite_verrouillee")
-        .eq("visiteur_id", user.id)
-        .eq("ville_id", villeSelectionnee.id)
-        .gte("created_at", ilCinqMinutes)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
-  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
-
-  // Jalon 18 : palier d'attaques du jour et bulletin municipal de la
-  // ville affichée dans le panneau détail — et le tirage quotidien de
-  // manifestation, vérifié opportunistement à chaque affichage (même
-  // logique que verifier_president(), Jalon 11 : pas de tâche planifiée
-  // dans ce projet).
-  let palierAttaquesVille: PalierAttaques = "calme";
-  let palierVisitesVille: PalierPopularite = "calme";
-  let palierInfluenceVille: PalierRenommee = "calme";
-  let evenementsBulletin: EvenementBulletin[] = [];
-  if (villeSelectionnee) {
-    await supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: villeSelectionnee.id });
-    const { data: nbAttaques } = await supabase.rpc("attaques_recues_aujourdhui", {
-      p_ville_id: villeSelectionnee.id,
-    });
-    palierAttaquesVille = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
-    const { data: nbVisitesRecues } = await supabase.rpc("visites_recues_aujourdhui", {
-      p_ville_id: villeSelectionnee.id,
-    });
-    palierVisitesVille = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
-    const { data: nbInfluenceRecue } = await supabase.rpc("actions_influence_recues_aujourdhui", {
-      p_ville_id: villeSelectionnee.id,
-    });
-    palierInfluenceVille = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
-    const { data: evenements } = await supabase
-      .from("city_events")
-      .select("id, type, activite, type_action, valeur, created_at")
-      .eq("ville_id", villeSelectionnee.id)
-      .order("created_at", { ascending: false })
-      .limit(8);
-    evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
-  }
 
   const paramsConserves = new URLSearchParams();
   if (filtrePays) paramsConserves.set("pays", filtrePays);
@@ -286,100 +194,203 @@ export default async function VillesPage({
   const villeAffichee3D = villeSelectionnee ?? toutesLesVilles.find((v) => v.id === maVilleId) ?? null;
   const pays3D = villeAffichee3D ? paysDe(villeAffichee3D.pays) : PAYS_PAR_DEFAUT;
 
-  // Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs déjà
-  // ouverts et élan de l'Énergie, pour la ville affichée en 3D (celle du
-  // panneau détail si une ville est sélectionnée, sinon "Ma ville").
-  let vocations3D: VocationsBlocs = new Map();
-  let elanEnergie3D = 0;
-  if (villeAffichee3D) {
-    await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: villeAffichee3D.id });
-    const { data: blocsBruts } = await supabase
-      .from("city_blocks")
-      .select("rang, vocation")
-      .eq("ville_id", villeAffichee3D.id);
-    vocations3D = new Map((blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier]));
-    const jauges3D =
-      villeSelectionnee && villeAffichee3D.id === villeSelectionnee.id
-        ? jauges
-        : ((await supabase.rpc("jauges_ville", { p_ville_id: villeAffichee3D.id })).data ?? []);
-    elanEnergie3D =
-      (jauges3D as { activite: Activite; elan: number }[]).find((j) => j.activite === "energie")?.elan ?? 0;
-  }
+  // Réponse neutre pour les lectures sans objet (pas de ville sélectionnée,
+  // pas de ville à afficher...) : garde les Promise.all à plat.
+  const vide = Promise.resolve({ data: null, count: null });
+  const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-  // Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : construit les
-  // mégaprojets financés (opportuniste, même logique qu'au-dessus) puis
-  // lit l'état de tous les chantiers, pour la ville affichée en 3D.
-  let etatMegaprojets: EtatMegaprojet[] = [];
-  let megaprojetsConstruits: MegaprojetConstruit[] = [];
-  if (villeAffichee3D) {
-    await supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: villeAffichee3D.id });
-    const { data: megaprojetsBruts } = await supabase.rpc("etat_megaprojets", { p_ville_id: villeAffichee3D.id });
-    const chantiers = (megaprojetsBruts ?? []) as {
-      palier: number;
-      type: string;
-      activite: string;
-      statut: "en_chantier" | "construit";
-      points: number;
-      cout_points: number;
-      materiaux: number;
-      cout_materiaux: number;
-      revenus: number;
-      cout_revenus: number;
-    }[];
-    etatMegaprojets = chantiers.map((c) => ({
-      palier: c.palier,
-      type: c.type as EtatMegaprojet["type"],
-      activite: c.activite,
-      statut: c.statut,
-      points: c.points,
-      coutPoints: c.cout_points,
-      materiaux: c.materiaux,
-      coutMateriaux: c.cout_materiaux,
-      revenus: c.revenus,
-      coutRevenus: c.cout_revenus,
-    }));
-    megaprojetsConstruits = chantiers
-      .filter((c) => c.statut === "construit")
-      .map((c) => ({ palier: c.palier, type: c.type, activite: c.activite }));
-  }
+  // Vague 2 — pour la ville du panneau détail (`villeSelectionnee`) et/ou la
+  // ville affichée en 3D (celle du panneau, sinon « Ma ville »), toujours la
+  // même quand une ville est sélectionnée :
+  //  - lectures qui doivent voir l'état AVANT les écritures de la vague 4 :
+  //    les jauges (l'Énergie dépend des mégaprojets construits), la liste
+  //    des villes déjà lue plus haut (population avant la manifestation) ;
+  //  - lectures sans lien avec les écritures opportunistes (jumelages,
+  //    activité de la dernière visite, paliers du jour, points de Recherche
+  //    — un simple comptage de visites) ;
+  //  - verifier_manifestation (Jalon 18 : tirage quotidien, même logique
+  //    opportuniste que verifier_president(), Jalon 11 : pas de tâche
+  //    planifiée dans ce projet) : elle doit précéder avancer_megaprojets
+  //    (ordre d'origine) et la lecture du bulletin ;
+  //  - assigner_vocations_blocs (Jalon 19) : indépendante de tout le reste.
+  const [
+    { data: mesJumelages },
+    { data: jaugesBrutes },
+    { data: pointsBruts },
+    { data: derniereVisiteActivite },
+    { data: nbAttaques },
+    { data: nbVisitesRecues },
+    { data: nbInfluenceRecue },
+  ] = await Promise.all([
+    supabase
+      .from("jumelages")
+      .select("id, ville_proposante_id, ville_ciblee_id, statut")
+      .or(`ville_proposante_id.eq.${maVilleId},ville_ciblee_id.eq.${maVilleId}`)
+      .in("statut", ["en_attente", "actif"]),
+    // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
+    // de développement de la ville affichée.
+    villeAffichee3D ? supabase.rpc("jauges_ville", { p_ville_id: villeAffichee3D.id }) : vide,
+    villeAffichee3D
+      ? supabase.rpc("stock_ville", { p_ville_id: villeAffichee3D.id, p_activite: "recherche" })
+      : vide,
+    // Activité de la dernière visite du joueur (si récente — fenêtre de
+    // grâce de 5 minutes, cohérente avec choisir_activite_visite() côté
+    // SQL) pour proposer de la changer.
+    villeSelectionnee
+      ? supabase
+          .from("visites")
+          .select("activite, activite_verrouillee")
+          .eq("visiteur_id", user.id)
+          .eq("ville_id", villeSelectionnee.id)
+          .gte("created_at", ilCinqMinutes)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : vide,
+    // Jalon 18 : palier d'attaques du jour ; Jalon 22 (docs/DECISIONS.md §10
+    // point 22) : paliers de popularité/renommée, affichage seulement.
+    villeSelectionnee
+      ? supabase.rpc("attaques_recues_aujourdhui", { p_ville_id: villeSelectionnee.id })
+      : vide,
+    villeSelectionnee
+      ? supabase.rpc("visites_recues_aujourdhui", { p_ville_id: villeSelectionnee.id })
+      : vide,
+    villeSelectionnee
+      ? supabase.rpc("actions_influence_recues_aujourdhui", { p_ville_id: villeSelectionnee.id })
+      : vide,
+    villeSelectionnee ? supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: villeSelectionnee.id }) : vide,
+    villeAffichee3D ? supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: villeAffichee3D.id }) : vide,
+  ]);
 
-  // Jalon 20 (2/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : débloque les
-  // technologies déjà financées (opportuniste, même logique
-  // qu'au-dessus) puis lit combien sont débloquées et les points de
-  // Recherche déjà accumulés, pour la ville affichée en 3D.
-  let nbTechnologiesDebloquees3D = 0;
-  let pointsRecherche3D = 0;
-  if (villeAffichee3D) {
-    await supabaseAdmin.rpc("avancer_technologies", { p_ville_id: villeAffichee3D.id });
-    const { count } = await supabase
-      .from("technologies")
-      .select("id", { count: "exact", head: true })
-      .eq("ville_id", villeAffichee3D.id);
-    nbTechnologiesDebloquees3D = count ?? 0;
-    const { data: pointsBruts } = await supabase.rpc("stock_ville", {
-      p_ville_id: villeAffichee3D.id,
-      p_activite: "recherche",
-    });
-    pointsRecherche3D = typeof pointsBruts === "number" ? pointsBruts : 0;
-  }
-
-  // Jalon 20 (3/3, docs/A-INTEGRER.md §19) : débloque les monuments
-  // déjà atteints (opportuniste, même logique qu'au-dessus) puis lit
-  // combien sont débloqués, pour la ville affichée en 3D.
-  let nbMonumentsDebloques3D = 0;
-  let monumentsDebloques3D: MonumentDebloque[] = [];
-  if (villeAffichee3D) {
-    await supabaseAdmin.rpc("avancer_monuments", { p_ville_id: villeAffichee3D.id });
-    const { data: monumentsBruts } = await supabase
-      .from("monuments")
-      .select("palier")
-      .eq("ville_id", villeAffichee3D.id);
-    nbMonumentsDebloques3D = monumentsBruts?.length ?? 0;
-    monumentsDebloques3D = [];
-    for (const m of monumentsBruts ?? []) {
-      const type = typeMonument(m.palier as number);
-      if (type) monumentsDebloques3D.push({ palier: m.palier as number, type });
+  const statutJumelageParVille = new Map<string, "actif" | "envoye" | "recu">();
+  const jumelageIdParVille = new Map<string, string>();
+  let nbJumelagesActifs = 0;
+  for (const j of mesJumelages ?? []) {
+    const autreVilleId = j.ville_proposante_id === maVilleId ? j.ville_ciblee_id : j.ville_proposante_id;
+    if (j.statut === "actif") {
+      statutJumelageParVille.set(autreVilleId, "actif");
+      jumelageIdParVille.set(autreVilleId, j.id);
+      nbJumelagesActifs++;
+    } else {
+      statutJumelageParVille.set(
+        autreVilleId,
+        j.ville_proposante_id === maVilleId ? "envoye" : "recu"
+      );
     }
+  }
+  const quotaJumelagesAtteint = nbJumelagesActifs >= QUOTA_JUMELAGES_ACTIFS;
+
+  const jauges = (jaugesBrutes ?? []) as { activite: Activite; elan: number; jauge: number }[];
+  const elanEnergie3D = jauges.find((j) => j.activite === "energie")?.elan ?? 0;
+  const pointsRecherche3D = typeof pointsBruts === "number" ? pointsBruts : 0;
+  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
+  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+  const palierAttaquesVille: PalierAttaques = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
+  const palierVisitesVille: PalierPopularite = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
+  const palierInfluenceVille: PalierRenommee = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
+
+  // Jalon 20 (docs/SYSTEME-DEVELOPPEMENT.md §6, docs/A-INTEGRER.md §19) :
+  // construit les mégaprojets financés, débloque les technologies et les
+  // monuments déjà atteints (opportuniste, même logique qu'au-dessus ; les
+  // trois sont indépendants entre eux). Elles écrivent dans city_events :
+  // avec une ville sélectionnée, le bulletin ci-dessous est lu AVANT (ordre
+  // d'origine : leurs événements n'y apparaissent qu'au chargement suivant)
+  // et elles ne partent qu'ensuite ; sans ville sélectionnée il n'y a pas
+  // de bulletin, elles partent avec le reste.
+  const avancerVilleAffichee = () =>
+    villeAffichee3D
+      ? Promise.all([
+          supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: villeAffichee3D.id }),
+          supabaseAdmin.rpc("avancer_technologies", { p_ville_id: villeAffichee3D.id }),
+          supabaseAdmin.rpc("avancer_monuments", { p_ville_id: villeAffichee3D.id }),
+        ])
+      : Promise.resolve([]);
+
+  // Vague 3 — jours de bonus des jumelages actifs (dépend de la vague 2),
+  // blocs écrits par assigner_vocations_blocs, bulletin municipal de la
+  // ville du panneau détail.
+  const [{ data: joursBonusBruts }, { data: blocsBruts }, { data: evenements }] = await Promise.all([
+    // Jalon 22 (docs/DECISIONS.md §10 point 22) : palier de solidité de
+    // chaque jumelage actif, dérivé du cumul de jours où son bonus a déjà
+    // été accordé — affichage seulement, aucun effet ajouté.
+    nbJumelagesActifs > 0 ? supabase.rpc("jours_bonus_jumelages_ville", { p_ville_id: maVilleId }) : vide,
+    // Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs déjà
+    // ouverts, pour le rendu 3D.
+    villeAffichee3D
+      ? supabase.from("city_blocks").select("rang, vocation").eq("ville_id", villeAffichee3D.id)
+      : vide,
+    villeSelectionnee
+      ? supabase
+          .from("city_events")
+          .select("id, type, activite, type_action, valeur, created_at")
+          .eq("ville_id", villeSelectionnee.id)
+          .order("created_at", { ascending: false })
+          .limit(8)
+      : vide,
+    villeSelectionnee ? Promise.resolve([]) : avancerVilleAffichee(),
+  ]);
+  const evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
+
+  const joursBonusParJumelage = new Map<string, number>();
+  for (const ligne of (joursBonusBruts ?? []) as { jumelage_id: string; jours: number }[]) {
+    joursBonusParJumelage.set(ligne.jumelage_id, ligne.jours);
+  }
+
+  const vocations3D: VocationsBlocs = new Map(
+    (blocsBruts ?? []).map((b: { rang: number; vocation: string }) => [b.rang, b.vocation as VocationQuartier])
+  );
+
+  // Vague 4 — avec une ville sélectionnée, les écritures de mégaprojets,
+  // technologies et monuments partent maintenant (voir plus haut).
+  if (villeSelectionnee) await avancerVilleAffichee();
+
+  // Vague 5 — lecture de ce que la vague 4 a écrit : état de tous les
+  // chantiers, technologies et monuments débloqués, pour la ville affichée
+  // en 3D (catalogue des monuments fini et connu côté client,
+  // monuments.ts : une simple liste suffit).
+  const [{ data: megaprojetsBruts }, { count: nbTechnologiesBrut }, { data: monumentsBruts }] =
+    await Promise.all([
+      villeAffichee3D ? supabase.rpc("etat_megaprojets", { p_ville_id: villeAffichee3D.id }) : vide,
+      villeAffichee3D
+        ? supabase.from("technologies").select("id", { count: "exact", head: true }).eq("ville_id", villeAffichee3D.id)
+        : vide,
+      villeAffichee3D ? supabase.from("monuments").select("palier").eq("ville_id", villeAffichee3D.id) : vide,
+    ]);
+
+  const chantiers = (megaprojetsBruts ?? []) as {
+    palier: number;
+    type: string;
+    activite: string;
+    statut: "en_chantier" | "construit";
+    points: number;
+    cout_points: number;
+    materiaux: number;
+    cout_materiaux: number;
+    revenus: number;
+    cout_revenus: number;
+  }[];
+  const etatMegaprojets: EtatMegaprojet[] = chantiers.map((c) => ({
+    palier: c.palier,
+    type: c.type as EtatMegaprojet["type"],
+    activite: c.activite,
+    statut: c.statut,
+    points: c.points,
+    coutPoints: c.cout_points,
+    materiaux: c.materiaux,
+    coutMateriaux: c.cout_materiaux,
+    revenus: c.revenus,
+    coutRevenus: c.cout_revenus,
+  }));
+  const megaprojetsConstruits: MegaprojetConstruit[] = chantiers
+    .filter((c) => c.statut === "construit")
+    .map((c) => ({ palier: c.palier, type: c.type, activite: c.activite }));
+
+  const nbTechnologiesDebloquees3D = nbTechnologiesBrut ?? 0;
+  const nbMonumentsDebloques3D = monumentsBruts?.length ?? 0;
+  const monumentsDebloques3D: MonumentDebloque[] = [];
+  for (const m of monumentsBruts ?? []) {
+    const type = typeMonument(m.palier as number);
+    if (type) monumentsDebloques3D.push({ palier: m.palier as number, type });
   }
 
   return (

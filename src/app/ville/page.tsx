@@ -111,57 +111,175 @@ export default async function VillePage() {
       ? { latitude: paysBrut.latitude, longitude: paysBrut.longitude, fuseauHoraire: paysBrut.fuseau_horaire }
       : PAYS_PAR_DEFAUT;
 
-  const { count: nbVillesDevant } = await supabase
-    .from("cities")
-    .select("id", { count: "exact", head: true })
-    .eq("country_id", ville.country_id)
-    .gt("population", ville.population);
+  // Chargement en 4 vagues parallèles plutôt qu'une vingtaine d'allers-retours
+  // Supabase à la suite (≈100-400 ms chacun, voir DECISIONS.md §4, journal
+  // « Rapidité de /ville et /villes »). L'ordre RELATIF des écritures
+  // opportunistes et des lectures qui les consomment est celui d'origine ;
+  // seul ce qui est indépendant est lancé ensemble :
+  //
+  //  - vague 1 : lectures qui doivent voir l'état AVANT toute écriture
+  //    opportuniste (population/rang avant verifier_manifestation, jauges
+  //    avant avancer_megaprojets dont l'Énergie dépend) + lectures sans
+  //    lien avec elles (visites, paliers du jour) + verifier_president
+  //    (lit les populations, donc avant la manifestation, qui les modifie) ;
+  //  - vague 2 : assigner_vocations_blocs, avancer_megaprojets,
+  //    avancer_technologies, avancer_monuments (mutuellement indépendantes :
+  //    tables distinctes, aucune ne lit ce que les autres écrivent) ;
+  //  - vague 3 : verifier_manifestation (lit les mégaprojets construits :
+  //    Stade, centrales) et les lectures qui consomment les écritures de la
+  //    vague 2 (blocs, mégaprojets, technologies, monuments) ;
+  //  - vague 4 : le bulletin municipal, qui lit city_events, écrit par la
+  //    manifestation, les mégaprojets, les technologies et les monuments.
+  const maintenant = new Date();
+  const aujourdhui = maintenant.toISOString().slice(0, 10);
+  const ilCinqMinutes = new Date(maintenant.getTime() - 5 * 60 * 1000).toISOString();
+  // Auto-visite de sa propre ville (Jalon 13 ter, docs/A-INTEGRER.md
+  // §16) : même délai d'une heure et plafond de 3/jour que pour visiter
+  // une autre ville (Jalon 13 bis), même compteur (visiteur_id,
+  // ville_id) — ici les deux valent l'id du joueur et de sa ville.
+  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
+
+  const [
+    { count: nbVillesDevant },
+    { data: activiteVecue },
+    { data: jaugesBrutes },
+    { data: derniereVisiteActivite },
+    { data: nbAttaques },
+    { data: nbVisitesRecues },
+    { data: nbInfluenceRecue },
+    { data: pointsRechercheBruts },
+    { data: mesVisitesRecentes },
+    { count: nbVisitesAujourdhui },
+  ] = await Promise.all([
+    supabase
+      .from("cities")
+      .select("id", { count: "exact", head: true })
+      .eq("country_id", ville.country_id)
+      .gt("population", ville.population),
+    // Activité (7j) calculée à la volée (Jalon 9) : la colonne
+    // cities.activite n'a jamais eu de vraie définition (toujours 0 pour
+    // une ville réelle, voir DECISIONS.md §4, journal du Jalon 9).
+    supabase.rpc("activite_ville", { p_ville_id: ville.id }),
+    // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
+    // de développement de sa propre ville.
+    supabase.rpc("jauges_ville", { p_ville_id: ville.id }),
+    supabase
+      .from("visites")
+      .select("activite, activite_verrouillee")
+      .eq("visiteur_id", user.id)
+      .eq("ville_id", ville.id)
+      .gte("created_at", ilCinqMinutes)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Jalon 18 : attaques reçues aujourd'hui, pour le palier affiché.
+    supabase.rpc("attaques_recues_aujourdhui", { p_ville_id: ville.id }),
+    // Jalon 22 (docs/DECISIONS.md §10 point 22) : paliers de
+    // popularité/renommée, affichage seulement — aucun plafond ajouté.
+    supabase.rpc("visites_recues_aujourdhui", { p_ville_id: ville.id }),
+    supabase.rpc("actions_influence_recues_aujourdhui", { p_ville_id: ville.id }),
+    // Points de Recherche déjà accumulés (Jalon 20 2/3) : un simple
+    // comptage de visites, que avancer_technologies() ne modifie pas.
+    supabase.rpc("stock_ville", { p_ville_id: ville.id, p_activite: "recherche" }),
+    supabase
+      .from("visites")
+      .select("created_at")
+      .eq("visiteur_id", user.id)
+      .eq("ville_id", ville.id)
+      .gte("created_at", ilUneHeureEnArriere),
+    supabase
+      .from("visites")
+      .select("id", { count: "exact", head: true })
+      .eq("visiteur_id", user.id)
+      .eq("ville_id", ville.id)
+      .eq("jour", aujourdhui),
+    // Tient à jour l'historique des présidences (Jalon 11) — idempotente,
+    // sans effet si la ville n°1 du pays n'a pas changé depuis le dernier
+    // appel. Le badge "Président" ci-dessous reste calculé en direct sur
+    // le rang (toujours exact) ; cette table ne sert qu'à retenir
+    // "depuis quand" et les mandats précédents (voir DECISIONS.md §4,
+    // Jalon 11). Résultat non lu ici.
+    supabaseAdmin.rpc("verifier_president", { p_country_id: ville.country_id }),
+  ]);
   const rang = (nbVillesDevant ?? 0) + 1;
   const president = rang === 1;
 
-  // Tient à jour l'historique des présidences (Jalon 11) — idempotente,
-  // sans effet si la ville n°1 du pays n'a pas changé depuis le dernier
-  // appel. Le badge "Président" ci-dessus reste calculé en direct sur
-  // le rang (toujours exact) ; cette table ne sert qu'à retenir
-  // "depuis quand" et les mandats précédents (voir DECISIONS.md §4,
-  // Jalon 11).
-  await supabaseAdmin.rpc("verifier_president", { p_country_id: ville.country_id });
-
-  // Activité (7j) calculée à la volée (Jalon 9) : la colonne
-  // cities.activite n'a jamais eu de vraie définition (toujours 0 pour
-  // une ville réelle, voir DECISIONS.md §4, journal du Jalon 9).
-  const { data: activiteVecue } = await supabase.rpc("activite_ville", { p_ville_id: ville.id });
   const activite = typeof activiteVecue === "number" ? activiteVecue : ville.activite;
 
   const progression = progressionNiveau(ville.population_max);
   const nomNiveauSuivant =
     progression.seuilSuivant != null ? libelleNiveau(progression.niveau + 1, locale) : null;
 
-  // Jalon 17 (docs/SYSTEME-DEVELOPPEMENT.md §9 point 1) : les 7 jauges
-  // de développement de sa propre ville.
-  const { data: jaugesBrutes } = await supabase.rpc("jauges_ville", { p_ville_id: ville.id });
   const jauges = (jaugesBrutes ?? []) as { activite: Activite; elan: number; jauge: number }[];
   const activitesDeCetteVille = activitesDisponibles(progression.niveau);
   const elanEnergie = jauges.find((j) => j.activite === "energie")?.elan ?? 0;
 
-  // Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs déjà
-  // ouverts, assignée de façon opportuniste (même logique que
-  // verifier_president()/verifier_manifestation() ci-dessous) puis lue
-  // pour le rendu 3D.
-  await supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: ville.id });
-  const { data: blocsBruts } = await supabase
-    .from("city_blocks")
-    .select("rang, vocation")
-    .eq("ville_id", ville.id);
+  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
+  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+  const palierAttaquesVille = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
+  const palierVisitesVille = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
+  const palierInfluenceVille = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
+  const pointsRecherche = typeof pointsRechercheBruts === "number" ? pointsRechercheBruts : 0;
+
+  const derniereVisite = (mesVisitesRecentes ?? []).reduce<string | null>(
+    (max, v) => (!max || v.created_at > max ? v.created_at : max),
+    null
+  );
+  const minutesAvantRevisite = derniereVisite
+    ? Math.max(
+        1,
+        Math.ceil((new Date(derniereVisite).getTime() + DELAI_VISITE_MINUTES * 60 * 1000 - maintenant.getTime()) / 60_000)
+      )
+    : null;
+  const plafondVisiteAtteint = (nbVisitesAujourdhui ?? 0) >= QUOTA_VISITE_QUOTIDIEN;
+
+  // Vague 2 — écritures opportunistes, indépendantes entre elles :
+  //  - Jalon 19 (docs/SYSTEME-DEVELOPPEMENT.md §7) : vocation des blocs
+  //    déjà ouverts, lue ensuite pour le rendu 3D ;
+  //  - Jalon 20 (1/3, §6) : construit les mégaprojets financés ;
+  //  - Jalon 20 (2/3, §6) : débloque les technologies déjà financées ;
+  //  - Jalon 20 (3/3, docs/A-INTEGRER.md §19) : débloque les monuments
+  //    déjà atteints.
+  await Promise.all([
+    supabaseAdmin.rpc("assigner_vocations_blocs", { p_ville_id: ville.id }),
+    supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: ville.id }),
+    supabaseAdmin.rpc("avancer_technologies", { p_ville_id: ville.id }),
+    supabaseAdmin.rpc("avancer_monuments", { p_ville_id: ville.id }),
+  ]);
+
+  // Vague 3 — tirage quotidien de manifestation (Jalon 18, opportuniste,
+  // comme verifier_president ci-dessus ; après avancer_megaprojets, dont
+  // le Stade réduit les pertes) et lecture de ce que la vague 2 a écrit.
+  // Catalogue des monuments fini et connu côté client (monuments.ts) :
+  // pas besoin d'une fonction de lecture dédiée, une simple liste suffit.
+  const [
+    { data: blocsBruts },
+    { data: megaprojetsBruts },
+    { count: nbTechnologiesDebloquees },
+    { data: monumentsBruts },
+  ] = await Promise.all([
+    supabase.from("city_blocks").select("rang, vocation").eq("ville_id", ville.id),
+    supabase.rpc("etat_megaprojets", { p_ville_id: ville.id }),
+    supabase.from("technologies").select("id", { count: "exact", head: true }).eq("ville_id", ville.id),
+    supabase.from("monuments").select("palier").eq("ville_id", ville.id),
+    supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: ville.id }),
+  ]);
+
+  // Vague 4 — bulletin municipal de sa propre ville : les attaques reçues
+  // et l'éventuelle manifestation valent aussi d'être vues sur "Ma ville",
+  // pas seulement en visitant.
+  const { data: evenements } = await supabase
+    .from("city_events")
+    .select("id, type, activite, type_action, valeur, created_at")
+    .eq("ville_id", ville.id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+  const evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
+
   const vocations: VocationsBlocs = new Map(
     (blocsBruts ?? []).map((b) => [b.rang as number, b.vocation as VocationQuartier])
   );
 
-  // Jalon 20 (1/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : construit les
-  // mégaprojets financés (opportuniste, même logique qu'au-dessus) puis
-  // lit l'état de tous les chantiers pour l'affichage et le rendu 3D.
-  await supabaseAdmin.rpc("avancer_megaprojets", { p_ville_id: ville.id });
-  const { data: megaprojetsBruts } = await supabase.rpc("etat_megaprojets", { p_ville_id: ville.id });
   const chantiers = (megaprojetsBruts ?? []) as {
     palier: number;
     type: string;
@@ -191,103 +309,12 @@ export default async function VillePage() {
     .filter((c) => c.statut === "construit")
     .map((c) => ({ palier: c.palier, type: c.type, activite: c.activite }));
 
-  // Jalon 20 (2/3, docs/SYSTEME-DEVELOPPEMENT.md §6) : débloque les
-  // technologies déjà financées (opportuniste, même logique que
-  // ci-dessus) puis lit combien sont débloquées et les points de
-  // Recherche déjà accumulés, pour l'affichage et le rendu 3D.
-  await supabaseAdmin.rpc("avancer_technologies", { p_ville_id: ville.id });
-  const { count: nbTechnologiesDebloquees } = await supabase
-    .from("technologies")
-    .select("id", { count: "exact", head: true })
-    .eq("ville_id", ville.id);
-  const { data: pointsRechercheBruts } = await supabase.rpc("stock_ville", {
-    p_ville_id: ville.id,
-    p_activite: "recherche",
-  });
-  const pointsRecherche = typeof pointsRechercheBruts === "number" ? pointsRechercheBruts : 0;
-
-  // Jalon 20 (3/3, docs/A-INTEGRER.md §19) : débloque les monuments
-  // déjà atteints (opportuniste, même logique que ci-dessus) puis lit
-  // combien sont débloqués, pour l'affichage et le rendu 3D. Catalogue
-  // fini et connu côté client (monuments.ts) : pas besoin d'une
-  // fonction de lecture dédiée, une simple liste suffit.
-  await supabaseAdmin.rpc("avancer_monuments", { p_ville_id: ville.id });
-  const { data: monumentsBruts } = await supabase.from("monuments").select("palier").eq("ville_id", ville.id);
   const nbMonumentsDebloquesVille = monumentsBruts?.length ?? 0;
   const monumentsDebloques: MonumentDebloque[] = [];
   for (const m of monumentsBruts ?? []) {
     const type = typeMonument(m.palier as number);
     if (type) monumentsDebloques.push({ palier: m.palier as number, type });
   }
-
-  const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const { data: derniereVisiteActivite } = await supabase
-    .from("visites")
-    .select("activite, activite_verrouillee")
-    .eq("visiteur_id", user.id)
-    .eq("ville_id", ville.id)
-    .gte("created_at", ilCinqMinutes)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
-  const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
-
-  // Jalon 18 : tirage quotidien de manifestation (opportuniste, comme
-  // verifier_president ci-dessus) et bulletin municipal de sa propre
-  // ville — les attaques reçues et l'éventuelle manifestation valent
-  // aussi d'être vues sur "Ma ville", pas seulement en visitant.
-  await supabaseAdmin.rpc("verifier_manifestation", { p_ville_id: ville.id });
-  const { data: nbAttaques } = await supabase.rpc("attaques_recues_aujourdhui", { p_ville_id: ville.id });
-  const palierAttaquesVille = palierAttaques(typeof nbAttaques === "number" ? nbAttaques : 0);
-  // Jalon 22 (docs/DECISIONS.md §10 point 22) : paliers de
-  // popularité/renommée, affichage seulement — aucun plafond ajouté.
-  const { data: nbVisitesRecues } = await supabase.rpc("visites_recues_aujourdhui", { p_ville_id: ville.id });
-  const palierVisitesVille = palierVisites(typeof nbVisitesRecues === "number" ? nbVisitesRecues : 0);
-  const { data: nbInfluenceRecue } = await supabase.rpc("actions_influence_recues_aujourdhui", {
-    p_ville_id: ville.id,
-  });
-  const palierInfluenceVille = palierInfluence(typeof nbInfluenceRecue === "number" ? nbInfluenceRecue : 0);
-  const { data: evenements } = await supabase
-    .from("city_events")
-    .select("id, type, activite, type_action, valeur, created_at")
-    .eq("ville_id", ville.id)
-    .order("created_at", { ascending: false })
-    .limit(8);
-  const evenementsBulletin = (evenements ?? []) as EvenementBulletin[];
-
-  // Auto-visite de sa propre ville (Jalon 13 ter, docs/A-INTEGRER.md
-  // §16) : même délai d'une heure et plafond de 3/jour que pour visiter
-  // une autre ville (Jalon 13 bis), même compteur (visiteur_id,
-  // ville_id) — ici les deux valent l'id du joueur et de sa ville.
-  const maintenant = new Date();
-  const aujourdhui = maintenant.toISOString().slice(0, 10);
-  const ilUneHeureEnArriere = new Date(maintenant.getTime() - DELAI_VISITE_MINUTES * 60 * 1000).toISOString();
-
-  const { data: mesVisitesRecentes } = await supabase
-    .from("visites")
-    .select("created_at")
-    .eq("visiteur_id", user.id)
-    .eq("ville_id", ville.id)
-    .gte("created_at", ilUneHeureEnArriere);
-  const derniereVisite = (mesVisitesRecentes ?? []).reduce<string | null>(
-    (max, v) => (!max || v.created_at > max ? v.created_at : max),
-    null
-  );
-  const minutesAvantRevisite = derniereVisite
-    ? Math.max(
-        1,
-        Math.ceil((new Date(derniereVisite).getTime() + DELAI_VISITE_MINUTES * 60 * 1000 - maintenant.getTime()) / 60_000)
-      )
-    : null;
-
-  const { count: nbVisitesAujourdhui } = await supabase
-    .from("visites")
-    .select("id", { count: "exact", head: true })
-    .eq("visiteur_id", user.id)
-    .eq("ville_id", ville.id)
-    .eq("jour", aujourdhui);
-  const plafondVisiteAtteint = (nbVisitesAujourdhui ?? 0) >= QUOTA_VISITE_QUOTIDIEN;
 
   const stats: Array<{ cle: "ville.population" | "ville.influence" | "ville.activite"; valeur: number }> = [
     { cle: "ville.population", valeur: ville.population },
