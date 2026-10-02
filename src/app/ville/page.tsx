@@ -8,6 +8,7 @@ import { ACTIVITES, activitesDisponibles, type Activite } from "@/lib/game/activ
 import { palierAttaques } from "@/lib/game/antiville";
 import { palierVisites, palierInfluence } from "@/lib/game/popularite";
 import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
+import { DUREE_VISITE_FRAICHE_MS, QUOTA_VISITE_QUOTIDIEN } from "@/lib/game/visites";
 import { premierRangZone, type VocationsBlocs } from "@/lib/ville3d/generer";
 import type { VocationQuartier } from "@/lib/ville3d/quartiers";
 import { typeMonument } from "@/lib/game/monuments";
@@ -30,7 +31,6 @@ import { THEMES } from "@/lib/game/themes";
 // (quelques territoires ISO 3166-1 sur 250 — voir DECISIONS.md §4,
 // Jalon 6). Mêmes valeurs que le prototype par défaut (France).
 const PAYS_PAR_DEFAUT = { latitude: 46.6, longitude: 2.35, fuseauHoraire: "Europe/Paris" };
-const QUOTA_VISITE_QUOTIDIEN = 3;
 const DELAI_VISITE_MINUTES = 60;
 const GAIN_VISITE = 1;
 
@@ -225,7 +225,7 @@ export default async function VillePage() {
   const ilCinqMinutes = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const { data: derniereVisiteActivite } = await supabase
     .from("visites")
-    .select("activite, activite_verrouillee")
+    .select("activite, activite_verrouillee, created_at")
     .eq("visiteur_id", user.id)
     .eq("ville_id", ville.id)
     .gte("created_at", ilCinqMinutes)
@@ -234,6 +234,11 @@ export default async function VillePage() {
     .maybeSingle();
   const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
   const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+  // A-INTEGRER §27 B : juste après une visite, les choix d'activité sont
+  // montrés d'emblée ; plus tard dans la fenêtre de grâce, derrière « Changer ».
+  const visiteFraiche = derniereVisiteActivite?.created_at
+    ? Date.now() - new Date(derniereVisiteActivite.created_at as string).getTime() < DUREE_VISITE_FRAICHE_MS
+    : false;
 
   // Jalon 18 : tirage quotidien de manifestation (opportuniste, comme
   // verifier_president ci-dessus) et bulletin municipal de sa propre
@@ -405,6 +410,7 @@ export default async function VillePage() {
           villeId={ville.id}
           activiteActuelle={activiteActuelle}
           verrouillee={activiteVerrouillee}
+          visiteFraiche={visiteFraiche}
           activitesDisponibles={activitesDeCetteVille}
         />
         <Megaprojets

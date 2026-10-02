@@ -8,7 +8,7 @@ import { createClient } from "@supabase/supabase-js";
  * - §16 : visiter sa propre ville est désormais autorisé (déviation
  *   assumée du cahier des charges §3, même précédent que le délai/
  *   plafond du Jalon 13 bis) — même délai d'une heure et plafond de
- *   3/jour, aucune règle spéciale.
+ *   8/jour (3 à l'origine), aucune règle spéciale.
  * - §15 (partie A) : la visite (autre ville ou la sienne) se compte
  *   automatiquement en ouvrant la page, plus de bouton "Visiter" à
  *   cliquer (voir src/components/VisiteAutomatique.tsx).
@@ -98,13 +98,13 @@ test.describe("Jalon 13 ter — visite automatique", () => {
       await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
 
       await expect(page.getByRole("button", { name: "Visiter" })).toHaveCount(0);
-      await expect(page.getByText("0/3")).toBeVisible();
+      await expect(page.getByText("0/8")).toBeVisible();
       // Timeouts généreux (15 s, pas 8 s) : la scène 3D en arrière-plan
       // peut ralentir le thread principal (GPU stall observé en
       // environnement de test headless) et repousser le déclenchement du
       // minuteur de ~2,5 s bien au-delà de sa valeur nominale.
       await expect(page.getByText("Visite comptée, +1 population.")).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("1/8")).toBeVisible({ timeout: 15_000 });
 
       const { data: ville } = await supabaseAdmin
         .from("cities")

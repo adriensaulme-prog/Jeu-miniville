@@ -77,7 +77,7 @@ test.describe("Jalon 5 — villes jumelles", () => {
       await ligneB.click();
       // Ouvrir la page de B déclenche aussi une visite automatique
       // (Jalon 13 ter, ~2,5 s puis confirmation) : on attend que le
-      // compteur "1/3" soit affiché (signe que le cycle complet,
+      // compteur "1/8" soit affiché (signe que le cycle complet,
       // confirmation + router.refresh(), est terminé) avant de
       // continuer, sinon la population finale de B dépendrait d'une
       // course entre ce délai et le reste du scénario. Timeout généreux
@@ -85,7 +85,7 @@ test.describe("Jalon 5 — villes jumelles", () => {
       // thread principal (GPU stall observé en environnement de test
       // headless) et repousser le déclenchement du minuteur bien au-delà
       // des 2,5 s nominales.
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("1/8")).toBeVisible({ timeout: 30_000 });
       await page.getByRole("button", { name: "Proposer un jumelage" }).click();
       await expect(page.getByText("Demande envoyée")).toBeVisible();
 

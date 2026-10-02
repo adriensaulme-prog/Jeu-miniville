@@ -351,7 +351,11 @@ test.describe("Jalon 17 — choisir une activité", () => {
       // (GPU stall observé en environnement de test headless).
       await expect(page.getByText("Activité choisie :")).toBeVisible({ timeout: 20_000 });
 
-      await page.getByRole("button", { name: "Changer" }).click();
+      // A-INTEGRER §27 B : juste après la visite, « +1 visite » puis les
+      // choix d'activité d'emblée, sans passer par « Changer ».
+      await expect(page.getByText("+1 visite").first()).toBeVisible();
+      await expect(page.getByText("Choisir une activité")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Changer" })).toHaveCount(0);
       await page.getByRole("button", { name: /Loisirs/ }).click();
       await expect(page.getByText("Activité choisie : 🌳 Loisirs")).toBeVisible({ timeout: 10_000 });
       // Correctif Jalon 19 (§20 B) : ce choix explicite est verrouillé,

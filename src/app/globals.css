@@ -406,6 +406,27 @@ body {
   line-height: 1.45;
   color: var(--muted);
 }
+.center-card.regles {
+  width: min(720px, calc(100% - 32px));
+  margin: 72px auto 96px;
+}
+.regles-section {
+  display: grid;
+  gap: 8px;
+}
+.regles-section p {
+  margin: 0;
+  line-height: 1.55;
+}
+.regles-lien {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.regles-lien:hover {
+  color: var(--focus);
+  text-decoration: underline;
+}
 .catalogue-monuments summary {
   cursor: pointer;
 }

@@ -9,6 +9,7 @@ import { palierVisites, palierInfluence, type PalierPopularite, type PalierRenom
 import { palierJumelage } from "@/lib/game/jumelages";
 import { nbMegaprojetsOuverts } from "@/lib/game/megaprojets";
 import { typeMonument } from "@/lib/game/monuments";
+import { DUREE_VISITE_FRAICHE_MS, QUOTA_VISITE_QUOTIDIEN } from "@/lib/game/visites";
 import { premierRangZone, type VocationsBlocs } from "@/lib/ville3d/generer";
 import type { VocationQuartier } from "@/lib/ville3d/quartiers";
 import type { MegaprojetConstruit, MonumentDebloque } from "@/lib/ville3d/terrain";
@@ -28,7 +29,6 @@ import { Technologies } from "@/components/Technologies";
 import { Monuments } from "@/components/Monuments";
 import { influencerVille, proposerJumelage } from "./actions";
 
-const QUOTA_VISITE_QUOTIDIEN = 3;
 const DELAI_VISITE_MINUTES = 60;
 const GAIN_VISITE = 1;
 const QUOTA_INFLUENCE_QUOTIDIEN = 5;
@@ -226,7 +226,7 @@ export default async function VillesPage({
   const { data: derniereVisiteActivite } = villeSelectionnee
     ? await supabase
         .from("visites")
-        .select("activite, activite_verrouillee")
+        .select("activite, activite_verrouillee, created_at")
         .eq("visiteur_id", user.id)
         .eq("ville_id", villeSelectionnee.id)
         .gte("created_at", ilCinqMinutes)
@@ -236,6 +236,9 @@ export default async function VillesPage({
     : { data: null };
   const activiteActuelle = (derniereVisiteActivite?.activite ?? null) as Activite | null;
   const activiteVerrouillee = derniereVisiteActivite?.activite_verrouillee ?? false;
+  const visiteFraiche = derniereVisiteActivite?.created_at
+    ? Date.now() - new Date(derniereVisiteActivite.created_at as string).getTime() < DUREE_VISITE_FRAICHE_MS
+    : false;
 
   // Jalon 18 : palier d'attaques du jour et bulletin municipal de la
   // ville affichée dans le panneau détail — et le tirage quotidien de
@@ -534,6 +537,7 @@ export default async function VillesPage({
                   villeId={c.id}
                   activiteActuelle={activiteActuelle}
                   verrouillee={activiteVerrouillee}
+                  visiteFraiche={visiteFraiche}
                   activitesDisponibles={activitesDisponibles(c.niveau)}
                 />
                 <Megaprojets

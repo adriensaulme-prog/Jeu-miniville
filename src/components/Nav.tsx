@@ -21,6 +21,9 @@ export async function Nav() {
         </Link>
         {user ? <NavTabs locale={locale} className="tabs" tabClassName="tab" /> : null}
         <div className="who">
+          <Link href="/regles" className="regles-lien">
+            {traduire(locale, "nav.regles")}
+          </Link>
           <LangSwitcher locale={locale} />
           {user ? (
             <form action={deconnexion}>

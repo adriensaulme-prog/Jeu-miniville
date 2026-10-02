@@ -24,6 +24,7 @@ export function ChoisirActivite({
   activiteActuelle,
   verrouillee,
   activitesDisponibles,
+  visiteFraiche,
 }: {
   locale: Locale;
   villeId: string;
@@ -36,9 +37,16 @@ export function ChoisirActivite({
    * vrai, même si la fenêtre de grâce de 5 minutes n'est pas écoulée. */
   verrouillee: boolean;
   activitesDisponibles: Activite[];
+  /** A-INTEGRER §27 B : visite de moins de 2 minutes => les choix sont ouverts d'emblée. */
+  visiteFraiche: boolean;
 }) {
   const router = useRouter();
-  const [ouvert, setOuvert] = useState(false);
+  // Le composant est monté AVANT la visite (activiteActuelle nulle) puis
+  // reçoit ses nouvelles props au rafraîchissement : l'ouverture d'emblée
+  // doit donc être dérivée des props, pas figée au premier rendu. Le
+  // joueur peut ensuite l'ouvrir/fermer à la main (ouvertManuel).
+  const [ouvertManuel, setOuvertManuel] = useState<boolean | null>(null);
+  const ouvert = ouvertManuel ?? (visiteFraiche && !verrouillee);
   const [enCours, startTransition] = useTransition();
 
   if (!activiteActuelle) {
@@ -48,18 +56,21 @@ export function ChoisirActivite({
   function choisir(activite: Activite) {
     startTransition(async () => {
       await choisirActiviteVisite(villeId, activite);
-      setOuvert(false);
+      setOuvertManuel(false);
       router.refresh();
     });
   }
 
   return (
     <div className="note">
+      <p className="visite-plus-une">
+        <b>{traduire(locale, "visite.plusUne")}</b>
+      </p>
       <p>
         {traduire(locale, "activite.choisie")} {EMOJI_ACTIVITE[activiteActuelle]}{" "}
         {traduire(locale, `activite.${activiteActuelle}`)}{" "}
         {!ouvert && !verrouillee && (
-          <button type="button" className="btn small" onClick={() => setOuvert(true)}>
+          <button type="button" className="btn small" onClick={() => setOuvertManuel(true)}>
             {traduire(locale, "activite.changer")}
           </button>
         )}

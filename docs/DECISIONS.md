@@ -3835,6 +3835,61 @@ vert.
 
 ---
 
+### Plafond de visites à 8, « +1 visite » et choix d'emblée, page des règles (A-INTEGRER §27) — 02/10/2026
+
+**Demande d'Adrien** (`docs/A-INTEGRER.md` §27, trois points).
+
+**A. Plafond de visites quotidien : 3 → 8** (par jour et par ville
+visitée). Migration `0039` : une fonction `plafond_visites_quotidien()`
+(= 8) et `visiter_ville()` recréée à l'identique de la `0024` en
+l'appelant — le chiffre n'est plus recopié à chaque redéfinition. Côté
+TypeScript : `src/lib/game/visites.ts` (`QUOTA_VISITE_QUOTIDIEN`), qui
+remplace les deux constantes locales de `ville/page.tsx` et
+`villes/page.tsx` ; `tests/unit/visites.test.ts` lit la dernière
+migration pour vérifier la parité TS/SQL et l'absence de littéral dans
+`visiter_ville()`. Délai d'une heure (P0018) et code d'erreur (P0019)
+inchangés. *Correction de la note du §27* : elle situait la définition
+de `visiter_ville()` dans la `0030` ; la dernière est en réalité la
+`0024` (les `>= 3` de `0025`, `0028` et `0030` sont le quota des actions
+AntiVille, pas touché).
+*Effet à garder en tête* : le gain par visiteur et par ville est multiplié
+par 8/3 ; les paliers de popularité du Jalon 22 (visites reçues
+aujourd'hui) ont été calibrés avant ce changement — à relever peut-être,
+**question posée à Adrien**.
+
+**B. « +1 visite » puis les choix d'activité tout de suite en dessous.**
+`VisiteAutomatique` affiche « **+1 visite** · Visite comptée, +X
+habitant(s) » ; `ChoisirActivite` (donnée serveur, survit aux
+rafraîchissements) affiche « **+1 visite** » pendant toute la fenêtre de
+5 minutes et ouvre la liste des activités **d'emblée** si la visite a
+moins de 2 minutes (`DUREE_VISITE_FRAICHE_MS`), sinon derrière « Changer »
+(cas d'un joueur qui revient dans la fenêtre de grâce, comme le §27 le
+laisse entendre). Choix : l'ouverture d'emblée vaut 2 minutes et non
+toute la fenêtre de 5, pour que « Changer » garde un sens.
+
+**C. Règles du jeu.** Page publique `/regles` (lisible sans compte),
+lien discret « Règles » à gauche du sélecteur de langue dans la barre du
+haut. v1 : le cœur de boucle seulement (principe, visites, activités et
+jauges, influence, AntiVille, jumelages), plus une section « La suite »
+qui annonce pays/guerre/mégaprojets/technologies. Contenu structuré dans
+`src/lib/game/regles.ts`, **FR + EN dès la première version**
+(`tests/unit/regles.test.ts` : chaque section dans les deux langues, même
+nombre de paragraphes, plafond de visites cité depuis la constante). À
+étoffer au rythme des jalons ; sert de base au parcours de découverte
+(§26 F) sans l'attendre.
+
+**Testé.** Unitaires : `visites.test.ts` (2), `regles.test.ts` (3).
+E2E : `jalon13bis` réécrit pour 8 visites + refus de la 9ᵉ (population
+9, 8 lignes en base) et pour l'interface jusqu'à « 8/8 » puis « Quota
+atteint » (6 visites antérieures insérées pour ne pas rejouer 8 fois le
+cycle d'interface) ; `jalon13ter` et `jalon5` en « x/8 » ;
+`jalon17` : « +1 visite » et choix visibles sans « Changer » ;
+`visites-regles.spec.ts` (3) : visite de 3 min => liste derrière
+« Changer », page des règles FR puis EN (cookie de langue), lien de la
+barre du haut.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

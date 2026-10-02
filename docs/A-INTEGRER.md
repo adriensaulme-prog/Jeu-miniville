@@ -134,12 +134,15 @@ journal existant, puis ce fichier peut être supprimé.*
 > priorisés entre eux.
 > **§27 (plafond de visites à 8, feedback de visite + choix immédiat,
 > bouton règles du jeu, 02/10/2026) : nouveau** — trois demandes
-> ponctuelles d'Adrien, détail dans la section.
+> ponctuelles d'Adrien, détail dans la section. **État : A, B et C codés
+> le 02/10/2026 (migration `0039`).**
 > **§28 (fichier APK pour tester avec des amis, 02/10/2026) :
 > nouveau** — emballer la PWA existante (Jalon 15) en TWA pour obtenir
 > un .apk installable, utile pour les tests fermés désormais EXIGÉS par
 > le Play Store (12 testeurs pendant 14 jours) avant toute mise en
-> production. Ce fichier peut être supprimé quand Adrien aura répondu
+> production. **État : reçu, pas commencé** (demande l'URL de
+> production, Java/SDK Android et un accord sur la garde de la clé de
+> signature). Ce fichier peut être supprimé quand Adrien aura répondu
 > aux questions restantes et que les jalons de la Phase 6 seront
 > terminés.
 
@@ -1511,6 +1514,15 @@ français ET anglais dès cette première version (règle i18n immédiate,
 `DECISIONS.md` §1 point 5). Peut servir de brique de départ pour le
 parcours de découverte des nouveaux joueurs proposé en §26 F, sans
 attendre que ce chantier-là soit pris.
+
+**Traité le 02/10/2026 (Claude Code)** : A (plafond 8, migration `0039`,
+constante centralisée — la définition de `visiter_ville()` se trouve en
+fait dans la `0024`, pas la `0030`), B (« +1 visite » puis choix
+d'emblée pour une visite de moins de 2 minutes) et C (page publique
+`/regles`, FR + EN, v1 cœur de boucle) — détail dans `DECISIONS.md` §4
+« Plafond de visites à 8… ». **Question posée à Adrien** : les paliers
+de popularité du Jalon 22 sont-ils à relever maintenant que le plafond
+passe de 3 à 8 ?
 
 ---
 

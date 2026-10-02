@@ -77,6 +77,7 @@ export function VisiteAutomatique({
   }
   return (
     <p className="note">
+      <b>{traduire(locale, "visite.plusUne")}</b>{" · "}
       {gainReel > 0
         ? `${traduire(locale, "villes.visiteComptee")} +${gainReel} ${traduire(locale, "ville.population").toLowerCase()}.`
         : traduire(locale, "villes.visiteComptSansGain")}

@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 
 /**
  * Jalon 13 bis : « Revenir plus souvent » — une même personne peut
- * revisiter une ville plusieurs fois par jour (jusqu'à 3, plafond
- * choisi par Claude Code), avec un délai minimum d'une heure entre deux
+ * revisiter une ville plusieurs fois par jour (jusqu'à 8 depuis le §27 A du
+ * 02/10/2026, 3 à l'origine), avec un délai minimum d'une heure entre deux
  * visites de la même ville. Déviation assumée du cahier des charges
  * §3/§26 ("une fois par jour"), demandée par Adrien en connaissance de
  * cause — voir docs/A-INTEGRER.md §13 et docs/DECISIONS.md §4. Client
@@ -73,7 +73,7 @@ async function connecter(page: import("@playwright/test").Page, email: string, m
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 13 bis — Revenir plus souvent", () => {
-  test("sabotage : délai d'une heure entre deux visites, plafond de 3 par jour", async () => {
+  test("sabotage : délai d'une heure entre deux visites, plafond de 8 par jour", async () => {
     const cible = await creerCompteAvecVille("j13bis-sabotage-cible");
     const visiteur = await creerCompteAvecVille("j13bis-sabotage-visiteur");
     try {
@@ -90,21 +90,17 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
       });
       expect(erreurDelai?.code).toBe("P0018");
 
-      await debloquerDelai(visiteur.userId, cible.villeId);
-      const { error: e2 } = await supabaseAdmin.rpc("visiter_ville", {
-        p_visiteur_id: visiteur.userId,
-        p_ville_id: cible.villeId,
-      });
-      expect(e2).toBeNull();
+      // Visites 2 à 8 : chacune après avoir « laissé passer » le délai d'une heure.
+      for (let n = 2; n <= 8; n++) {
+        await debloquerDelai(visiteur.userId, cible.villeId);
+        const { error } = await supabaseAdmin.rpc("visiter_ville", {
+          p_visiteur_id: visiteur.userId,
+          p_ville_id: cible.villeId,
+        });
+        expect(error, `visite n°${n}`).toBeNull();
+      }
 
-      await debloquerDelai(visiteur.userId, cible.villeId);
-      const { error: e3 } = await supabaseAdmin.rpc("visiter_ville", {
-        p_visiteur_id: visiteur.userId,
-        p_ville_id: cible.villeId,
-      });
-      expect(e3).toBeNull();
-
-      // Délai à nouveau écoulé, mais plafond quotidien de 3 déjà atteint.
+      // Délai à nouveau écoulé, mais plafond quotidien de 8 déjà atteint.
       await debloquerDelai(visiteur.userId, cible.villeId);
       const { error: erreurPlafond } = await supabaseAdmin.rpc("visiter_ville", {
         p_visiteur_id: visiteur.userId,
@@ -117,14 +113,14 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
         .select("population")
         .eq("id", cible.villeId)
         .single();
-      expect(ville?.population).toBe(4); // 1 (départ) + 3 visites, pas 4
+      expect(ville?.population).toBe(9); // 1 (départ) + 8 visites, pas 9
 
       const { count } = await supabaseAdmin
         .from("visites")
         .select("id", { count: "exact", head: true })
         .eq("visiteur_id", visiteur.userId)
         .eq("ville_id", cible.villeId);
-      expect(count).toBe(3);
+      expect(count).toBe(8);
     } finally {
       await supprimerCompte(cible.userId);
       await supprimerCompte(visiteur.userId);
@@ -151,23 +147,31 @@ test.describe("Jalon 13 bis — Revenir plus souvent", () => {
       await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
 
       await page.goto(`/villes?ville=${cible.villeId}`);
-      await expect(page.getByText("0/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("0/8")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("1/8")).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText(/Revisiter dans \d+ min/)).toBeVisible({ timeout: 15_000 });
 
+      // 6 visites supplémentaires déjà faites aujourd'hui (reculées de 2 h : le
+      // délai d'une heure est écoulé), sans refaire 6 fois le cycle d'interface.
+      const aujourdhui = new Date().toISOString().slice(0, 10);
+      const ilYaDeuxHeures = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const { error: erreurPreparation } = await supabaseAdmin.from("visites").insert(
+        Array.from({ length: 6 }, () => ({
+          visiteur_id: visiteur.userId,
+          ville_id: cible.villeId,
+          jour: aujourdhui,
+          created_at: ilYaDeuxHeures,
+        }))
+      );
+      expect(erreurPreparation).toBeNull();
       await debloquerDelai(visiteur.userId, cible.villeId);
       await page.reload();
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("2/3")).toBeVisible({ timeout: 15_000 });
-
-      await debloquerDelai(visiteur.userId, cible.villeId);
-      await page.reload();
-      await expect(page.getByText("2/3")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("3/3")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("7/8")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("8/8")).toBeVisible({ timeout: 15_000 });
 
       // Plafond atteint : "Quota atteint" s'affiche, plus de visite
       // automatique possible même si le délai est aussi encore actif
-      // juste après cette 3e visite.
+      // juste après cette 8e visite.
       await expect(page.getByText("Quota atteint")).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole("link", { name: new RegExp(cible.villeNom) })).toContainText(
         "Indisponible pour l'instant",
