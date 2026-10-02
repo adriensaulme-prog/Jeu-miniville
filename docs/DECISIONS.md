@@ -3606,6 +3606,51 @@ pas encore appliquée au moment de l'écriture.
 
 ---
 
+### Guerres équilibrées : effort national à la moyenne par ville (A-INTEGRER §24) — 02/10/2026
+
+**Demande d'Adrien** (`docs/A-INTEGRER.md` §24) : ne plus laisser un
+pays de 50 villes écraser mécaniquement un pays de 2 villes. Constat
+(Claude chat) : `effort_national()` additionnait l'activité 7 jours de
+toutes les villes, un choix que la migration `0017` qualifiait elle-même
+d'« assumé mais contestable ». Adrien choisit l'option radicale : **une
+vraie moyenne par ville**. Migration `0037`.
+
+**Fait.** `effort_national()` = activité 7 jours **moyenne** par ville
++ `floor(sqrt(ressources nationales / nombre de villes))` ; un pays sans
+ville vaut 0. La comparaison quotidienne de `resoudre_conflits_en_cours()`
+et tout le reste du mécanisme de guerre (bonus défensif ×1,5, perte
+quotidienne de 0,1 % plafonnée à 5 %, paliers visibles, verdict à la
+majorité des journées — Jalon 21) sont inchangés. Affichage de `/pays` :
+libellés « Effort moyen par ville (attaquant/défenseur) », une décimale.
+
+*Choix de Claude Code, le §24 ne le tranchait pas* : l'effort devient une
+valeur **décimale** (`numeric(12,2)`). Une moyenne d'activité vaut entre
+0 et 7 ; l'arrondir à l'entier effacerait presque toute différence entre
+deux pays (2,4 et 2,9 donneraient tous deux 2). Conséquences :
+`conflits.effort_*` en `numeric(12,2)`, `conflit_pays()` recréée, et le
+seuil défensif n'est plus arrondi (`effort_attaquant > effort_defenseur
+× 1,5` — le `floor` servait seulement à rester en entiers).
+
+*À savoir* : « une ville » = « un joueur » ici (une ville par joueur),
+donc une ville inactive compte comme zéro dans la moyenne, ce qui est le
+but (seule l'implication réelle des joueurs compte), mais pénalise un
+pays dont beaucoup de comptes dorment. Les villes de test comptent comme
+les autres, comme avant. L'option écartée par Adrien (diviser par la
+racine carrée du nombre de villes, pour atténuer sans annuler l'avantage
+de taille) reste la solution de repli si la moyenne pure s'avère trop
+punitive une fois testée.
+
+**Testé.** `tests/e2e/effort-national-moyenne.spec.ts` (3 tests, pays
+BG/RO/MT réservés) : pays sans ville = 0 ; même activité par joueur =
+même effort que le pays ait 1 ou 3 villes (avant : 9 contre 3) ; villes
+inactives qui tirent la moyenne vers le bas, et terme ressources lui aussi
+divisé par le nombre de villes. `jalon13-france-contre-allemagne.spec.ts`
+adapté (attendus 4,5 et 1 au lieu de 9 et 1, nouveaux libellés).
+Typecheck et lint verts. Pas encore lancés : migration `0037` pas encore
+appliquée au moment de l'écriture.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

@@ -91,7 +91,9 @@ test.describe("Jalon 8 — se classer", () => {
       expect(error).toBeNull();
 
       await connecter(page, joueur.email, joueur.motDePasse);
-      await expect(page).toHaveURL(/\/ville$/, { timeout: 20_000 });
+      // Région nulle : /ville renvoie aussitôt vers /ville/region, selon la
+      // vitesse du serveur le test voit l'une ou l'autre URL.
+      await expect(page).toHaveURL(/\/ville(\/region)?$/, { timeout: 20_000 });
 
       // Toute page du jeu redirige vers l'écran de rattrapage tant que
       // la région n'est pas choisie.

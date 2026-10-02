@@ -85,7 +85,7 @@ test.describe("Jalon 5 — villes jumelles", () => {
       // thread principal (GPU stall observé en environnement de test
       // headless) et repousser le déclenchement du minuteur bien au-delà
       // des 2,5 s nominales.
-      await expect(page.getByText("1/3")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("1/3")).toBeVisible({ timeout: 30_000 });
       await page.getByRole("button", { name: "Proposer un jumelage" }).click();
       await expect(page.getByText("Demande envoyée")).toBeVisible();
 

@@ -114,9 +114,16 @@ journal existant, puis ce fichier peut être supprimé.*
 > `effort_national()` compare aujourd'hui une SOMME d'activité par
 > pays, ce qui écrase mécaniquement les petits pays. Adrien a choisi de
 > passer à une MOYENNE par ville/joueur, pour une guerre équitable
-> indépendamment de la taille du pays. Ce fichier peut être supprimé
-> quand Adrien aura répondu aux questions restantes et que les jalons
-> de la Phase 6 seront terminés.
+> indépendamment de la taille du pays.
+> **§25 (zones dans la ville + repérer les bâtiments débloqués,
+> 02/10/2026) : nouveau** — les blocs de la ville sont mélangés
+> aujourd'hui (vocation décidée indépendamment de la position) ;
+> Adrien veut les gratte-ciels au centre et les maisons repoussées en
+> périphérie à mesure que la ville grandit, plus un vrai catalogue
+> débloqué/à débloquer sur `/ville` avec un bouton pour repérer un
+> bâtiment dans la vue 3D. Gros chantier, détail complet dans la
+> section. Ce fichier peut être supprimé quand Adrien aura répondu aux
+> questions restantes et que les jalons de la Phase 6 seront terminés.
 
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
@@ -1167,3 +1174,121 @@ l'annuler (diviser par la racine carrée du nombre de villes plutôt que
 par le nombre de villes lui-même) — gardée en mémoire si jamais la
 moyenne pure s'avère trop punitive pour les grands pays une fois testée
 avec les villes de test.
+
+**Traité le 02/10/2026 (Claude Code)** : `effort_national()` passe à la
+moyenne par ville (migration `0037`), efforts décimaux, libellés
+« effort moyen par ville » sur `/pays` — détail et choix laissés à Claude
+Code dans `DECISIONS.md` §4 "Guerres équilibrées". En attente
+d'application de la migration par Adrien.
+
+---
+
+## 25. Zones dans la ville (gratte-ciels au centre, maisons en périphérie) + repérer les bâtiments débloqués (demande d'Adrien, 02/10/2026)
+
+**Constat d'Adrien, vérifié dans le code** : « dans les villes, il
+faudrait faire des zones, gratte-ciels, maison, commerce, énergie...
+tout est mélangé actuellement, d'ailleurs je ne vois pas les bâtiments
+pour chaque ».
+
+Deux causes distinctes identifiées en lisant `supabase/migrations/0026`
+et `src/lib/ville3d/generer.ts`/`terrain.ts` :
+
+1. **Les blocs ne sont pas zonés.** La position de chaque bloc
+   (distance au centre) est fixée uniquement par `planifierBlocs()`
+   (ordre par distance au croisement central + un petit aléa propre à
+   chaque bloc), AVANT même de savoir quelle vocation il aura. La
+   vocation (résidentiel/industrie/commerce/loisirs/services/recherche)
+   est ensuite attribuée bloc par bloc selon l'activité la plus en
+   retard à cet instant (`assigner_vocations_blocs()`) — un calcul qui
+   ne regarde jamais où est le bloc dans la ville. Résultat : un bloc
+   commerce peut tout à fait se retrouver au rang 2 (très central) et
+   un bloc résidentiel au rang 40 (en périphérie), sans aucune logique
+   de zone.
+2. **L'Énergie, les mégaprojets et les monuments d'influence ne sont
+   même pas dans un bloc.** Ils sont placés dans la campagne, à un
+   ANGLE ALÉATOIRE autour de la ville et à une distance qui peut aller
+   jusqu'à 1500 unités pour l'Énergie (plus loin encore pour les
+   mégaprojets/monuments aux paliers élevés) — explique directement
+   pourquoi Adrien ne les voit pas en jouant : il faudrait tourner la
+   caméra dans la bonne direction et dézoomer suffisamment, au hasard,
+   pour tomber dessus.
+
+**Ce qu'Adrien veut pour les zones** (après clarification) : les gros
+bâtiments / gratte-ciels au centre-ville, et à mesure que des
+gratte-ciels se construisent, les maisons doivent être repoussées vers
+l'extérieur — un vrai gradient de densité du centre vers la périphérie,
+pas un mélange.
+
+**Point utile découvert en lisant le code** : une partie de cette idée
+existe déjà partiellement dans le moteur — `towerAtK(k)`
+(`constantes.ts`) fait déjà dépendre le seuil de population à partir
+duquel un bloc résidentiel passe en gratte-ciel du rang `k` du bloc
+(plus le rang est petit/central, plus tôt la tour apparaît). Le
+problème n'est donc pas l'absence totale de logique centre/périphérie
+pour les tours, mais que :
+- cette logique ne s'applique qu'aux blocs **résidentiels**, et les
+  blocs résidentiels ne sont pas forcément les plus centraux (point 1
+  ci-dessus) ;
+- rien ne "repousse" jamais un bâtiment résidentiel déjà construit —
+  un bloc en périphérie qui devient résidentiel finira lui aussi par
+  recevoir une tour si la ville grandit assez, ce qui contredit l'idée
+  de garder les maisons en périphérie durablement.
+
+**Proposition pour Claude Code** (idée générale validée par Adrien,
+détail d'implémentation à sa main) :
+1. Réorganiser l'attribution des blocs pour que les rangs les plus
+   centraux soient réservés en priorité aux blocs résidentiels à forte
+   densité (gratte-ciels), un anneau intermédiaire pour les autres
+   vocations (commerce, industrie, services, loisirs, recherche), et
+   les rangs les plus externes pour les maisons (résidentiel à faible
+   densité) — plutôt que l'ordre purement géométrique actuel (distance
+   au centre + aléa) qui ignore la vocation.
+2. Garder la logique "résidentiel ≥ moitié des blocs" et "activité la
+   plus en retard" pour décider QUELLE vocation ouvrir ensuite (ça
+   marche bien, pas besoin d'y toucher) ; changer seulement OÙ ce
+   nouveau bloc est placé pour respecter le gradient centre →
+   périphérie plutôt que le rang géométrique brut.
+3. Un bloc déjà ouvert ne change jamais de vocation ni de position
+   (règle existante, à garder) — le "repoussement" des maisons se fait
+   donc en choisissant mieux la position des FUTURS blocs résidentiels
+   (toujours plus loin que les blocs à tours), jamais en déplaçant des
+   maisons déjà construites.
+4. Portée : seuls les blocs ouverts à partir de maintenant suivent la
+   nouvelle règle de zonage — les villes déjà construites (villes de
+   test notamment) ne sont pas rétroactivement réorganisées, pour
+   respecter "un bloc une fois ouvert n'est jamais déplacé".
+5. Énergie, mégaprojets et monuments : pas de retour sur le choix "hors
+   de la ville" déjà validé — mais leur emplacement devrait devenir
+   plus prévisible (un secteur/angle plus restreint plutôt
+   qu'entièrement aléatoire sur 360°) pour qu'ils soient plus faciles à
+   repérer, en complément du point suivant.
+
+**Nouvelle fonctionnalité demandée sur `/ville`** : « voir ce qu'on a
+débloqué et ce qu'il reste à débloquer, et quand on clique sur un
+bâtiment débloqué on voit où il est ».
+- Aujourd'hui, seul le panneau Monuments (`src/components/Monuments.tsx`)
+  va dans ce sens, et il est incomplet : il liste seulement les
+  monuments déjà débloqués plus le tout prochain, pas le catalogue
+  complet des 16 paliers avec leur état (débloqué / à débloquer) —
+  contrairement à ce que demande Adrien.
+- À construire : un vrai panneau catalogue sur `/ville`, qui montre
+  TOUS les paliers de monuments d'influence (les 16, voir
+  `src/lib/game/monuments.ts`), chacun marqué débloqué ou verrouillé
+  (avec son seuil si verrouillé) — et, pour chaque monument débloqué,
+  un bouton/action "voir où il est" qui amène la caméra 3D dessus (ou
+  au minimum un repère visuel surligné/clignotant) plutôt que de
+  laisser le joueur chercher au hasard dans la campagne.
+- À étendre, si Adrien le souhaite plus tard, au même traitement pour
+  les mégaprojets (déjà un catalogue fini par palier de population,
+  `SYSTEME-DEVELOPPEMENT.md` §6) et les technologies (paliers de points
+  de Recherche) — pas demandé explicitement cette fois, mais la même
+  logique s'appliquerait.
+
+**Risque technique à surveiller** (pour Claude Code) : le "voir où il
+est" demande de piloter la caméra 3D depuis un clic dans un panneau 2D
+à côté — un nouveau type d'interaction (aujourd'hui la caméra ne
+semble pilotée que par les gestes souris/doigt sur la scène
+elle-même). Une version plus simple pourrait démarrer par un indicateur
+visuel (surlignage/clignotement) placé sur le bâtiment visé sans
+bouger la caméra, à faire évoluer vers un vrai "aller à" ensuite si
+besoin.

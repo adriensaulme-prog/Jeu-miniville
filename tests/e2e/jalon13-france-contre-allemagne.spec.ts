@@ -329,13 +329,15 @@ test.describe("Jalon 13 — France contre Allemagne", () => {
         }))
       );
 
-      // effort_national(AU) = activité (3 + 2 = 5) + floor(sqrt(16)) = 4 => 9
-      // effort_national(NZ) = activité (1) + floor(sqrt(0)) = 0 => 1
+      // Depuis A-INTEGRER §24 (migration 0037), l'effort est une MOYENNE par ville :
+      // effort_national(AU) = activité moyenne (3 + 2) / 2 villes = 2,5
+      //   + floor(sqrt(16 votes / 2 villes)) = 2 => 4,5
+      // effort_national(NZ) = activité (1) / 1 ville + floor(sqrt(0)) = 0 => 1
       const { data: effortAU, error: erreurAU } = await supabaseAdmin.rpc("effort_national", {
         p_country_id: "AU",
       });
       expect(erreurAU).toBeNull();
-      expect(effortAU).toBe(9);
+      expect(effortAU).toBe(4.5);
       const { data: effortNZ, error: erreurNZ } = await supabaseAdmin.rpc("effort_national", {
         p_country_id: "NZ",
       });
@@ -378,7 +380,7 @@ test.describe("Jalon 13 — France contre Allemagne", () => {
         .single();
       expect(conflitTermine?.statut).toBe("termine");
       expect(conflitTermine?.resultat).toBe("attaquant");
-      expect(conflitTermine?.effort_attaquant).toBe(9);
+      expect(conflitTermine?.effort_attaquant).toBe(4.5);
       expect(conflitTermine?.effort_defenseur).toBe(1);
       // Une seule journée traitée ici (debut et fin le même jour calendaire
       // dans ce test) : l'attaquant a gagné cette unique journée.
@@ -432,8 +434,8 @@ test.describe("Jalon 13 — France contre Allemagne", () => {
       // Conflit en cours, effort affiché automatiquement (aucune action
       // citoyenne à cliquer — voir docs/A-INTEGRER.md §12).
       await expect(page.getByText("Mexique contre Argentine")).toBeVisible();
-      await expect(page.getByText("Effort de l'attaquant")).toBeVisible();
-      await expect(page.getByText("Effort du défenseur")).toBeVisible();
+      await expect(page.getByText("Effort moyen par ville (attaquant)")).toBeVisible();
+      await expect(page.getByText("Effort moyen par ville (défenseur)")).toBeVisible();
     } finally {
       await supprimerCompte(presidente.userId);
       // Même raison qu'ailleurs : la ligne "conflit en_cours" ne

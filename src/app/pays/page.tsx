@@ -463,11 +463,11 @@ export default async function PaysPage({
                   <span>{traduire(locale, "pays.conflit.joursGagnesDefenseur")}</span>
                 </div>
                 <div className="tile">
-                  <b>{new Intl.NumberFormat(locale).format(conflit.effort_attaquant)}</b>
+                  <b>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(conflit.effort_attaquant)}</b>
                   <span>{traduire(locale, "pays.conflit.effortAttaquant")}</span>
                 </div>
                 <div className="tile">
-                  <b>{new Intl.NumberFormat(locale).format(conflit.effort_defenseur)}</b>
+                  <b>{new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(conflit.effort_defenseur)}</b>
                   <span>{traduire(locale, "pays.conflit.effortDefenseur")}</span>
                 </div>
               </div>
