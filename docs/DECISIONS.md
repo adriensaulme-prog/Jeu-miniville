@@ -4119,6 +4119,86 @@ bouton sur sa propre ville.
 
 ---
 
+### Journal du monde et centre de notifications (A-INTEGRER §26 A et B) — 02/10/2026
+
+**Contexte.** Propositions A (journal mondial, cahier des charges §22) et
+B (notifications de rivalité, §23) du §26, validées par Adrien. Elles
+allaient ensemble : mêmes faits, deux présentations.
+
+**Constat qui a simplifié le chantier.** Les faits dont elles ont besoin
+sont **déjà enregistrés de façon durable** — `presidents` (chaque mandat
+du n°1 d'un pays), `conflits` (chaque guerre, début, fin, résultat),
+`resultats_diplomatiques` (alliances adoptées) et `city_events`
+(mégaprojets, technologies, monuments, attaques, manifestations). **Aucune
+table d'événements ne s'ajoute** : le journal et les notifications sont des
+*lectures agrégées* (l'historique existant est disponible d'emblée, aucun
+doublon à garder cohérent, rien à rattraper). Seul stockage nouveau :
+`users.notifications_vues_le`.
+
+**Fait (migration `0042`).**
+- *`journal_monde(p_limite)`* : fil public. Retient les changements de
+  présidence (un mandat qui a un prédécesseur ; le tout premier mandat
+  d'un pays n'est pas une nouvelle), guerres déclarées et terminées,
+  alliances adoptées, mégaprojets construits, **grands monuments**
+  (palier 8 et au-delà sur 16 : un fil mondial noyé sous les 16 monuments
+  de chaque ville serait illisible). Technologies de ville, attaques et
+  manifestations restent à l'échelle de la ville.
+- *`notifications_joueur(joueur, limite)`* : ce qui concerne la ville et le
+  pays du joueur — tous les événements de sa ville (attaques subies et
+  manifestations comprises), sa présidence gagnée ou perdue, les guerres
+  et alliances de son pays. **30 derniers jours** et **rien d'antérieur à
+  la création du compte** (un nouveau joueur ne reçoit pas l'histoire du
+  monde). Colonne `non_lue` : plus récent que la dernière consultation.
+- *`nb_notifications_non_lues`*, *`marquer_notifications_lues`*. Identité
+  vérifiée (`P0007`) : un joueur connecté ne lit ni ne marque les
+  notifications d'un autre (testé avec un vrai jeton de connexion).
+- *Pages* : `/journal` (**publique**, sans connexion — comme `/regles` et
+  `/v/<id>`) et `/notifications` (protégée) ; les « Nouveau » sont montrés
+  cette fois-là, puis la page marque tout lu. **Cloche 🔔 avec pastille**
+  de non lus dans la barre du haut, à côté des liens « Journal » et
+  « Règles ». Textes en modèles `{ville}` `{pays}` du dictionnaire (FR +
+  EN), personnalisés pour le joueur concerné (« Ton pays entre en conflit
+  avec… », « Ta ville perd la tête de… »).
+- Sur petit écran (≤ 480 px), le titre du jeu cède la place (le logo
+  reste) pour que Journal, Règles, la cloche, le sélecteur de langue et
+  « Se déconnecter » tiennent sur 360 px.
+
+**Défauts trouvés en chemin (corrigés).**
+- Un conflit terminé *avant* sa date de fin aurait daté l'événement dans
+  le futur (visible seulement dans un test qui terminait un conflit à la
+  main) : il restait « non lu » à jamais. En production un conflit ne se
+  termine qu'une fois sa date passée ; le test a été corrigé.
+- Dans la base de développement, des villes supprimées laissent des
+  mandats de présidence dont le prédécesseur est la ville elle-même :
+  « X prend la tête, devant X ». Ces lignes sont écartées à l'affichage
+  (pas de nouvelle migration).
+
+**Pas fait (volontairement).**
+- **Notifications poussées du navigateur** (permissions, abonnement,
+  backend d'envoi) : chantier à part, comme le §26 B le disait.
+- **« Tu viens de perdre ta place n°1 (mondiale) »**, « ton rival vient de
+  te dépasser » : seul le n°1 d'un *pays* est enregistré, pas le rang
+  mondial ni une notion de « rival ». Il faudrait journaliser les
+  changements de rang. Idem « passage n°1 » partageable sur la page
+  publique d'une ville (§26 C).
+- **« Ton pays débloque une technologie »** : les technologies existent par
+  ville, pas par pays.
+- **« Ton pays est en train de perdre la guerre »** : c'est un état en
+  cours (jours gagnés), pas un événement ; il reste visible sur `/pays`.
+- Pas d'e-mail ni de pastille sur l'icône de l'application.
+
+**Testé.** `tests/unit/journal.test.ts` (8) : tous les modèles FR/EN, les
+variantes « ton pays », la ville qui est son propre prédécesseur, donnée
+incomplète. `tests/e2e/journal-notifications.spec.ts` (4, pays EE/LV/LT
+réservés) : présidence (journal + notifications gagnée/perdue, premier
+mandat absent du journal), guerre et alliance (journal public, notifiés =
+seuls les pays concernés), événements de ville (attaque notifiée mais
+absente du journal public ; grand monument dans le journal, petit non),
+non-lus (pastille, marquage, nouvel événement, journal visible sans
+connexion, refus d'identité `P0007`). Captures desktop et 360 px vérifiées.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

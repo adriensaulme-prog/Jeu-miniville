@@ -322,7 +322,10 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 D codé** (suivi de
+*Dernière mise à jour : 02/10/2026. **A-INTEGRER §26 A et B codés**
+(journal du monde `/journal`, notifications `/notifications` + cloche,
+migration `0042` ; **les six chantiers du §26 sont faits** sauf les
+notifications poussées du navigateur). Avant : **A-INTEGRER §26 D codé** (suivi de
 villes, `/suivi`, migration `0041` ; reste A et B). Avant : **A-INTEGRER §26 C codé** (page
 publique `/v/<id>` partageable, sans migration ; reste A, B, D). Avant :
 **A-INTEGRER §26 F codé** (guide de

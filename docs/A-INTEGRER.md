@@ -1358,6 +1358,12 @@ page ou une nouvelle section d'accueil, alimentée par les mêmes types
 d'événements déjà trackés (`city_events`, conflits, votes, mandats)
 mais agrégés tous pays confondus plutôt que filtrés par ville.
 
+**Traité le 02/10/2026 (Claude Code), cinquième des six chantiers du
+§26** : page publique `/journal` (présidences, guerres, alliances,
+mégaprojets, grands monuments), lecture des tables existantes (aucune
+table d'événements), migration `0042` — détail dans `DECISIONS.md` §4
+« Journal du monde et centre de notifications ».
+
 ### B. Notifications de rivalité (cahier des charges §23)
 
 Le cahier des charges donne des exemples précis de notifications
@@ -1374,6 +1380,14 @@ push navigateur (le service worker du Jalon 15 existe déjà, PWA
 installable) sont une suite naturelle mais un chantier à part (gestion
 des permissions, abonnement, backend d'envoi) — à ne pas sous-estimer
 niveau effort.
+
+**Traité le 02/10/2026 (Claude Code), sixième des six chantiers du §26**
+(centre de notifications in-app, version « liste consultable » demandée
+au minimum par la note) : `/notifications` + cloche avec pastille de non
+lus, mêmes lectures que le journal filtrées sur la ville et le pays du
+joueur. **Notifications poussées du navigateur : non faites** (chantier à
+part, comme la note le disait). « Perte de la place n°1 mondiale » et
+« rival » : non faits, ces faits ne sont pas enregistrés.
 
 ### C. Page de ville partageable / viralité (cahier des charges §24)
 

@@ -161,6 +161,17 @@ body {
 .tabbar {
   display: none;
 }
+/* Petits écrans : le nom du jeu cède la place aux liens Journal / Règles, à la
+   cloche et au bouton de déconnexion (le logo reste, le titre est dans l'onglet). */
+@media (max-width: 480px) {
+  .topbar .brand {
+    font-size: 0;
+    gap: 0;
+  }
+  .topbar .who {
+    gap: 8px;
+  }
+}
 
 @media (max-width: 640px) {
   :root {
@@ -445,6 +456,59 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.cloche {
+  position: relative;
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 1;
+}
+.cloche-nb {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 16px;
+  padding: 1px 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: #c8372d;
+  color: #fff;
+  font-size: 10.5px;
+  line-height: 14px;
+  text-align: center;
+}
+.journal-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.journal-liste li {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  line-height: 1.45;
+}
+.journal-liste time {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.journal-liste li.non-lue {
+  background: rgba(37, 99, 235, 0.07);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+}
+.journal-lien {
+  font-size: 13px;
+  color: var(--focus);
+}
+@media (max-width: 480px) {
+  .journal-liste li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
 }
 .suivi-ligne {
   display: flex;
