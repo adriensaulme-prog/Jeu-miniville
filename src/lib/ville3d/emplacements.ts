@@ -1,15 +1,16 @@
 /**
  * Emplacements, dans la campagne autour de la ville, de ce qui n'est pas
- * dans un bloc : installations d'Énergie, mégaprojets, monuments
- * d'influence (docs/A-INTEGRER.md §25, point 5 + « voir où il est »).
+ * dans un bloc : installations d'Énergie et mégaprojets (docs/A-INTEGRER.md
+ * §25, point 5 + « voir où il est »). Les monuments d'influence n'y sont
+ * plus : ils ont été ramenés DANS la ville, dans la cour des premiers blocs
+ * (§33, voir monumentsVille.ts).
  *
  * Avant le §25 chaque objet était posé à un ANGLE ALÉATOIRE sur 360° :
  * impossible de savoir où regarder. Désormais chaque famille a son
  * SECTEUR fixe, identique pour toutes les villes :
  *   - Énergie       : axe +x
  *   - Mégaprojets   : axe +z
- *   - Monuments     : axe −x
- *   (l'axe −z reste libre pour une famille future ; pas de boussole
+ *   (les axes −x et −z sont libres ; pas de boussole
  *   affichée, la caméra tourne : le joueur passe par « voir où il est »)
  * et se place à partir d'une CEINTURE fixe, jamais relative au rayon
  * courant de la ville (qui grandit) : un objet déjà visible ne bouge plus
@@ -39,7 +40,6 @@ const DEMI_SECTEUR = 30;
 
 export const AXE_ENERGIE = 0;
 export const AXE_MEGAPROJETS = 90;
-export const AXE_MONUMENTS = 180;
 
 export interface Point {
   x: number;
@@ -86,18 +86,4 @@ export function emplacementMegaprojet(key: string, palier: number): Point {
   const r = rngFrom(key + "|megaprojet|" + palier);
   const fraction = (col - 1) * 0.62 + rr(r, -0.08, 0.08);
   return dansSecteur(AXE_MEGAPROJETS, fraction, CEINTURE + rangee * 60 + rr(r, 0, 12));
-}
-
-/**
- * Monument du palier `palier` (0..15) : grille de 4 colonnes × 4 rangées,
- * les paliers hauts plus loin (une rangée tous les 55 m). Case propre à
- * chaque palier : jamais deux monuments l'un sur l'autre.
- */
-export function emplacementMonument(key: string, palier: number): Point {
-  const case_ = palier % 16;
-  const col = case_ % 4,
-    rangee = Math.floor(case_ / 4);
-  const r = rngFrom(key + "|monument|" + palier);
-  const fraction = (col - 1.5) * 0.46 + rr(r, -0.05, 0.05);
-  return dansSecteur(AXE_MONUMENTS, fraction, CEINTURE + rangee * 55 + rr(r, 0, 8));
 }

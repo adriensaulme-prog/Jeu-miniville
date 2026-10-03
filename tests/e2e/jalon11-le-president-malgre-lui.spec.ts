@@ -68,7 +68,7 @@ async function connecter(page: import("@playwright/test").Page, email: string, m
 test.describe.configure({ mode: "serial" });
 
 test.describe("Jalon 11 — le président malgré lui", () => {
-  test("verifier_president élit la ville n°1, reste idempotent, puis bascule quand le rang change", async () => {
+  test("verifier_president élit la ville n°1, reste idempotent, ne bascule PAS en cours de semaine, puis bascule à la semaine suivante (A-INTEGRER §31)", async () => {
     // Populations très hautes pour dominer sans ambiguïté toute donnée
     // déjà présente en base pour ce pays (villes de test comprises).
     const villeB = await creerCompteAvecVille("president-b", "CH", "ch-zh", 6_000_000);
@@ -97,12 +97,39 @@ test.describe("Jalon 11 — le président malgré lui", () => {
       expect(mandatsApresRepetition).toHaveLength(1);
       expect(mandatsApresRepetition![0].debut).toBe(mandatOuvert1!.debut);
 
-      // A dépasse B : le mandat de B doit se refermer, un nouveau
-      // s'ouvrir pour A.
+      // A dépasse B EN COURS DE SEMAINE : la présidence est attribuée à la bascule
+      // hebdomadaire (lundi 00 h UTC), pas en direct (§31) — B reste président.
       await supabaseAdmin
         .from("cities")
         .update({ population: 7_000_000, population_max: 7_000_000 })
         .eq("id", villeA.villeId);
+      const { error: e3bis } = await supabaseAdmin.rpc("verifier_president", { p_country_id: "CH" });
+      expect(e3bis).toBeNull();
+      const { data: toujoursB } = await supabaseAdmin
+        .from("presidents")
+        .select("ville_id")
+        .eq("country_id", "CH")
+        .is("fin", null)
+        .single();
+      expect(toujoursB?.ville_id).toBe(villeB.villeId);
+
+      // Semaine suivante : on recule d'une semaine la présidence officielle et le mandat
+      // (on ne peut pas attendre le lundi), puis la première lecture désigne la ville n°1.
+      const { data: officielles } = await supabaseAdmin.from("presidents_semaine").select("semaine").eq("country_id", "CH");
+      for (const o of officielles ?? []) {
+        const avant = new Date(`${o.semaine}T00:00:00Z`);
+        avant.setUTCDate(avant.getUTCDate() - 7);
+        await supabaseAdmin
+          .from("presidents_semaine")
+          .update({ semaine: avant.toISOString().slice(0, 10) })
+          .eq("country_id", "CH")
+          .eq("semaine", o.semaine);
+      }
+      const { data: mandatB } = await supabaseAdmin.from("presidents").select("id, debut").eq("country_id", "CH").is("fin", null).single();
+      await supabaseAdmin
+        .from("presidents")
+        .update({ debut: new Date(new Date(mandatB!.debut).getTime() - 7 * 86_400_000).toISOString() })
+        .eq("id", mandatB!.id);
       const { error: e3 } = await supabaseAdmin.rpc("verifier_president", { p_country_id: "CH" });
       expect(e3).toBeNull();
 

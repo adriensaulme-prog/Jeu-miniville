@@ -24,7 +24,7 @@ import {
   blockX0,
   hex,
 } from "./constantes";
-import { box, cylinder, flat, type Geo } from "./geometrie";
+import { box, cylinder, flat, Geo } from "./geometrie";
 import { abribus, banc, car, conifer, fontaine, kiosque, tree, type TamponAO } from "./mobilier";
 import { buildApart, buildHouse, buildTower, type Facade, type Rect } from "./batiments";
 import {
@@ -36,11 +36,10 @@ import {
   type VocationQuartier,
 } from "./quartiers";
 import { buildCentraleEnergie, buildEolienne, buildPanneauSolaire } from "./energie";
-import { emplacementCentrale, emplacementEnergie, emplacementMegaprojet, emplacementMonument } from "./emplacements";
+import { emplacementCentrale, emplacementEnergie, emplacementMegaprojet } from "./emplacements";
 import { buildMegaprojet } from "./megaprojets";
-import { buildMonument } from "./monuments";
 import { niveauPourPopulation } from "@/lib/game/niveauVille";
-import type { TechnologiesVille } from "@/lib/game/technologies";
+import { technologiesDepuisPalier, type TechnologiesVille } from "@/lib/game/technologies";
 
 export interface MegaprojetConstruit {
   palier: number;
@@ -207,6 +206,14 @@ function decorTechToit(
   }
 }
 
+/** Réglages facultatifs de buildBlock() (monuments dans la cour, A-INTEGRER §33). */
+export interface OptionsBloc {
+  /** Reçoit le rectangle de la cour commune du bloc (centre des parcelles intérieures). */
+  surCour?: (rect: Rect) => void;
+  /** La cour accueille des monuments : on ne la décore pas. */
+  sansCour?: boolean;
+}
+
 export function buildBlock(
   g: Geo,
   b: Bloc,
@@ -217,7 +224,8 @@ export function buildBlock(
   glow: { x: number; z: number }[],
   ev: number[],
   tech: TechnologiesVille,
-  theme = "classique"
+  theme = "classique",
+  options: OptionsBloc = {}
 ) {
   const r = rngFrom(key + "|bloc|" + b.bi + "," + b.bj);
   const bx0 = blockX0(b.bi),
@@ -401,7 +409,10 @@ export function buildBlock(
       Math.max(...xs.map((q) => q[2])),
       Math.max(...xs.map((q) => q[3])),
     ];
-    buildCourtyard(g, rect, lotRng(9, 9), ao);
+    options.surCour?.(rect);
+    // A-INTEGRER §33 : des monuments d'influence occupent la cour de ce bloc —
+    // pas de fontaine ni d'arbres par-dessus ; ils sont posés par generate().
+    if (!options.sansCour) buildCourtyard(g, rect, lotRng(9, 9), ao);
   }
 
   // Emplacement du gratte-ciel : square public tant que le chantier n'a pas démarré,
@@ -461,12 +472,41 @@ export function buildSquare(g: Geo, rect: Rect, r: RNG, ao: TamponAO[]) {
   }
 }
 
-export function buildIdleBlock(g: Geo, b: Bloc, key: string, ao: TamponAO[]) {
+export function buildIdleBlock(g: Geo, b: Bloc, key: string, ao: TamponAO[], evite: { x: number; z: number }[] = []) {
   const r = rngFrom(key + "|friche|" + b.bi + "," + b.bj);
   const bx0 = blockX0(b.bi),
     bz0 = blockX0(b.bj);
   const n = 3 + Math.floor(r() * 5);
-  for (let i = 0; i < n; i++) tree(g, bx0 + rr(r, 6, BS - 6), bz0 + rr(r, 6, BS - 6), 0, rr(r, 0.9, 1.3), r, ao);
+  for (let i = 0; i < n; i++) {
+    // Le tirage a toujours lieu (le flux aléatoire ne change pas) ; on ne plante
+    // simplement pas l'arbre qui tomberait sur un monument (A-INTEGRER §33).
+    const x = bx0 + rr(r, 6, BS - 6),
+      z = bz0 + rr(r, 6, BS - 6),
+      echelle = rr(r, 0.9, 1.3);
+    if (evite.some((p) => Math.hypot(p.x - x, p.z - z) < 12)) continue;
+    tree(g, x, z, 0, echelle, r, ao);
+  }
+}
+
+/**
+ * Rectangle de la cour commune d'un bloc (la cour que partagent les parcelles
+ * intérieures, ni le gratte-ciel ni le pourtour), ou null s'il n'y en a pas.
+ * Calculé en exécutant buildBlock() sur une géométrie jetable avec une ville
+ * vide : la position de la cour dépend d'un tirage fait au milieu du flux
+ * aléatoire du bloc (le côté du gratte-ciel), qu'on ne peut pas deviner sans
+ * rejouer ce flux — et qu'on ne doit surtout pas modifier, sous peine de
+ * changer l'aspect de toutes les villes existantes.
+ */
+export function rectCourBloc(key: string, bi: number, bj: number): Rect | null {
+  let rect: Rect | null = null;
+  const b: Bloc = { bi, bj, d: 0, openAt: 0, gap: 1, towerAt: Infinity, active: true, vocation: "residentiel" };
+  const stats: Stats = { maxFloors: 0, towers: 0, active: 0 };
+  buildBlock(new Geo(), b, 0, key, [], stats, [], [], technologiesDepuisPalier(0), "classique", {
+    surCour: (r) => {
+      rect = r;
+    },
+  });
+  return rect;
 }
 
 /**
@@ -532,20 +572,6 @@ export function buildMegaprojetsCampagne(g: Geo, key: string, ao: TamponAO[], me
     const { x, z } = emplacementMegaprojet(key, m.palier);
     const r = rngFrom(key + "|megaprojet|type|" + m.palier);
     buildMegaprojet(g, x, z, m.type, m.activite, m.palier, r, ao, Math.floor(r() * 900) + 50);
-  }
-}
-
-/**
- * Monuments d'influence débloqués (Jalon 20 3/3, docs/A-INTEGRER.md §19),
- * dans leur secteur (emplacements.ts, §25) : une case de grille par
- * palier, les paliers hauts plus loin ; position indépendante du rayon
- * courant de la ville, un monument débloqué ne se déplace jamais.
- */
-export function buildMonumentsCampagne(g: Geo, key: string, ao: TamponAO[], monuments: MonumentDebloque[]) {
-  for (const m of monuments) {
-    const { x, z } = emplacementMonument(key, m.palier);
-    const r = rngFrom(key + "|monument|type|" + m.palier);
-    buildMonument(g, x, z, m.type, m.palier, ao, Math.floor(r() * 900) + 50);
   }
 }
 

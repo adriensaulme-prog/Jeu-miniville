@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { cleDe, emplacementMonument } from "../../src/lib/ville3d/emplacements";
+import { cleDe } from "../../src/lib/ville3d/emplacements";
+import { placesMonuments } from "../../src/lib/ville3d/monumentsVille";
 
 /**
  * A-INTEGRER §25 : catalogue complet des 16 monuments sur /ville
@@ -56,7 +57,7 @@ test("le catalogue liste les 16 monuments, verrouillés avec leur seuil, et « V
 
     // Clic sur le 3e monument débloqué (palier 2) : la scène reçoit son emplacement exact.
     await catalogue.getByRole("button", { name: /Voir où il est/ }).nth(2).click();
-    const attendu = emplacementMonument(cleDe(ville.id as string), 2);
+    const attendu = placesMonuments(cleDe(ville.id as string), [2]).get(2)!;
     await expect(page.locator("canvas")).toHaveAttribute(
       "data-repere",
       `${Math.round(attendu.x)},${Math.round(attendu.z)}`

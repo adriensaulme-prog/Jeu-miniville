@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
 import { visiterVille } from "@/app/villes/actions";
+
+/** Émis par le panneau AntiVille dès que le joueur le touche : suspend la visite automatique (A-INTEGRER §34). */
+export const EVENEMENT_INTENTION_HOSTILE = "jeu-miniville:intention-hostile";
 
 const DELAI_AVANT_VISITE_MS = 2500;
 const DELAI_AVANT_REFRESH_MS = 1200;
@@ -51,6 +54,18 @@ export function VisiteAutomatique({
   const router = useRouter();
   const [comptee, setComptee] = useState(false);
   const [gainReel, setGainReel] = useState(0);
+  // A-INTEGRER §34 : une page ouverte pour attaquer ne doit pas compter comme une visite.
+  // Suspendue pour toute la durée de la page dès le premier geste vers AntiVille.
+  const suspendue = useRef(false);
+
+  useEffect(() => {
+    suspendue.current = false;
+    const suspendre = () => {
+      suspendue.current = true;
+    };
+    window.addEventListener(EVENEMENT_INTENTION_HOSTILE, suspendre);
+    return () => window.removeEventListener(EVENEMENT_INTENTION_HOSTILE, suspendre);
+  }, [villeId]);
 
   useEffect(() => {
     if (!peutVisiter) {
@@ -58,6 +73,7 @@ export function VisiteAutomatique({
     }
     setComptee(false);
     const minuteur = setTimeout(() => {
+      if (suspendue.current) return;
       visiterVille(villeId).then((resultat) => {
         if (resultat.succes) {
           setGainReel(resultat.gain);

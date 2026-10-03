@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
 import { lancerActionAntiVille, type EtatActionAntiVille } from "./actions";
+import { EVENEMENT_INTENTION_HOSTILE } from "@/components/VisiteAutomatique";
 
 function BoutonAction({
   name,
@@ -44,7 +45,15 @@ export function ActionsAntiVille({
   }
 
   return (
-    <form action={action} className="row" style={{ display: "grid", gap: 8 }}>
+    <form
+      action={action}
+      className="row"
+      style={{ display: "grid", gap: 8 }}
+      // A-INTEGRER §34 : dès que le joueur touche au panneau AntiVille, la visite
+      // automatique de cette page est suspendue (attaque et visite ne vont pas ensemble).
+      onPointerDownCapture={() => window.dispatchEvent(new Event(EVENEMENT_INTENTION_HOSTILE))}
+      onFocusCapture={() => window.dispatchEvent(new Event(EVENEMENT_INTENTION_HOSTILE))}
+    >
       <input type="hidden" name="villeId" value={villeId} />
       <div className="anti">
         <BoutonAction
@@ -80,6 +89,7 @@ export function ActionsAntiVille({
             </>
           ) : null}
           {traduire(locale, "villes.antiVillePalier")} {traduire(locale, `villes.palier.${etat.palier}`)}
+          {etat.visiteAnnulee ? <> · {traduire(locale, "villes.visiteAnnulee")}</> : null}
         </p>
       ) : etat?.statut === "quota" ? (
         <p className="note">{traduire(locale, "villes.antiVilleQuota")}</p>

@@ -146,6 +146,49 @@ journal existant, puis ce fichier peut être supprimé.*
 > aux questions restantes et que les jalons de la Phase 6 seront
 > terminés.
 
+> **§29 (bannières de marques sur les bâtiments, 02/10/2026) :
+> nouveau** — idée d'Adrien, pas encore un chantier : vendre des packs
+> avec de vraies marques (Ferrari, PSG...) dessus. Risque de licence
+> réel signalé côté Claude chat, avec des pistes alternatives plus
+> sûres. Ne rien coder qui nomme ou reproduise une vraie marque sans
+> validation explicite d'Adrien au cas par cas.
+> **§30 (section Packs/Skins dans "Ma ville" + onglet Boutique,
+> 02/10/2026) : nouveau** — précise et avance le jalon "La boutique"
+> déjà prévu dans `BATIMENTS-ET-PACKS.md` §6 point 3 : deux surfaces
+> distinctes demandées par Adrien, pas une seule.
+> **§31 (historique des présidents à la semaine, pas au jour,
+> 02/10/2026) : nouveau** — le Jalon 11 recalcule la présidence en
+> direct à chaque affichage de page, donc elle peut changer à tout
+> moment dès qu'une ville dépasse une autre, pas seulement le dimanche
+> 20h comme le vote et la diplomatie ; Adrien veut que l'attribution ET
+> l'historique suivent le même rythme hebdomadaire que ces deux autres
+> mécaniques de pays.
+> **§32 (lien « Partager » des monuments débloqués jugé inutile,
+> 02/10/2026) : nouveau, élucidé côté Claude chat** — ce n'est pas le
+> bouton « Voir où il est » (sous-jalon 25a, déjà fonctionnel) : c'est
+> le bouton « Partager » du Bulletin municipal (`BulletinMunicipal.tsx`),
+> qui copie un lien public vers l'événement « monument débloqué ».
+> Adrien le trouve inutile ; à discuter avec lui avant de coder quoi
+> que ce soit (retirer ce bouton pour ce type d'événement, ou améliorer
+> son usage).
+> **§33 (monuments placés hors de la ville, 02/10/2026) : nouveau,
+> partiellement déjà traité** — la taille est déjà réglée (« petits
+> points », monuments agrandis ×2,5 le 02/10/2026, voir `DECISIONS.md`
+> §4). Reste non traité : Adrien confirme vouloir les monuments (et
+> Énergie/mégaprojets) DANS la ville, ce qui lève explicitement le
+> point 5 du §25 (« pas de retour sur le choix hors de la ville déjà
+> validé ») qui justifiait la ceinture fixe à 450 m du sous-jalon 25a.
+> **§34 (un clic AntiVille ne doit pas compter comme une visite,
+> 02/10/2026) : nouveau** — la visite automatique du §15 ne doit pas se
+> déclencher quand l'intention du joueur est d'attaquer une ville, pas
+> de la soutenir.
+> **État §29 à §34 (02/10/2026, Claude Code)** : §29 règle permanente
+> ajoutée à `CLAUDE.md` ; §30 noté pour le jalon « La boutique », pas codé ;
+> §31 fait (migration `0046`, bascule lundi 00 h UTC choisie par Adrien) ;
+> §32 gardé tel quel (décision d'Adrien) ; §33 fait (monuments dans les
+> cours des blocs, Énergie et mégaprojets restent dehors) ; §34 fait
+> (migration `0045`). Détail : `DECISIONS.md` §4 « Notes §29 à §34 ».
+
 Fichiers déposés avec cette note :
 - `docs/prototypes/maquette-ecrans.html` — **nouveau** : maquette
   cliquable de toutes les pages du jeu (données fictives).
@@ -1607,3 +1650,307 @@ APK en direct) — le compte développeur Google (25 $, unique) n'est
 nécessaire qu'à l'étape suivante, la mise en ligne sur le Play Store,
 et sera, comme toujours, soumis à l'accord explicite d'Adrien avant
 toute dépense.
+## 29. Bannières de vraies marques sur les bâtiments : risque de licence + pistes alternatives (sujet soulevé par Adrien, 02/10/2026)
+
+**Idée d'Adrien** : prévoir, plus tard, des bannières publicitaires sur
+certains bâtiments, avec de vraies marques (exemples cités : Ferrari,
+le PSG), vendues comme pack.
+
+**Avertissement donné côté Claude chat** (information factuelle, pas un
+avis juridique — à confirmer avec un vrai avocat en propriété
+intellectuelle si le projet prend de l'ampleur) : utiliser le nom ou le
+logo d'une vraie marque dans un produit commercial (un pack vendu aux
+joueurs) est un usage de marque déposée, le genre d'usage que ces
+marques licencient normalement (sponsoring officiel, jeux vidéo
+officiels, merchandising). Sans accord, c'est un risque réel de mise en
+demeure, voire plus si ça génère du revenu — la taille du projet ne
+change pas le droit, seulement la probabilité d'être repéré. Inversement,
+si le jeu gagne une vraie audience, le sens du chèque peut s'inverser :
+certaines marques paient pour apparaître dans un jeu populaire
+(placement de produit) plutôt que l'inverse.
+
+**Pistes alternatives proposées, à degrés de risque croissant pour la
+dernière** :
+1. **Marques parodiques/fictives inspirées de vraies marques** (façon
+   GTA : logo et nom clairement réinventés, juste suggestifs) — la
+   voie la plus sûre, garde le clin d'œil.
+2. **Bannières personnalisables par le joueur** (texte libre, couleurs,
+   petit logo perso uploadé) — zéro risque de marque, effet social
+   potentiel (montrer sa bannière aux autres).
+3. **Skins de bâtiments à thème générique sans marque déposée**
+   (enseignes de commerces inventées mais reconnaissables : fast-food,
+   banque, cinéma) — même esprit que les packs déjà prévus dans
+   `BATIMENTS-ET-PACKS.md` §4.
+4. **Contenu saisonnier/événementiel** (bannières liées aux événements
+   du jeu : championnat inter-villes, fête nationale) plutôt que des
+   marques tierces, vendu comme cosmétique limité dans le temps.
+5. **De vraies négociations de sponsoring**, si le jeu a une audience :
+   ce sont alors les marques qui paient pour apparaître, pas les
+   joueurs qui paient pour la marque — inverse le modèle (pas un pack
+   à vendre, un accord commercial à négocier au cas par cas).
+
+**Traité le 02/10/2026 (Claude Code)** : règle permanente reprise dans
+`CLAUDE.md` ; aucun code.
+
+**Statut** : simple piste de réflexion, aucun chantier ouvert. **Ne
+rien coder qui nomme ou reproduise une vraie marque** (logo, nom,
+dessin de produit reconnaissable) sans validation explicite d'Adrien au
+cas par cas — s'applique aussi bien aux bâtiments qu'à toute autre
+partie du jeu (mégaprojets, monuments, thèmes de packs). À regrouper,
+le jour où ce chantier est pris, avec la section monétisation déjà
+ouverte dans `DECISIONS.md` §9 ("Système de publicité et premium")
+et §10 point 4.
+
+---
+
+## 30. Interface boutique : un aperçu dans "Ma ville" + un onglet Boutique dédié (demande d'Adrien, 02/10/2026)
+
+**Demande d'Adrien** : prévoir, dans l'onglet/page "Ma ville" (pas
+forcément en évidence, un endroit secondaire suffit), une section qui
+montre les différents packs et thèmes (skins) disponibles pour sa
+ville ; et créer en plus un **onglet "Boutique"** séparé.
+
+**Comment ça se raccroche à ce qui est déjà prévu** : `BATIMENTS-ET-PACKS.md`
+§6 prévoit déjà une étape "La boutique" (après le MVP, une fois le
+statut légal réglé côté paiement — voir §5 du même document) comme
+troisième et dernier jalon du chantier bâtiments/packs/thèmes, après
+"La bibliothèque de bâtiments" et "Les thèmes". Cette demande ne change
+pas le principe (des packs cosmétiques, achetés, jamais d'avantage de
+jeu — `BATIMENTS-ET-PACKS.md` §4) mais **précise qu'il faut deux
+surfaces d'interface complémentaires**, pas une seule :
+
+1. **Dans "Ma ville"** : une section secondaire (pas besoin d'être au
+   premier plan — par exemple un onglet ou un repli dans le panneau
+   déjà existant, dans le même esprit que les panneaux vitrés décrits
+   au §1 de ce fichier) qui montre les thèmes/packs déjà possédés et
+   celui actuellement appliqué à sa ville, avec un moyen simple de
+   changer de thème parmi ceux qu'on possède (pas besoin de quitter la
+   page pour ça). Sert de rappel/gestion rapide, pas de catalogue
+   complet.
+2. **Un onglet "Boutique"** à part, dans la navigation (pas forcément
+   l'onglet principal/mis en avant — Adrien précise "pas forcément
+   principal") : le vrai catalogue, avec tous les packs disponibles
+   (possédés et non possédés), leurs aperçus, et le point d'entrée pour
+   l'achat une fois le paiement branché (§5 de
+   `BATIMENTS-ET-PACKS.md`). C'est l'équivalent du "essayer un pack en
+   aperçu dans la boutique avant de l'acheter" déjà mentionné au §4 du
+   même document, mais ça confirme qu'il s'agit d'un onglet séparé, pas
+   d'une sous-page cachée dans "Ma ville".
+
+**Ce qui reste ouvert, à trancher par Adrien ou Claude Code le moment
+venu** :
+- l'emplacement exact de la section dans "Ma ville" (onglet secondaire
+  du panneau existant, ou une icône/bouton dédié qui ouvre un tiroir) ;
+- si l'onglet Boutique doit déjà exister (vide ou avec les packs
+  gratuits/de test) avant que le paiement soit branché, pour habituer
+  les joueurs à son existence, ou s'il vaut mieux attendre que de vrais
+  packs achetables existent ;
+- l'articulation avec la navigation mobile (barre d'onglets du bas déjà
+  dense — Accueil/Ma ville/Villes/Pays/Jumelages — voir si Boutique y
+  trouve sa place ou si elle est accessible autrement, ex. depuis le
+  profil).
+
+**Portée de cette demande** : une demande d'interface/emplacement, pas
+un changement de design des packs eux-mêmes ni du modèle économique —
+à construire au moment du jalon "La boutique" de `BATIMENTS-ET-PACKS.md`
+§6, en gardant ces deux emplacements distincts en tête dès la première
+maquette plutôt que de les découvrir après coup.
+
+---
+
+## 31. Historique des présidents à la semaine, pas au jour (précision d'Adrien, 02/10/2026)
+
+**Précision d'Adrien** : le président d'un pays est attribué **chaque
+dimanche à 20h** (même échéance que le vote hebdomadaire de ressource et
+la décision diplomatique hebdomadaire — Jalons 9 et 11). Un historique
+des présidents/mandats tenu ou affiché **jour par jour n'a donc aucun
+sens** : il ne peut changer qu'une fois par semaine, à heure fixe.
+
+**État réel vérifié dans le code** (Jalon 11, `verifier_president()`) :
+ce n'est ni quotidien ni hebdomadaire aujourd'hui — c'est **recalculé en
+direct à chaque affichage** de `/ville` (son propre pays) ou `/pays` (le
+pays consulté), sans cron ni trigger. Le badge "Président" (rang #1,
+depuis le Jalon 7) est donc toujours exact à l'instant où la page est
+ouverte, et peut changer plusieurs fois par jour si les populations
+bougent. C'est encore plus éloigné du rythme hebdomadaire voulu par
+Adrien qu'un simple "par jour" : il faut introduire une vraie cadence
+hebdomadaire calée sur le même instant (dimanche 20h) que le vote de
+ressource et la décision diplomatique.
+
+**À corriger par Claude Code** :
+- la fonction/le déclencheur qui attribue la présidence (ville #1 du
+  pays) doit s'exécuter au même rythme et au même instant que la
+  clôture hebdomadaire déjà utilisée pour le vote de ressource et la
+  décision diplomatique (dimanche 20h) — réutiliser ce même
+  déclencheur/cette même notion de "semaine" plutôt qu'en committer un
+  second, pour éviter que les trois mécaniques dérivent les unes par
+  rapport aux autres ;
+- `verifier_president()` ne doit plus être réconcilié "à chaque
+  affichage de page" pour la partie attribution — seulement au moment
+  du bascule hebdomadaire ; le badge "Président" en direct (rang #1,
+  Jalon 7) peut rester tel quel comme indicateur séparé si Adrien le
+  souhaite (affichage immédiat de qui *serait* président), mais
+  l'historique/les mandats officiels, eux, doivent suivre uniquement le
+  rythme hebdomadaire ;
+- l'historique des présidents/mandats (table et affichage, y compris le
+  nouvel historique hebdomadaire de `/pays` ajouté au §23 de ce
+  fichier) doit lister **une entrée par semaine** (le mandat de la
+  semaine du X au Y, la ville présidente, éventuellement un
+  changement de président d'une semaine à l'autre), jamais une entrée
+  par jour ni "en direct" ;
+- si un mandat dure déjà plusieurs semaines consécutives pour la même
+  ville, l'affichage peut regrouper ("présidente depuis le ...")
+  plutôt que de répéter une ligne identique chaque semaine — détail
+  d'affichage laissé à Claude Code, l'essentiel est que l'unité de
+  temps du mécanisme et de son historique soit la semaine, jamais le
+  jour ni l'instant.
+
+**Portée** : ce point concerne uniquement la cadence/l'unité de temps
+de la présidence et de son historique. Ne touche pas aux autres
+mécaniques hebdomadaires déjà correctes (vote de ressource, décision
+diplomatique), ni à la refonte de `/pays` du §23, sinon pour s'assurer
+que les trois historiques (présidence, diplomatie, vote) restent
+alignés sur la même semaine.
+
+---
+
+## 32. Le lien « Partager » des monuments débloqués jugé inutile par Adrien (retour d'Adrien, 02/10/2026, élucidé côté Claude chat)
+
+**Retour d'Adrien** : « pour les monuments le lien copié sert à rien ».
+
+**Élucidé en lisant le code réel** (pas une hypothèse) : il existe deux
+fonctionnalités distinctes et il ne faut pas les confondre.
+1. **« Voir où il est »** (`BoutonVoirOu`, panneau Monuments,
+   sous-jalon 25a) : amène la caméra 3D sur le monument débloqué et pose
+   un repère lumineux. **Celui-là fonctionne déjà** et n'est pas ce
+   qu'Adrien critique.
+2. **« Partager »** (`BoutonPartager`, dans le Bulletin municipal,
+   `BulletinMunicipal.tsx`) : quand un monument se débloque, une ligne
+   apparaît dans le bulletin avec un bouton qui **copie un lien public**
+   vers cet événement précis (`cheminPartage(villeId, evenementId)`,
+   fonctionnalité du §26 C). **C'est ce bouton qu'Adrien trouve inutile**
+   — copier un lien pour annoncer qu'on a débloqué un monument ne lui
+   sert à rien en pratique.
+
+**À trancher avec Adrien avant de coder** : que faire de ce bouton
+« Partager » pour un événement de type « monument débloqué » —
+le retirer uniquement pour ce type d'événement (en gardant le partage
+pour les autres événements du bulletin : mégaprojet construit,
+technologie débloquée, passage #1, présidence, etc., qui restent dans
+l'esprit du §26 C), ou le garder mais comprendre pourquoi Adrien ne lui
+voit pas d'utilité (peut-être qu'une fois que la page publique de
+destination — `/v/[id]` — montrera mieux l'événement, ou une fois qu'il
+aura des amis/abonnés à qui envoyer ce lien, l'utilité deviendra plus
+claire ; pas de changement de code tant que ce n'est pas clarifié).
+
+**Portée** : ne touche pas au bouton « Voir où il est », qui reste
+comme il est (déjà validé en pratique par l'usage).
+
+---
+
+## 33. Monuments placés hors de la ville : à ramener dans la ville, trop petits (en partie déjà corrigé) (retour d'Adrien, 02/10/2026, précisé le même jour)
+
+**Retour initial d'Adrien** : « les monuments sont moches, ils ne
+ressemblent à rien, je veux des trucs plus gros et plus visibles ».
+**Précisé le même jour** : « les monuments ne sont pas placés dans la
+ville mais en extérieur ».
+
+**Partie déjà traitée, à ne pas refaire** : la taille a déjà été
+réglée dans le lot « petits points » du 02/10/2026 — coefficient
+`ECHELLE_MONUMENT = 2,5`, hauteur portée de 2-6 m à 4-15 m (voir
+`DECISIONS.md` §4, « Petits points… monuments agrandis »). Si ce retour
+d'Adrien est antérieur à ce correctif dans sa tête, le confirmer avec
+lui une fois l'emplacement corrigé (point suivant) : la taille seule
+ne suffira peut-être pas si les monuments restent loin, hors de la
+ville.
+
+**Partie non traitée, et c'est la vraie demande maintenant** :
+le sous-jalon 25a (`DECISIONS.md` §4, « Catalogue des monuments + voir
+où il est + secteurs fixes hors de la ville ») a volontairement sorti
+l'Énergie, les mégaprojets et les monuments de la ville, dans une
+ceinture fixe à 450 m (au-delà du rayon de rendu de la ville), **parce
+qu'un bug faisait qu'ils tombaient par erreur à seulement 141 m du
+centre** (donc sous la ville) et que le point 5 du §25 disait
+explicitement « pas de retour sur le choix hors de la ville déjà
+validé ». **Ce retour d'Adrien lève explicitement ce point 5** : il ne
+s'agit plus de rendre l'extérieur plus repérable, mais de **ramener les
+monuments (et si possible Énergie/mégaprojets) dans la ville elle-même**
+— ce qui correspond d'ailleurs à l'intention d'origine du §19
+(« près du croisement central de la ville, zone symbolique »), jamais
+respectée dans l'implémentation réelle.
+
+**Pour Claude Code, à cadrer avec Adrien avant de coder** (le sujet a
+déjà changé de direction une fois à cause d'un bug, mieux vaut
+confirmer avant de recoder un nouveau mécanisme) :
+- combien de blocs/quelle zone de la ville faut-il réserver aux
+  monuments (et à l'Énergie/mégaprojets si Adrien les inclut aussi) ?
+  Un bloc dédié par monument ? Un seul emplacement central partagé avec
+  plusieurs monuments autour (vu leur petite taille, 4-15 m, plusieurs
+  peuvent tenir sur un même bloc de 64 m) ?
+- est-ce compatible avec le zonage « par secteur » du sous-jalon 25b
+  (cœur résidentiel de 5 blocs, secteurs d'angle par activité) déjà
+  codé le même jour, ou faut-il lui réserver une place à part ?
+- les installations déjà dessinées (villes de test, premiers joueurs)
+  devront-elles aussi être déplacées cette fois-ci, ou seulement les
+  nouvelles (même principe que le "effet de bord assumé" du 25a, qui a
+  déjà déplacé une fois les emplacements existants) ?
+
+**Portée** : ce retour ne remplace pas le §19 (principes, paliers,
+caractère cosmétique/prestige) ni le travail déjà fait en 25a (catalogue,
+« voir où il est », qui restent valables) — il revient spécifiquement
+sur le choix d'emplacement extérieur du 25a, que Claude chat avait à
+tort laissé comme "déjà validé, pas de retour" au point 5 du §25.
+
+---
+
+## 34. Un clic sur une action AntiVille ne doit pas aussi compter comme une visite (demande d'Adrien, 02/10/2026)
+
+**Demande d'Adrien** : « si je clique sur une action antiville, je veux
+que la visite ne soit pas comptabilisée ».
+
+**Pourquoi ça arrive, probablement** : depuis le **§15** (visite
+automatique), ouvrir la page de détail d'une ville déclenche
+automatiquement `visiter_ville()` après un court délai
+(`VisiteAutomatique.tsx`, ~2,5 s). Les actions AntiVille (grève,
+contamination, propagande) sont accessibles depuis cette même page de
+détail. Un joueur qui ouvre la page d'une ville dans l'unique but de
+l'attaquer (action hostile) se retrouve donc, par le simple fait
+d'avoir ouvert la page, à aussi lui compter une visite (action de
+soutien) — les deux actions sont de nature opposée et ne devraient
+jamais se déclencher ensemble.
+
+**Ce qu'il faut distinguer, pour que Claude Code puisse corriger au bon
+endroit** :
+- si la visite automatique a déjà été comptée par le délai de 2,5 s
+  *avant* que le joueur ait eu le temps de cliquer sur une action
+  AntiVille, le clic sur l'action n'en est pas la cause directe — mais
+  le résultat perçu par Adrien est le même : une page ouverte pour
+  attaquer finit quand même par compter comme une visite ;
+- si au contraire le clic sur une action AntiVille déclenche lui-même,
+  directement ou indirectement, un appel à `visiter_ville()` (par
+  exemple parce que l'action partage du code avec la visite, ou parce
+  qu'elle force un rechargement de la page qui relance le minuteur),
+  c'est ce chemin de code précis qu'il faut couper.
+
+**Proposition de correction** : la visite automatique et une action
+AntiVille doivent rester mutuellement exclusives pour un même
+chargement de page — par exemple, annuler/suspendre le minuteur de
+visite automatique dès que le joueur interagit avec le panneau
+AntiVille (ouverture du panneau ou clic sur une action), plutôt que de
+laisser les deux timers tourner indépendamment. Détail d'implémentation
+exact (annuler le minuteur, ou ne déclencher la visite automatique
+qu'au bout d'un délai plus long pour laisser le temps de voir et
+choisir une action hostile en premier, ou tout autre mécanisme) laissé
+à Claude Code, comme pour les autres réglages fins de la visite
+automatique déjà délégués au §15.
+
+**Ce qui ne change pas** : les plafonds et délais des visites (§13/§27)
+et des actions AntiVille restent inchangés chacun de leur côté — cette
+demande porte uniquement sur le fait qu'un même geste (ouvrir une page
+pour attaquer) ne doit pas déclencher les deux actions à la fois.
+
+**Portée** : ce point ne remet pas en cause le principe de la visite
+automatique lui-même (§15, confirmé et toujours voulu par Adrien pour
+les visites normales) — il ajoute une exception claire : pas de visite
+automatique quand l'intention du joueur, démontrée par son clic, est
+d'attaquer plutôt que de soutenir.

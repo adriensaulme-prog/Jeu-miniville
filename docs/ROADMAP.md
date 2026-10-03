@@ -322,7 +322,11 @@ Cette liste vit dans `DECISIONS.md` §9 (ambitions long terme) et §10
 
 ---
 
-*Dernière mise à jour : 02/10/2026. **« Petits points » traités**
+*Dernière mise à jour : 02/10/2026. **Notes §29 à §34 d'Adrien traitées**
+(présidence à la semaine — migration `0046` —, monuments dans les cours des
+blocs, une attaque AntiVille annule la visite — migration `0045` ; règle « pas
+de vraie marque » dans `CLAUDE.md` ; la boutique du §30 reste au jalon « La
+boutique »). Avant : **« Petits points » traités**
 (« voir où il est » pour mégaprojets et Énergie, monuments ×2,5,
 notification de crise AntiVille — migration `0044` —, données de carte
 supprimées ; §10 points 33 à 35 tranchés par Adrien). Avant : **Mise en ligne préparée** (build de

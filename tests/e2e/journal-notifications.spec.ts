@@ -43,6 +43,27 @@ const notifs = async (joueurId: string) =>
 const nbNonLues = async (joueurId: string) =>
   (await supabaseAdmin.rpc("nb_notifications_non_lues", { p_joueur_id: joueurId })).data as number;
 
+/** Simule le passage au lundi suivant : la présidence officielle et le mandat ouvert d'un pays reculent d'une semaine (A-INTEGRER §31). */
+async function reculerUneSemaine(pays: string) {
+  const { data: officielles } = await supabaseAdmin.from("presidents_semaine").select("semaine").eq("country_id", pays);
+  for (const o of officielles ?? []) {
+    const avant = new Date(`${o.semaine}T00:00:00Z`);
+    avant.setUTCDate(avant.getUTCDate() - 7);
+    await supabaseAdmin
+      .from("presidents_semaine")
+      .update({ semaine: avant.toISOString().slice(0, 10) })
+      .eq("country_id", pays)
+      .eq("semaine", o.semaine);
+  }
+  const { data: ouverts } = await supabaseAdmin.from("presidents").select("id, debut").eq("country_id", pays).is("fin", null);
+  for (const m of ouverts ?? []) {
+    await supabaseAdmin
+      .from("presidents")
+      .update({ debut: new Date(new Date(m.debut).getTime() - 7 * 86_400_000).toISOString() })
+      .eq("id", m.id);
+  }
+}
+
 async function nettoyer() {
   await supabaseAdmin.from("conflits").delete().in("pays_attaquant_id", ["EE", "LV", "LT"]);
   await supabaseAdmin.from("resultats_diplomatiques").delete().in("country_id", ["EE", "LV", "LT"]);
@@ -62,6 +83,14 @@ test.describe("Journal mondial et notifications (A-INTEGRER §26 A/B)", () => {
     const ancienne = await nouveau("jn-ancienne", "EE");
     await supabaseAdmin.rpc("verifier_president", { p_country_id: "EE" });
     const nouvelle = await nouveau("jn-nouvelle", "EE", 500);
+    // En cours de semaine, la nouvelle n°1 ne prend PAS la présidence (A-INTEGRER §31)...
+    await supabaseAdmin.rpc("verifier_president", { p_country_id: "EE" });
+    expect((await journal()).find((l) => l.type === "president" && l.ville_id === nouvelle.villeId)).toBeUndefined();
+    // ... elle la prend à la bascule de semaine. Le mandat est daté du lundi : on antidate les
+    // comptes de test (en vrai, la bascule suit toujours la création du compte).
+    const ilYaDeuxSemaines = new Date(Date.now() - 14 * 86_400_000).toISOString();
+    await supabaseAdmin.from("users").update({ created_at: ilYaDeuxSemaines }).in("id", [ancienne.userId, nouvelle.userId]);
+    await reculerUneSemaine("EE");
     await supabaseAdmin.rpc("verifier_president", { p_country_id: "EE" });
 
     const lignes = await journal();

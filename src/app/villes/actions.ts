@@ -240,7 +240,14 @@ export async function influencerVille(formData: FormData) {
 }
 
 export type EtatActionAntiVille =
-  | { statut: "succes"; palier: PalierAttaques; perte: number | null; dureeHeures: number | null }
+  | {
+      statut: "succes";
+      palier: PalierAttaques;
+      perte: number | null;
+      dureeHeures: number | null;
+      /** A-INTEGRER §34 : la visite comptée dans la minute précédente a été annulée. */
+      visiteAnnulee: boolean;
+    }
   | { statut: "quota" }
   | { statut: "erreur" }
   | null;
@@ -289,6 +296,7 @@ export async function lancerActionAntiVille(
   });
 
   revalidatePath("/villes");
+  revalidatePath("/ville");
 
   if (error) {
     if (error.code === "P0001") {
@@ -298,7 +306,12 @@ export async function lancerActionAntiVille(
     return { statut: "erreur" };
   }
 
-  const resultat = data as { palier?: string; perte?: number | null; duree_heures?: number | null } | null;
+  const resultat = data as {
+    palier?: string;
+    perte?: number | null;
+    duree_heures?: number | null;
+    visite_annulee?: boolean;
+  } | null;
   const palier = PALIERS_ATTAQUES.includes(resultat?.palier as PalierAttaques)
     ? (resultat!.palier as PalierAttaques)
     : "calme";
@@ -307,6 +320,7 @@ export async function lancerActionAntiVille(
     palier,
     perte: resultat?.perte ?? null,
     dureeHeures: resultat?.duree_heures ?? null,
+    visiteAnnulee: resultat?.visite_annulee === true,
   };
 }
 

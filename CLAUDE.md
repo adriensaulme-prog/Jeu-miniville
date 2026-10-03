@@ -31,6 +31,9 @@ Consignes lues automatiquement par Claude Code au début de chaque session.
   §1 point 1 (mis à jour le 25/09/2026 : "zéro coût" devient "toute
   dépense est possible mais doit être demandée avant").
 - Pseudos et noms de ville uniques (A-INTEGRER §8).
+- **Aucune vraie marque** (nom, logo, produit reconnaissable) dans un
+  bâtiment, un monument, un mégaprojet ou un pack, sans validation
+  explicite d'Adrien au cas par cas (A-INTEGRER §29).
 - Les fichiers de `docs/SYSTEME-DEVELOPPEMENT.md`,
   `docs/BATIMENTS-ET-PACKS.md` marqués « à valider » ne se codent pas
   avant validation d'Adrien.

@@ -4366,6 +4366,95 @@ mais pas un pays étranger). Capture vérifiée à l'œil (monuments lisibles).
 
 ---
 
+### Notes §29 à §34 d'Adrien : marques, boutique, présidence hebdomadaire, monuments dans la ville, AntiVille et visite — 02/10/2026
+
+**Réception.** `docs/A-INTEGRER.md` a reçu six sections (§29 à §34). Une
+contradiction avec le code a été **signalée à Adrien avant de coder**
+(CLAUDE.md : ne pas trancher seul) : le §31 parle d'une bascule « dimanche
+20 h » commune au vote de ressource et à la décision diplomatique, or aucun
+mécanisme du code ne bascule à cette heure (semaine ISO, lundi 00 h UTC).
+
+**§29 — bannières de vraies marques : règle permanente, rien à coder.** Ne
+jamais nommer ni reproduire une vraie marque (logo, nom, produit reconnaissable)
+dans un bâtiment, un monument, un mégaprojet ou un pack, sans validation
+explicite d'Adrien au cas par cas. Ajoutée à `CLAUDE.md` (règles permanentes).
+À rattacher à la section monétisation (§9, §10 point 4) le jour où elle est
+prise.
+
+**§30 — boutique : noté, pas codé.** Deux surfaces distinctes prévues pour le
+jalon « La boutique » de `BATIMENTS-ET-PACKS.md` §6 (après le MVP et le statut
+légal du paiement) : une section secondaire dans « Ma ville » (thèmes possédés,
+changement rapide — le sélecteur de thème actuel en est l'embryon) et un onglet
+« Boutique » séparé (catalogue, aperçus, achat), « pas forcément principal ».
+Questions laissées ouvertes par la note, à trancher le moment venu : emplacement
+exact dans « Ma ville », onglet vide avant le paiement ou non, place dans la
+navigation mobile (déjà dense : un 7ᵉ onglet n'y tient pas, voir `/suivi`).
+
+**§31 — présidence à la semaine (migration `0046`).** Arbitrage d'Adrien : on
+**garde la bascule existante, lundi 00 h UTC** (celle du vote et de la
+diplomatie), plutôt que de passer les trois à dimanche 20 h. Nouvelle table
+`presidents_semaine` (une ville présidente par pays et par semaine, figée) ;
+`verifier_president()` ne désigne une présidente que s'il n'y en a pas encore
+pour la semaine en cours, puis les mandats (`presidents`) suivent : un mandat
+commence et finit un lundi 00 h UTC. Approximation assumée : l'ancien
+classement n'étant pas archivé, la première lecture de la semaine désigne le
+n°1 *à cet instant*, daté du lundi. Si la ville présidente est supprimée en
+cours de semaine, une nouvelle est désignée à la lecture suivante.
+`historique_pays()` donne le président de chaque semaine passée (une entrée par
+semaine) et `/pays` l'affiche. Le badge « Président » en direct (rang n°1,
+Jalon 7) n'est pas touché. Transition : les présidents actuels sont reconduits
+pour la semaine en cours. *Non traité, à signaler* : la place de n°1 **mondial**
+(`premiers_mondiaux`, ajoutée plus tôt aujourd'hui) reste calculée en direct —
+le §31 ne parle que de la présidence d'un pays ; à aligner sur la semaine si
+Adrien le souhaite.
+
+**§32 — « Partager » des monuments : gardé tel quel.** Décision d'Adrien après
+discussion : pas de changement de code (« Voir où il est » est inchangé).
+
+**§33 — monuments DANS la ville (pas de migration).** Le retour d'Adrien lève
+le point 5 du §25 (monuments hors de la ville). Décision : **dans les cours des
+blocs**, du centre vers l'extérieur. Règle (`monumentsVille.ts`) : le monument
+du palier p occupe la cour de la case n° ⌊p/2⌋ dans l'ordre de distance au
+centre (`cases.ts`, extrait de `planifierBlocs()` sans changer le rendu —
+empreinte de géométrie identique avant/après), deux par cour, le long du grand
+côté. 16 paliers = les 8 cases les plus centrales. Les cases ne dépendent que
+de la graine de la ville : un monument ne se déplace jamais, même si son bloc
+n'est pas encore ouvert (la case est alors une friche au cœur de la ville).
+`buildBlock()` ne décore pas une cour qui accueille des monuments
+(`sansCour`) ; les friches évitent de planter des arbres dessus. Énergie et
+mégaprojets **restent dehors** (une centrale en pleine ville serait étrange ;
+décision par défaut, Adrien peut la renverser). Les monuments déjà dessinés
+changent donc de place une fois (même effet de bord assumé qu'au 25a). La
+position de la cour dépend d'un tirage au milieu du flux aléatoire du bloc : au
+lieu de la deviner, `rectCourBloc()` exécute `buildBlock()` sur une géométrie
+jetable. Taille ×2,5 déjà réglée plus tôt (« petits points »).
+
+**§34 — une attaque AntiVille n'est pas une visite (migration `0045`).**
+Arbitrage d'Adrien : *annuler aussi la visite déjà comptée*. (1) Côté
+navigateur, toucher au panneau AntiVille (clic ou focus) suspend la visite
+automatique de la page (`EVENEMENT_INTENTION_HOSTILE`). (2) Côté base,
+`visites.gain` mémorise ce que chaque visite a rapporté (bonus de solidarité
+compris) et `lancer_action_antiville()` supprime la visite de l'attaquant sur
+cette ville si elle date de moins d'une minute : quota du jour et délai d'une
+heure rendus, activité retirée des jauges, habitants repris,
+`visite_annulee` renvoyé et affiché au joueur. `population_max` (record, ne
+décroît jamais) n'est pas rendue ; les visites d'avant la migration ont un gain
+de 0 (annulées sans reprise d'habitants). Délai de la visite automatique
+inchangé (2,5 s).
+
+**Testé.** Unitaires : `monumentsVille.test.ts` (6 : 8 cases centrales, deux par
+cour, dans le bloc, jamais en contact, position stable quelle que soit la
+population, tous à moins de 168 m du centre), parité visites adaptée, journal.
+E2E (nouveau) `presidence-hebdo-antiville-visite.spec.ts` : présidence figée en
+cours de semaine puis relevée à la semaine suivante, mandat daté d'un lundi
+00 h UTC, une entrée par semaine dans `historique_pays`, relais si la ville
+présidente disparaît ; annulation d'une visite récente (ligne supprimée,
+habitants repris) et non-annulation d'une visite de 2 minutes ; visite
+automatique suspendue au premier geste (horloge simulée). `jalon11` et
+`journal-notifications` adaptés à la bascule hebdomadaire.
+
+---
+
 ## §5. i18n
 
 Toute chaîne affichée passe par une clé (`ville.nom`, `jeu.connexion_jour`,

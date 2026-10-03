@@ -2,23 +2,21 @@ import { describe, expect, it } from "vitest";
 import {
   AXE_ENERGIE,
   AXE_MEGAPROJETS,
-  AXE_MONUMENTS,
   CEINTURE,
   cleDe,
   emplacementCentrale,
   emplacementEnergie,
   emplacementMegaprojet,
-  emplacementMonument,
 } from "@/lib/ville3d/emplacements";
 import { generate } from "@/lib/ville3d/generer";
 import { PLAFOND_RENDU_POPULATION } from "@/lib/ville3d/constantes";
-import { CATALOGUE_MONUMENTS } from "@/lib/game/monuments";
 import { ENERGIE_MAX_INSTALLATIONS } from "@/lib/ville3d/constantes";
 
 /**
- * A-INTEGRER §25 : Énergie, mégaprojets et monuments ont chacun leur
- * secteur fixe, au-delà de la ville la plus grande qu'on dessine, et ne
- * se chevauchent pas entre eux.
+ * A-INTEGRER §25 : Énergie et mégaprojets ont chacun leur secteur fixe,
+ * au-delà de la ville la plus grande qu'on dessine, et ne se chevauchent
+ * pas entre eux. (Les monuments, eux, sont dans la ville depuis le §33 :
+ * voir tests/unit/monumentsVille.test.ts.)
  */
 const normeMax = (p: { x: number; z: number }) => Math.max(Math.abs(p.x), Math.abs(p.z));
 /** Angle (degrés, −180..180) de l'axe de secteur le plus proche, écart au centre du secteur. */
@@ -38,7 +36,7 @@ describe("emplacements de la campagne (§25)", () => {
     }
   });
 
-  it("énergie, mégaprojets et monuments restent dans leur secteur (±30°) et hors de la ville", () => {
+  it("énergie et mégaprojets restent dans leur secteur (±30°) et hors de la ville", () => {
     for (const cle of CLES) {
       for (let k = 0; k < ENERGIE_MAX_INSTALLATIONS; k++) {
         const p = emplacementEnergie(cle, k);
@@ -53,19 +51,11 @@ describe("emplacements de la campagne (§25)", () => {
         expect(normeMax(p)).toBeGreaterThanOrEqual(CEINTURE - 0.01);
         expect(ecartAAxe(p, AXE_MEGAPROJETS)).toBeLessThanOrEqual(30.01);
       }
-      for (let palier = 0; palier < CATALOGUE_MONUMENTS.length; palier++) {
-        const p = emplacementMonument(cle, palier);
-        expect(normeMax(p)).toBeGreaterThanOrEqual(CEINTURE - 0.01);
-        expect(ecartAAxe(p, AXE_MONUMENTS)).toBeLessThanOrEqual(30.01);
-      }
     }
   });
 
-  it("les 16 monuments ne se chevauchent jamais (au moins 40 m entre deux) et jamais deux mégaprojets à moins de 40 m l'un de l'autre", () => {
+  it("jamais deux mégaprojets à moins de 40 m l'un de l'autre", () => {
     for (const cle of CLES) {
-      const monuments = CATALOGUE_MONUMENTS.map((_, i) => emplacementMonument(cle, i));
-      for (let i = 0; i < monuments.length; i++)
-        for (let j = i + 1; j < monuments.length; j++) expect(distance(monuments[i], monuments[j])).toBeGreaterThan(40);
       const mega = Array.from({ length: 39 }, (_, i) => emplacementMegaprojet(cle, i));
       for (let i = 0; i < mega.length; i++)
         for (let j = i + 1; j < mega.length; j++) expect(distance(mega[i], mega[j])).toBeGreaterThan(40);
@@ -73,15 +63,13 @@ describe("emplacements de la campagne (§25)", () => {
   });
 
   it("la position d'un palier ne dépend que de la ville et du palier : stable quand d'autres se débloquent", () => {
-    expect(emplacementMonument("ville-a", 3)).toEqual(emplacementMonument("ville-a", 3));
     expect(emplacementMegaprojet("ville-a", 2)).toEqual(emplacementMegaprojet("ville-a", 2));
     expect(emplacementEnergie("ville-a", 5)).toEqual(emplacementEnergie("ville-a", 5));
-    expect(emplacementMonument("ville-a", 3)).not.toEqual(emplacementMonument("ville-b", 3));
   });
 
   it("les paliers hauts sont plus loin que les bas (rangées successives)", () => {
-    const proche = normeMax(emplacementMonument("ville-a", 0));
-    const loin = normeMax(emplacementMonument("ville-a", 15));
+    const proche = normeMax(emplacementMegaprojet("ville-a", 0));
+    const loin = normeMax(emplacementMegaprojet("ville-a", 12));
     expect(loin).toBeGreaterThan(proche + 120);
   });
 
@@ -90,11 +78,9 @@ describe("emplacements de la campagne (§25)", () => {
     expect(cleDe("")).toBe("ville");
   });
 
-  it("la géométrie générée change quand on débloque un monument, et reste identique sinon (déterminisme)", () => {
-    const sans = generate("ville-a", 20_000);
+  it("la géométrie générée est déterministe, quels que soient les monuments débloqués", () => {
     const avec = generate("ville-a", 20_000, undefined, 0, [], 0, [{ palier: 0, type: "borne_commemorative" }]);
     const avec2 = generate("ville-a", 20_000, undefined, 0, [], 0, [{ palier: 0, type: "borne_commemorative" }]);
-    expect(avec.g.V.length).toBeGreaterThan(sans.g.V.length);
     expect(avec2.g.V.length).toBe(avec.g.V.length);
   });
 });

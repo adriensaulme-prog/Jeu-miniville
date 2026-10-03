@@ -8,8 +8,11 @@
  * un bloc de plus tous les 5 000 habitants, du centre vers l'extérieur.
  */
 
-import { rngFrom } from "./aleatoire";
 import { cleDe } from "./emplacements";
+import { casesTriees } from "./cases";
+import { buildMonument } from "./monuments";
+import { placesMonuments } from "./monumentsVille";
+import { rngFrom } from "./aleatoire";
 import {
   BS,
   CITY_R_MIN,
@@ -34,7 +37,6 @@ import {
   buildEnergieCampagne,
   buildIdleBlock,
   buildMegaprojetsCampagne,
-  buildMonumentsCampagne,
   buildRoadsAndTraffic,
   buildTramway,
   type Bloc,
@@ -93,24 +95,18 @@ export function planifierBlocs(
   let K = 0;
   while (openAtK(K) <= Crendu) K++;
   const M = Math.ceil(Math.sqrt(K + 40) / 2) + 3;
-  const blocks: Bloc[] = [];
-  for (let bi = -M; bi < M; bi++)
-    for (let bj = -M; bj < M; bj++) {
-      // Aléa d'ordre propre à chaque bloc (pas un générateur séquentiel) :
-      // ajouter des candidats ne réordonne jamais les blocs déjà ouverts.
-      const jit = (rngFrom(key + "|ordre|" + bi + "," + bj)() - 0.5) * 0.7;
-      blocks.push({
-        bi,
-        bj,
-        d: Math.hypot(bi + 0.5, bj + 0.5) + jit,
-        openAt: 0,
-        gap: 0,
-        towerAt: 0,
-        active: false,
-        vocation: "residentiel",
-      });
-    }
-  blocks.sort((a, b) => a.d - b.d || a.bi - b.bi || a.bj - b.bj);
+  // Aléa d'ordre propre à chaque case (cases.ts) : ajouter des candidats ne
+  // réordonne jamais les blocs déjà ouverts.
+  const blocks: Bloc[] = casesTriees(key, M).map((c) => ({
+    bi: c.bi,
+    bj: c.bj,
+    d: c.d,
+    openAt: 0,
+    gap: 0,
+    towerAt: 0,
+    active: false,
+    vocation: "residentiel" as VocationQuartier,
+  }));
   blocks.length = Math.min(blocks.length, K + 24);
 
   // Case (index dans l'ordre de distance) occupée par chaque rang. Jalon
@@ -191,10 +187,19 @@ export function generate(
   const horsVille = (b: Bloc) =>
     Math.max(Math.abs(blockX0(b.bi)), Math.abs(blockX0(b.bi) + BS), Math.abs(blockX0(b.bj)), Math.abs(blockX0(b.bj) + BS)) >= cityR;
 
+  // A-INTEGRER §33 : les monuments occupent la cour des premiers blocs (ou leur friche).
+  const places = placesMonuments(
+    key,
+    monuments.map((m) => m.palier)
+  );
+  const casesAvecMonument = new Set([...places.values()].map((p) => p.bi + "," + p.bj));
+  const emplacementsMonuments = [...places.values()];
+
   buildRoadsAndTraffic(g, act, key, Math.ceil(cityR / T));
   for (const b of blocks) {
-    if (b.active) buildBlock(g, b, C, key, ao, stats, glow, ev, tech, theme);
-    else if (!horsVille(b)) buildIdleBlock(g, b, key, ao);
+    if (b.active)
+      buildBlock(g, b, C, key, ao, stats, glow, ev, tech, theme, { sansCour: casesAvecMonument.has(b.bi + "," + b.bj) });
+    else if (!horsVille(b)) buildIdleBlock(g, b, key, ao, emplacementsMonuments);
   }
   if (tech.tramway) buildTramway(g, key, cityR);
   if (tech.drones) buildDrones(g, key, cityR);
@@ -202,7 +207,12 @@ export function generate(
   buildCountryRoads(g, key, ao, cityR);
   buildEnergieCampagne(g, key, ao, elanEnergie);
   buildMegaprojetsCampagne(g, key, ao, megaprojets);
-  buildMonumentsCampagne(g, key, ao, monuments);
+  for (const m of monuments) {
+    const place = places.get(m.palier);
+    if (!place) continue;
+    const r = rngFrom(key + "|monument|type|" + m.palier);
+    buildMonument(g, place.x, place.z, m.type, m.palier, ao, Math.floor(r() * 900) + 50);
+  }
   stats.next = ev.filter((t) => t > C).reduce((m, t) => Math.min(m, t), Infinity);
   return { g, ao, glow, stats: { ...stats, cityR } };
 }

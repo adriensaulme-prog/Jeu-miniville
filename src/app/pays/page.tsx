@@ -85,6 +85,9 @@ type LigneHistorique = {
   conflit_resultat: ResultatConflit | null;
   pertes_pays: number | null;
   pertes_adversaire: number | null;
+  /** Ville présidente de cette semaine (A-INTEGRER §31), null avant la présidence hebdomadaire. */
+  president_ville_id: string | null;
+  president_ville_nom: string | null;
 };
 
 type MandatBrut = {
@@ -561,6 +564,12 @@ export default async function PaysPage({
                         {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(h.semaine))}
                       </span>
                     </div>
+                    {h.president_ville_nom ? (
+                      <p className="note">
+                        <span className="badge pres">{traduire(locale, "classement.president")}</span>{" "}
+                        <b>{h.president_ville_nom}</b>
+                      </p>
+                    ) : null}
                     {h.vote_categorie ? (
                       <p className="note">
                         {traduire(locale, "pays.historique.vote")} :{" "}

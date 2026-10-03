@@ -1,6 +1,7 @@
 import { traduire, type Locale } from "@/lib/i18n/dictionaries";
 import { CATALOGUE_MONUMENTS, seuilMonument } from "@/lib/game/monuments";
-import { cleDe, emplacementMonument } from "@/lib/ville3d/emplacements";
+import { cleDe } from "@/lib/ville3d/emplacements";
+import { placesMonuments } from "@/lib/ville3d/monumentsVille";
 import { BoutonVoirOu } from "./BoutonVoirOu";
 
 /**
@@ -26,6 +27,12 @@ export function Monuments({
   influenceMax: number;
 }) {
   const cle = cleDe(cleVille);
+  // A-INTEGRER §33 : les monuments sont dans les cours des premiers blocs ; on ne calcule
+  // la place que de ceux qui sont débloqués.
+  const places = placesMonuments(
+    cle,
+    Array.from({ length: paliersDebloques }, (_, i) => i)
+  );
   const nf = new Intl.NumberFormat(locale);
   return (
     <details className="note catalogue-monuments">
@@ -38,7 +45,7 @@ export function Monuments({
           const debloque = i < paliersDebloques;
           const prochain = i === paliersDebloques;
           if (debloque) {
-            const { x, z } = emplacementMonument(cle, i);
+            const { x, z } = places.get(i)!;
             return (
               <li key={palier.type} className="debloque">
                 <span>
